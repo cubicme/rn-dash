@@ -41,7 +41,7 @@
 - [x] **WORK-03**: User can set a custom label on a branch that persists across worktrees (label follows the branch, not the worktree)
 - [ ] **WORK-04**: User can switch the "running" worktree which auto-kills metro in current and starts it in the new one
 - [x] **WORK-05**: User sees dependency staleness hints when node_modules is outdated relative to package.json/yarn.lock
-- [ ] **WORK-06**: Stale dependencies are lazily installed before launching the app if user hasn't manually installed
+- [x] **WORK-06**: Stale dependencies are lazily installed before launching the app if user hasn't manually installed
 
 ### Git Operations
 
@@ -128,7 +128,7 @@
 | WORK-03 | Phase 3 | Complete |
 | WORK-04 | Phase 5 | Pending |
 | WORK-05 | Phase 3 | Complete |
-| WORK-06 | Phase 3 | Pending |
+| WORK-06 | Phase 3 | Complete |
 | GIT-01 | Phase 3 | Complete |
 | GIT-02 | Phase 3 | Complete |
 | GIT-03 | Phase 3 | Complete |

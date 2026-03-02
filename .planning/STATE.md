@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T08:29:37Z"
+last_updated: "2026-03-02T08:35:45Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 3 of 5 (Worktree Browser, Git and RN Commands)
-Plan: 2 of 4 in current phase
-Status: Plan 03-02 Complete — infra modules implemented
-Last activity: 2026-03-02 — Completed 03-02 (worktrees.rs, labels.rs, command_runner.rs, devices.rs)
+Plan: 3 of 4 in current phase
+Status: Plan 03-03 Complete — app.rs wired with all Phase 3 logic
+Last activity: 2026-03-02 — Completed 03-03 (app.rs: AppState, handle_key, update(), run() with worktree/label loading)
 
-Progress: [████████░░] 50%
+Progress: [█████████░] 55%
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [████████░░] 50%
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
 | Phase 2 | 3/3 | 13 min | 4.3 min |
-| Phase 3 | 2/4 | 4 min | 2 min |
+| Phase 3 | 3/4 | 7 min | 2.3 min |
 
 **Recent Trend:**
 - Last 5 plans: 4 min, 2 min, 3 min, 5 min, 2 min
@@ -53,6 +53,7 @@ Progress: [████████░░] 50%
 | Phase 02-metro-process-control P03 | 5 | 2 tasks | 4 files |
 | Phase 03-worktree-browser P01 | 2min | 2 tasks | 6 files |
 | Phase 03-worktree-browser P02 | 2min | 2 tasks | 5 files |
+| Phase 03-worktree-browser P03 | 3min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,10 @@ Recent decisions affecting current work:
 - [03-02]: stream_command_output uses done flags on select! guards — prevents polling closed streams
 - [03-02]: parse_adb_devices sets id=name=serial — adb list has no model names; Phase 5 can enrich
 - [03-02]: parse_xcrun_simctl formats name as "{name} ({state})" to distinguish booted vs shutdown sims
+- [03-03]: dispatch_command() helper skips pre-processing pipeline — ModalConfirm calls it directly to avoid re-triggering destructive confirmation
+- [03-03]: DevicesEnumerated added to Action enum — only way to bridge async device list call back into sync update(); spec stored in pending_device_command while in flight
+- [03-03]: pending_label_branch: Option<String> in AppState distinguishes label submit from command submit in ModalInputSubmit — avoids adding ModalState::LabelInput variant
+- [03-03]: palette_mode: Option<PaletteMode> in AppState read by handle_key for two-stroke commands; update() clears it on CommandRun or ModalCancel
 
 ### Pending Todos
 
@@ -100,10 +105,10 @@ None.
 ### Blockers/Concerns
 
 - [Phase 4]: JIRA auth method must be confirmed (Cloud = Basic Auth email:token, Data Center = Bearer PAT) before writing the client — wrong choice means zero successful API calls
-- [Phase 5]: adb devices + xcrun simctl output parsing implemented in 03-02 — parsers are ready, device selection UI is Phase 3 Plan 03-03/03-04
+- [Phase 5]: device selection UI (DevicePicker modal) implemented in 03-03 — adb/xcrun parsers + modal wired; only UI rendering remains in 03-04
 
 ## Session Continuity
 
-Last session: 2026-03-02T08:29:37Z
-Stopped at: Completed 03-02-PLAN.md — infra modules (worktrees, labels, command_runner, devices)
+Last session: 2026-03-02T08:35:45Z
+Stopped at: Completed 03-03-PLAN.md — app.rs wired (AppState, handle_key, update(), run())
 Resume file: None
