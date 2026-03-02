@@ -28,8 +28,8 @@
 - [x] **METRO-02**: User can start metro (yarn start --reset-cache) from the active worktree
 - [x] **METRO-03**: User can stop the running metro instance
 - [x] **METRO-04**: User can restart metro (kill + start) with one keystroke
-- [ ] **METRO-05**: User can view metro log output in a dedicated panel only when a log filter is applied (metro does not stream logs by default)
-- [ ] **METRO-06**: User can scroll through metro log history in the log panel
+- [x] **METRO-05**: User can view metro log output in a dedicated panel only when a log filter is applied (metro does not stream logs by default)
+- [x] **METRO-06**: User can scroll through metro log history in the log panel
 - [x] **METRO-07**: User can send debugger command (j) to the running metro instance
 - [x] **METRO-08**: User can send reload command (r) to the running metro instance
 - [x] **METRO-09**: Only one metro instance can run at a time across all worktrees (enforced by the dashboard)
@@ -118,8 +118,8 @@
 | METRO-02 | Phase 2 | Complete |
 | METRO-03 | Phase 2 | Complete |
 | METRO-04 | Phase 2 | Complete |
-| METRO-05 | Phase 2 | Pending |
-| METRO-06 | Phase 2 | Pending |
+| METRO-05 | Phase 2 | Complete |
+| METRO-06 | Phase 2 | Complete |
 | METRO-07 | Phase 2 | Complete |
 | METRO-08 | Phase 2 | Complete |
 | METRO-09 | Phase 2 | Complete |

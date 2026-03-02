@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T07:06:54.080Z"
+last_updated: "2026-03-02T07:09:13.189Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 2 of 5 (Metro Process Control)
-Plan: 2 of 3 in current phase
-Status: Plan 02-02 Complete
-Last activity: 2026-03-02 — Completed 02-02 (metro keybinding dispatch, async spawn/kill/restart runtime, log streaming, stdin forwarding, death detection)
+Plan: 3 of 3 in current phase
+Status: Plan 02-03 Complete — Phase 2 all plans done
+Last activity: 2026-03-02 — Completed 02-03 (metro status display, log panel, footer/help keybinding hints)
 
-Progress: [█████░░░░░] 40%
+Progress: [██████░░░░] 40%
 
 ## Performance Metrics
 
@@ -41,7 +41,7 @@ Progress: [█████░░░░░] 40%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
-| Phase 2 | 2/3 | 8 min | 4 min |
+| Phase 2 | 3/3 | 13 min | 4.3 min |
 
 **Recent Trend:**
 - Last 5 plans: 2 min, 4 min, 2 min, 3 min, 5 min
@@ -49,6 +49,7 @@ Progress: [█████░░░░░] 40%
 
 *Updated after each plan completion*
 | Phase 02-metro-process-control P02 | 5min | 2 tasks | 2 files |
+| Phase 02-metro-process-control P03 | 5 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [02-02]: Separate handle_rx channel for MetroHandle delivery — MetroHandle contains non-Clone JoinHandle so it cannot travel through Action enum; separate channel keeps type boundary clean
 - [02-02]: pending_restart: bool in AppState drives restart chain — MetroRestart/MetroStart-while-running/MetroToggleLog-while-running all set flag; MetroExited checks and re-dispatches MetroStart
 - [02-02]: stream_metro_logs spawned inside metro_process_task and aborted before kill — prevents log lines racing with MetroExited delivery
+- [Phase 02-metro-process-control]: Scrollbar rendered only when log content exceeds visible height
+- [Phase 02-metro-process-control]: J/R footer hints hidden when metro not running to reduce clutter
 
 ### Pending Todos
 
@@ -90,6 +93,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T07:07:00Z
-Stopped at: Completed 02-02-PLAN.md — metro keybinding dispatch, async spawn/kill/restart runtime, log streaming, stdin forwarding, death detection
+Last session: 2026-03-02T07:12:00Z
+Stopped at: Completed 02-03-PLAN.md — metro status display, log panel rendering, footer/help keybinding hints
 Resume file: None
