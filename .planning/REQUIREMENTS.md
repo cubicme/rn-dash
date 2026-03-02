@@ -7,11 +7,11 @@
 
 ### Architecture
 
-- [ ] **ARCH-01**: Domain logic (worktree model, metro state machine, command dependencies, staleness rules) is pure Rust with zero dependencies on UI or system crates
-- [ ] **ARCH-02**: Infrastructure layer (process spawning, git operations, JIRA HTTP, tmux interaction, file I/O) is behind trait boundaries so implementations can be swapped or tested
-- [ ] **ARCH-03**: UI layer (ratatui widgets, rendering, layout) depends on domain types but never on infrastructure directly
+- [x] **ARCH-01**: Domain logic (worktree model, metro state machine, command dependencies, staleness rules) is pure Rust with zero dependencies on UI or system crates
+- [x] **ARCH-02**: Infrastructure layer (process spawning, git operations, JIRA HTTP, tmux interaction, file I/O) is behind trait boundaries so implementations can be swapped or tested
+- [x] **ARCH-03**: UI layer (ratatui widgets, rendering, layout) depends on domain types but never on infrastructure directly
 - [ ] **ARCH-04**: Application layer uses The Elm Architecture (TEA): AppState (model) → Action enum (update) → View functions (render)
-- [ ] **ARCH-05**: Code follows "A Philosophy of Software Design" by John Ousterhout — deep modules with simple interfaces, minimize shallow abstractions
+- [x] **ARCH-05**: Code follows "A Philosophy of Software Design" by John Ousterhout — deep modules with simple interfaces, minimize shallow abstractions
 - [ ] **ARCH-06**: Domain invariants (e.g., "only one metro at a time") are enforced in domain types, not scattered across UI or infra code
 
 ### TUI Shell
@@ -103,11 +103,11 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
+| ARCH-01 | Phase 1 | Complete |
+| ARCH-02 | Phase 1 | Complete |
+| ARCH-03 | Phase 1 | Complete |
 | ARCH-04 | Phase 1 | Pending |
-| ARCH-05 | Phase 1 | Pending |
+| ARCH-05 | Phase 1 | Complete |
 | ARCH-06 | Phase 1 | Pending |
 | SHELL-01 | Phase 1 | Pending |
 | SHELL-02 | Phase 1 | Pending |
