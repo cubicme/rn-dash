@@ -17,7 +17,7 @@ use ratatui::{
 use crate::app::AppState;
 
 /// Root render function. Called on every draw cycle from app::run().
-/// Layout: left column (worktree list) | right column (metro pane / command output)
+/// Layout: left column (worktree list) | right column (metro pane / log panel / command output)
 /// Footer: always rendered at bottom.
 /// Overlays: rendered last so they layer on top of all base content.
 pub fn view(f: &mut Frame, state: &AppState) {
@@ -35,16 +35,34 @@ pub fn view(f: &mut Frame, state: &AppState) {
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .areas(main_area);
 
-    // Right column split: top 40% metro pane | bottom 60% command output
-    let [metro_area, output_area] = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-        .areas(right_area);
-
-    // Render base panels
+    // Render worktree list (always in the left column)
     panels::render_worktree_list(f, left_area, state);
-    panels::render_metro_pane(f, metro_area, state);
-    panels::render_command_output(f, output_area, state);
+
+    // Right column split depends on log panel visibility:
+    // - Log hidden: metro (40%) | output (60%)
+    // - Log visible: metro (25%) | log (40%) | output (35%)
+    if state.log_panel_visible {
+        let [metro_area, log_area, output_area] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(25),
+                Constraint::Percentage(40),
+                Constraint::Percentage(35),
+            ])
+            .areas(right_area);
+
+        panels::render_metro_pane(f, metro_area, state);
+        panels::render_log_panel(f, log_area, state);
+        panels::render_command_output(f, output_area, state);
+    } else {
+        let [metro_area, output_area] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+            .areas(right_area);
+
+        panels::render_metro_pane(f, metro_area, state);
+        panels::render_command_output(f, output_area, state);
+    }
 
     // Render footer (always visible)
     footer::render_footer(f, footer_area, state);
