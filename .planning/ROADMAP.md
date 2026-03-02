@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer (completed 2026-03-02)
 - [x] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain (completed 2026-03-02)
-- [ ] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress)
+- [x] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress) (completed 2026-03-02)
 - [ ] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation
 - [ ] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch
 
@@ -101,6 +101,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
-| 3. Worktree Browser, Git, and RN Commands | 4/5 | Gap closure | - |
+| 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |

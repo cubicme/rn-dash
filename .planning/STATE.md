@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T08:41:01Z"
+last_updated: "2026-03-02T09:01:00Z"
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_plans: 11
+  completed_plans: 11
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 3 of 5 (Worktree Browser, Git and RN Commands) — COMPLETE
-Plan: 4 of 4 in current phase — ALL PLANS COMPLETE
-Status: Plan 03-04 Complete — UI rendering layer done (worktree list, modals, footer, help)
-Last activity: 2026-03-02 — Completed 03-04 (panels, modals, footer, help_overlay Phase 3 UI)
+Plan: 5 of 5 in current phase — ALL PLANS COMPLETE
+Status: Plan 03-05 Complete — Gap closure: 6 CommandSpec to_argv() deviations fixed
+Last activity: 2026-03-02 — Completed 03-05 (command.rs to_argv() corrections for RN-01, RN-02, RN-06, RN-07, RN-08, RN-10)
 
 Progress: [████████████░░] 60%
 
@@ -42,7 +42,7 @@ Progress: [████████████░░] 60%
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
 | Phase 2 | 3/3 | 13 min | 4.3 min |
-| Phase 3 | 4/4 | 17 min | 4.3 min |
+| Phase 3 | 5/5 | 19 min | 3.8 min |
 
 **Recent Trend:**
 - Last 5 plans: 4 min, 2 min, 3 min, 5 min, 2 min
@@ -55,6 +55,7 @@ Progress: [████████████░░] 60%
 | Phase 03-worktree-browser P02 | 2min | 2 tasks | 5 files |
 | Phase 03-worktree-browser P03 | 3min | 2 tasks | 2 files |
 | Phase 03-worktree-browser-git-and-rn-commands P04 | 10 | 2 tasks | 6 files |
+| Phase 03-worktree-browser-git-and-rn-commands P05 | 2min | 1 task | 1 file |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase 03-04]: modals.rs is separate module with its own centered_rect() — avoids cross-widget coupling, matches error_overlay.rs pattern
 - [Phase 03-04]: DevicePicker modal uses local ListState for rendering — modal owns selected index as usize, not ListState
 - [Phase 03-04]: Help overlay height increased from 70% to 80%, first column from 18 to 28 chars for Phase 3 keybinding sections
+- [03-05]: RnRunIos keeps yarn as launcher per RN-07 spec, with react-native run-ios as sub-command (not npx)
+- [03-05]: RnCleanAndroid and RnCleanCocoapods both use npx react-native clean --include <target> — unified clean interface replaces separate gradle/pod commands
 
 ### Pending Todos
 
@@ -114,6 +117,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T08:41:01Z
-Stopped at: Completed 03-04-PLAN.md — Phase 3 complete (UI rendering: panels, modals, footer, help overlay)
+Last session: 2026-03-02T09:01:00Z
+Stopped at: Completed 03-05-PLAN.md — Phase 3 gap closure complete (6 CommandSpec to_argv() deviations fixed)
 Resume file: None
