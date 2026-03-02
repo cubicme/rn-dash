@@ -6,9 +6,15 @@ edition = "2024"
 [dependencies]
 # TUI core — crossterm accessed via ratatui::crossterm, NOT as a direct dep
 ratatui = { version = "0.30", features = ["crossterm"] }
+# Enable event-stream feature so EventStream is available via ratatui::crossterm::event::EventStream
+# Same version as ratatui-crossterm uses — cargo feature-unifies, no duplication
+crossterm = { version = "0.29", features = ["event-stream"] }
 
 # Async runtime
 tokio = { version = "1.49", features = ["full"] }
+
+# Stream utilities — provides StreamExt trait for EventStream::next()
+futures = "0.3"
 
 # Error handling
 anyhow = "1"
