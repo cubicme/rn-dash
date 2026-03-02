@@ -30,7 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User can open a help overlay (? or F1) that lists all available keybindings, and dismiss it with q or Escape
   4. User sees a clear error state with retry and dismiss options when any operation fails with a non-zero exit code
   5. App compiles without warnings, domain logic has no direct dependency on ratatui or process crates (verifiable via cargo tree), and there is exactly one crossterm version in the dependency graph
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Cargo manifest + layered module stubs (domain/infra/ui isolation boundaries)
+- [ ] 01-02-PLAN.md — TEA app loop: AppState, Action enum, handle_key(), update(), async event loop, terminal lifecycle with panic hook
+- [ ] 01-03-PLAN.md — UI render layer: three-panel layout, footer keyhints, help overlay, error overlay
 
 ### Phase 2: Metro Process Control
 **Goal**: Users can start, stop, restart, and monitor metro with guaranteed single-instance enforcement — the zombie-process and port-binding bugs are addressed before any downstream features depend on this layer
@@ -82,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scaffold and TUI Shell | 0/TBD | Not started | - |
+| 1. Scaffold and TUI Shell | 0/3 | Planned | - |
 | 2. Metro Process Control | 0/TBD | Not started | - |
 | 3. Worktree Browser, Git, and RN Commands | 0/TBD | Not started | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
