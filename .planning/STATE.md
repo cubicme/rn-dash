@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T12:59:16Z"
+last_updated: "2026-03-02T13:04:33Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 4 of 5 (Config and JIRA Integration) — IN PROGRESS
-Plan: 1 of 2 in current phase — COMPLETE
-Status: Plan 04-01 Complete — Config, JIRA HTTP client, cache, and tmux detection infra modules added
-Last activity: 2026-03-02 — Completed 04-01 (reqwest 0.12, config.rs, jira.rs, jira_cache.rs, mod.rs)
+Phase: 4 of 5 (Config and JIRA Integration) — COMPLETE
+Plan: 2 of 2 in current phase — COMPLETE
+Status: Plan 04-02 Complete — JIRA title fetching wired into TEA loop (AppState, Action enum, WorktreesLoaded, JiraTitlesFetched)
+Last activity: 2026-03-02 — Completed 04-02 (action.rs JiraTitlesFetched, app.rs Phase 4 fields + handlers)
 
-Progress: [█████████████░] 65%
+Progress: [██████████████] 77%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [█████████████░] 65%
 | Phase 03-worktree-browser-git-and-rn-commands P04 | 10 | 2 tasks | 6 files |
 | Phase 03-worktree-browser-git-and-rn-commands P05 | 2min | 1 task | 1 file |
 | Phase 04-config-and-jira-integration P01 | 2min | 1 task | 6 files |
+| Phase 04-config-and-jira-integration P02 | 2min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -110,6 +111,9 @@ Recent decisions affecting current work:
 - [04-01]: extract_jira_key() uses match/continue instead of ? operator — ? inside for loop exits the whole function, not just the iteration
 - [04-01]: HttpJiraClient::new() builds bare reqwest::Client with no default auth — auth applied per-request for clarity and auditability
 - [04-01]: save_config() 0600 permissions guarded by #[cfg(unix)] with #[cfg(not(unix))] no-op fallback
+- [04-02]: JiraClient trait requires Debug supertrait — AppState derives Debug so Arc<dyn JiraClient> must satisfy Debug
+- [04-02]: HttpJiraClient derives Debug — reqwest::Client implements Debug, so derive works cleanly
+- [04-02]: panels.rs required no changes — display_name() and dim branch parenthetical were already implemented in Phase 3
 
 ### Pending Todos
 
@@ -122,6 +126,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T12:59:16Z
-Stopped at: Completed 04-01-PLAN.md — reqwest JIRA infra modules (config.rs, jira.rs, jira_cache.rs) added
+Last session: 2026-03-02T13:04:33Z
+Stopped at: Completed 04-02-PLAN.md — Phase 4 complete: JIRA title fetching wired into TEA loop
 Resume file: None
