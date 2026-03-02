@@ -95,7 +95,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can switch the "running" worktree with one keystroke and the dashboard automatically kills metro in the current worktree, waits for port 8081 to free, and starts metro in the newly selected worktree — progress is visible during the transition
   2. User can open Claude Code in a new tmux tab at a selected worktree's directory with one keystroke; the tab opens with claude as the initial shell command (not via send-keys) so there is no race condition on shell initialization
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Worktree switch orchestration (Enter key) + Claude Code tmux tab launch (C key), with footer/help updates
 
 ## Progress
 
@@ -108,4 +111,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
 | 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
 | 4. Config and JIRA Integration | 3/3 | Complete   | 2026-03-02 |
-| 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |
+| 5. Worktree Switching and Claude Code | 0/1 | Not started | - |
