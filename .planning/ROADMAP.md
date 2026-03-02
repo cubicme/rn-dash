@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer (completed 2026-03-02)
 - [x] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain (completed 2026-03-02)
-- [x] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (completed 2026-03-02)
+- [ ] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress)
 - [ ] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation
 - [ ] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch
 
@@ -63,13 +63,14 @@ Plans:
   3. User can run any git operation (reset --hard, pull, push, rebase, checkout, checkout -b) on a selected worktree and watch streaming output in a panel; destructive operations (reset --hard) show a confirmation prompt before executing
   4. User can run any RN command (clean android, clean cocoapods, rm node_modules, yarn install, pod-install, run-android with device selection, run-ios with device/simulator selection, unit-tests, jest with filter, lint, check-types) on a selected worktree with streaming output
   5. Dashboard shows a staleness hint when node_modules appears outdated relative to package.json or yarn.lock, and lazily installs dependencies before launching the app if the user has not done so manually
-**Plans**: 4 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Domain types: CommandSpec enum, Worktree struct expansion, ModalState, Action enum extensions, serde deps
-- [ ] 03-02-PLAN.md — Infra layer: worktree enumeration, command runner, label persistence, device enumeration
-- [ ] 03-03-PLAN.md — App wiring: AppState extensions, handle_key modal/palette routing, update() for all Phase 3 actions, worktree loading
-- [ ] 03-04-PLAN.md — UI rendering: worktree list widget, command output panel, modals, footer/help updates
+- [x] 03-01-PLAN.md — Domain types: CommandSpec enum, Worktree struct expansion, ModalState, Action enum extensions, serde deps
+- [x] 03-02-PLAN.md — Infra layer: worktree enumeration, command runner, label persistence, device enumeration
+- [x] 03-03-PLAN.md — App wiring: AppState extensions, handle_key modal/palette routing, update() for all Phase 3 actions, worktree loading
+- [x] 03-04-PLAN.md — UI rendering: worktree list widget, command output panel, modals, footer/help updates
+- [ ] 03-05-PLAN.md — Gap closure: fix 6 CommandSpec to_argv() variants to match requirements (RN-01, RN-02, RN-06, RN-07, RN-08, RN-10)
 
 ### Phase 4: Config and JIRA Integration
 **Goal**: Users see JIRA ticket titles next to branch names, the JIRA API token is stored securely with correct file permissions, and the dashboard degrades gracefully when JIRA is unreachable
@@ -100,6 +101,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
-| 3. Worktree Browser, Git, and RN Commands | 4/4 | Complete   | 2026-03-02 |
+| 3. Worktree Browser, Git, and RN Commands | 4/5 | Gap closure | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |
