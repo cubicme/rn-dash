@@ -7,3 +7,6 @@ pub mod worktrees;
 pub mod command_runner;
 pub mod labels;
 pub mod devices;
+pub mod config;
+pub mod jira;
+pub mod jira_cache;
