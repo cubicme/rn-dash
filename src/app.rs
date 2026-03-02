@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use crate::action::Action;
+use crate::domain::command::{CommandSpec, ModalState};
 use crate::domain::metro::MetroHandle;
 use futures::StreamExt;
 use ratatui::crossterm::event::{EventStream, KeyCode, KeyEventKind};
@@ -8,13 +9,16 @@ use std::path::PathBuf;
 /// Maximum number of metro log lines retained in memory.
 const MAX_LOG_LINES: usize = 1000;
 
+/// Maximum number of command output lines retained in memory.
+const MAX_COMMAND_LINES: usize = 1000;
+
 /// Which panel currently has keyboard focus.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum FocusedPanel {
     #[default]
     WorktreeList,
     MetroPane,
-    CommandOutput, // stub for Phase 3
+    CommandOutput,
 }
 
 impl FocusedPanel {
@@ -41,6 +45,15 @@ pub struct ErrorState {
     pub can_retry: bool,
 }
 
+/// Whether the command palette is in git or RN mode.
+#[derive(Debug, Clone, PartialEq)]
+pub enum PaletteMode {
+    /// 'g' was pressed — next key selects a git command.
+    Git,
+    /// 'c' was pressed — next key selects an RN command.
+    Rn,
+}
+
 /// Application state — the single source of truth. All mutations happen in update().
 ///
 /// No longer derives Default — MetroManager uses new() rather than Default::default().
@@ -61,16 +74,51 @@ pub struct AppState {
     pub log_panel_visible: bool,
     pub log_filter_active: bool,
 
-    // Active worktree (stub until Phase 3 populates the real list)
+    // Active worktree (updated from WorktreesLoaded + WorktreeSelectNext/Prev)
     pub active_worktree_path: Option<std::path::PathBuf>,
 
     // Set to true when MetroRestart or MetroStart-while-running triggers a stop-first-then-start.
     // When MetroExited fires and this is true, a new MetroStart is auto-dispatched.
     pub pending_restart: bool,
+
+    // --- Phase 3 fields ---
+
+    // Worktree browser
+    pub worktrees: Vec<crate::domain::worktree::Worktree>,
+    pub worktree_list_state: ratatui::widgets::ListState,
+
+    // Command output panel
+    pub command_output: std::collections::VecDeque<String>,
+    pub command_output_scroll: usize,
+    pub running_command: Option<crate::domain::command::CommandSpec>,
+    pub command_task: Option<tokio::task::JoinHandle<()>>,
+
+    // Lazy install (WORK-06): run yarn install before run-android/run-ios if worktree is stale
+    pub pending_command_after_install: Option<crate::domain::command::CommandSpec>,
+
+    // Modal state — only one modal active at a time
+    pub modal: Option<crate::domain::command::ModalState>,
+
+    // Label store: branch_name -> label_text (persisted to labels.json)
+    pub labels: std::collections::HashMap<String, String>,
+
+    // Repo root — worktrees are listed relative to this path
+    pub repo_root: std::path::PathBuf,
+
+    // Command palette mode — Some when user pressed 'g' or 'c' in WorktreeList
+    pub palette_mode: Option<PaletteMode>,
+
+    // Pending device command — stored while async device enumeration is in flight
+    pub pending_device_command: Option<crate::domain::command::CommandSpec>,
+
+    // Pending label branch — set by StartSetLabel, consumed by ModalInputSubmit
+    pub pending_label_branch: Option<String>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
+        let mut worktree_list_state = ratatui::widgets::ListState::default();
+        worktree_list_state.select(Some(0));
         Self {
             focused_panel: FocusedPanel::default(),
             show_help: false,
@@ -83,6 +131,23 @@ impl Default for AppState {
             log_filter_active: false,
             active_worktree_path: None,
             pending_restart: false,
+            // Phase 3
+            worktrees: Vec::new(),
+            worktree_list_state,
+            command_output: std::collections::VecDeque::new(),
+            command_output_scroll: 0,
+            running_command: None,
+            command_task: None,
+            pending_command_after_install: None,
+            modal: None,
+            labels: std::collections::HashMap::new(),
+            repo_root: PathBuf::from(
+                std::env::var("HOME").unwrap_or_else(|_| ".".into()),
+            )
+            .join("aljazeera/ump"),
+            palette_mode: None,
+            pending_device_command: None,
+            pending_label_branch: None,
         }
     }
 }
@@ -97,7 +162,75 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
         return None;
     }
 
-    // Overlay modes intercept keys first — overlay dismissal takes priority
+    // --- MODAL INTERCEPTION — MUST be first (prevents key leak to navigation) ---
+    if let Some(ref modal) = state.modal {
+        return match modal {
+            ModalState::Confirm { .. } => match key.code {
+                Char('y') | Char('Y') => Some(Action::ModalConfirm),
+                Char('n') | Char('N') | Esc => Some(Action::ModalCancel),
+                _ => None,
+            },
+            ModalState::TextInput { .. } => match key.code {
+                Esc => Some(Action::ModalCancel),
+                Enter => Some(Action::ModalInputSubmit),
+                Backspace => Some(Action::ModalInputBackspace),
+                Char(c) => Some(Action::ModalInputChar(c)),
+                _ => None,
+            },
+            ModalState::DevicePicker { .. } => match key.code {
+                Esc => Some(Action::ModalCancel),
+                Enter => Some(Action::ModalDeviceConfirm),
+                Char('j') | Down => Some(Action::ModalDeviceNext),
+                Char('k') | Up => Some(Action::ModalDevicePrev),
+                _ => None,
+            },
+        };
+    }
+
+    // --- PALETTE MODE ROUTING — after modal, before overlays ---
+    if let Some(ref mode) = state.palette_mode {
+        return match mode {
+            PaletteMode::Git => match key.code {
+                Char('p') => Some(Action::CommandRun(CommandSpec::GitPull)),
+                Char('P') => Some(Action::CommandRun(CommandSpec::GitPush)),
+                Char('d') => Some(Action::CommandRun(CommandSpec::GitResetHard)),
+                Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout {
+                    branch: String::new(),
+                })),
+                Char('B') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew {
+                    branch: String::new(),
+                })),
+                Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase {
+                    target: String::new(),
+                })),
+                Esc => Some(Action::ModalCancel), // exits palette mode
+                _ => Some(Action::ModalCancel),   // unknown key exits palette
+            },
+            PaletteMode::Rn => match key.code {
+                Char('a') => Some(Action::CommandRun(CommandSpec::RnCleanAndroid)),
+                Char('c') => Some(Action::CommandRun(CommandSpec::RnCleanCocoapods)),
+                Char('n') => Some(Action::CommandRun(CommandSpec::RmNodeModules)),
+                Char('i') => Some(Action::CommandRun(CommandSpec::YarnInstall)),
+                Char('p') => Some(Action::CommandRun(CommandSpec::YarnPodInstall)),
+                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid {
+                    device_id: String::new(),
+                })),
+                Char('s') => Some(Action::CommandRun(CommandSpec::RnRunIos {
+                    device_id: String::new(),
+                })),
+                Char('t') => Some(Action::CommandRun(CommandSpec::YarnUnitTests)),
+                Char('j') => Some(Action::CommandRun(CommandSpec::YarnJest {
+                    filter: String::new(),
+                })),
+                Char('l') => Some(Action::CommandRun(CommandSpec::YarnLint)),
+                Char('y') => Some(Action::CommandRun(CommandSpec::YarnCheckTypes)),
+                Esc => Some(Action::ModalCancel), // exits palette mode
+                _ => Some(Action::ModalCancel),   // unknown key exits palette
+            },
+        };
+    }
+
+    // --- OVERLAY MODES ---
     if state.show_help {
         return match key.code {
             Char('q') | Esc => Some(Action::DismissHelp),
@@ -113,23 +246,44 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
         };
     }
 
-    // Metro pane specific keybindings — checked before general navigation.
-    // Error overlay intercept above already claims 'r' for RetryLastCommand, so
-    // MetroRestart ('r') is only reachable when no error overlay is showing. Correct priority.
+    // --- METRO PANE SPECIFIC ---
     if state.focused_panel == FocusedPanel::MetroPane {
         match key.code {
             Char('s') => return Some(Action::MetroStart),
             Char('x') => return Some(Action::MetroStop),
             Char('r') => return Some(Action::MetroRestart),
             Char('l') => return Some(Action::MetroToggleLog),
-            // Shift-J / Shift-R avoid conflict with j=FocusDown and r=MetroRestart
             Char('J') => return Some(Action::MetroSendDebugger),
             Char('R') => return Some(Action::MetroSendReload),
-            _ => {} // fall through to normal mode navigation
+            _ => {} // fall through to normal navigation
         }
     }
 
-    // Normal mode keybindings
+    // --- WORKTREE LIST SPECIFIC ---
+    if state.focused_panel == FocusedPanel::WorktreeList {
+        match key.code {
+            Char('j') | Down => return Some(Action::WorktreeSelectNext),
+            Char('k') | Up => return Some(Action::WorktreeSelectPrev),
+            Char('L') => return Some(Action::StartSetLabel),
+            Char('g') => return Some(Action::EnterGitPalette),
+            Char('c') => return Some(Action::EnterRnPalette),
+            Char('R') => return Some(Action::RefreshWorktrees),
+            _ => {}
+        }
+    }
+
+    // --- COMMAND OUTPUT SPECIFIC ---
+    if state.focused_panel == FocusedPanel::CommandOutput {
+        match key.code {
+            Char('j') | Down => return Some(Action::FocusDown),
+            Char('k') | Up => return Some(Action::FocusUp),
+            Char('X') => return Some(Action::CommandCancel),
+            Char('C') => return Some(Action::CommandOutputClear),
+            _ => {}
+        }
+    }
+
+    // --- NORMAL MODE ---
     match key.code {
         Char('q') => Some(Action::Quit),
         Char('?') | F(1) => Some(Action::ShowHelp),
@@ -144,10 +298,56 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     }
 }
 
+/// Directly dispatches a command without going through the pre-processing pipeline.
+/// Used by ModalConfirm to run confirmed destructive commands, and internally after
+/// text-input and device-picker modals complete.
+///
+/// Clears command_output, sets running_command, spawns the process task.
+fn dispatch_command(
+    state: &mut AppState,
+    spec: CommandSpec,
+    metro_tx: &tokio::sync::mpsc::UnboundedSender<Action>,
+) {
+    let wt = if !state.worktrees.is_empty() {
+        let idx = state.worktree_list_state.selected().unwrap_or(0);
+        let idx = idx.min(state.worktrees.len() - 1);
+        state.worktrees[idx].clone()
+    } else {
+        // No worktrees loaded yet — can't dispatch
+        state.command_output.push_back("[error] no worktree selected".into());
+        return;
+    };
+
+    // Clear output and prepare header
+    state.command_output.clear();
+    state.command_output_scroll = 0;
+    state
+        .command_output
+        .push_back(format!("--- {} ---", spec.label()));
+    state.running_command = Some(spec.clone());
+
+    // Abort any existing command task
+    if let Some(task) = state.command_task.take() {
+        task.abort();
+    }
+
+    let tx = metro_tx.clone();
+    let path = wt.path.clone();
+    let branch = wt.branch.clone();
+    let spec_for_task = spec.clone();
+
+    // spawn_command_task is async so we wrap it in a nested spawn
+    let handle = tokio::spawn(async move {
+        let task = crate::infra::command_runner::spawn_command_task(spec_for_task, path, branch, tx).await;
+        let _ = task.await;
+    });
+    state.command_task = Some(handle);
+}
+
 /// TEA update function — the ONLY place AppState is mutated.
 ///
 /// `metro_tx` and `handle_tx` are channels that connect update() to the async runtime:
-/// - `metro_tx`: background tasks send Action events (MetroLogLine, MetroExited) back to the loop
+/// - `metro_tx`: background tasks send Action events back to the loop
 /// - `handle_tx`: spawn task sends the MetroHandle back so it can be registered in AppState
 ///
 /// Async operations are always dispatched via tokio::spawn — update() never awaits.
@@ -161,17 +361,28 @@ pub fn update(
         // Phase 1 actions
         Action::FocusNext => state.focused_panel = state.focused_panel.next(),
         Action::FocusPrev => state.focused_panel = state.focused_panel.prev(),
-        Action::FocusUp | Action::FocusDown | Action::FocusLeft | Action::FocusRight => {
-            // Phase 1: no intra-panel navigation yet — actions dispatched but no-op within panels
+        Action::FocusUp => {
+            if state.focused_panel == FocusedPanel::CommandOutput {
+                state.command_output_scroll = state.command_output_scroll.saturating_sub(1);
+            }
         }
+        Action::FocusDown => {
+            if state.focused_panel == FocusedPanel::CommandOutput {
+                let max = state.command_output.len();
+                if state.command_output_scroll < max {
+                    state.command_output_scroll += 1;
+                }
+            }
+        }
+        Action::FocusLeft => {}
+        Action::FocusRight => {}
         Action::Search => {
-            // Phase 1: stub — keybinding registered, search mode implemented in Phase 4+
+            // Phase 4+: stub
         }
         Action::ShowHelp => state.show_help = true,
         Action::DismissHelp => state.show_help = false,
         Action::DismissError => state.error_state = None,
         Action::RetryLastCommand => {
-            // Phase 2+ will populate retry logic; for now just clear the error
             state.error_state = None;
         }
         Action::Quit => state.should_quit = true,
@@ -180,7 +391,6 @@ pub fn update(
 
         Action::MetroStart => {
             if state.metro.is_running() {
-                // Another instance is running — stop it first, then auto-start when it exits.
                 state.pending_restart = true;
                 update(state, Action::MetroStop, metro_tx, handle_tx);
                 return;
@@ -199,13 +409,10 @@ pub fn update(
         Action::MetroStop => {
             if let Some(mut handle) = state.metro.take_handle() {
                 state.metro.set_stopping();
-                // Signal the process task to kill the child via the oneshot channel.
                 if let Some(kill_tx) = handle.kill_tx.take() {
                     let _ = kill_tx.send(());
                 }
-                // Stop stdin writes — no more bytes needed after stop.
                 handle.stdin_task.abort();
-                // metro_process_task owns the child and will send MetroExited when done.
             }
         }
 
@@ -233,7 +440,6 @@ pub fn update(
         Action::MetroToggleLog => {
             state.log_panel_visible = !state.log_panel_visible;
             state.log_filter_active = state.log_panel_visible;
-            // Restart with updated filter if metro is currently running.
             if state.metro.is_running() {
                 state.pending_restart = true;
                 update(state, Action::MetroStop, metro_tx, handle_tx);
@@ -266,28 +472,388 @@ pub fn update(
             }
         }
 
-        // Phase 3 actions — stubs that will be implemented in Plan 03-02 (app logic).
-        Action::WorktreeSelectNext
-        | Action::WorktreeSelectPrev
-        | Action::RefreshWorktrees
-        | Action::WorktreesLoaded(_)
-        | Action::CommandRun(_)
-        | Action::CommandOutputLine(_)
-        | Action::CommandExited
-        | Action::CommandOutputClear
-        | Action::CommandCancel
-        | Action::ShowCommandPalette
-        | Action::ModalConfirm
-        | Action::ModalCancel
-        | Action::ModalInputChar(_)
-        | Action::ModalInputBackspace
-        | Action::ModalInputSubmit
-        | Action::ModalDeviceNext
-        | Action::ModalDevicePrev
-        | Action::ModalDeviceConfirm
-        | Action::SetLabel { .. }
-        | Action::StartSetLabel => {
-            // Phase 3 stubs — implemented in Plan 03-02 (app state logic)
+        // --- Phase 3: Worktree navigation ---
+
+        Action::WorktreeSelectNext => {
+            let len = state.worktrees.len();
+            if len > 0 {
+                let i = state.worktree_list_state.selected().unwrap_or(0);
+                let next = if i >= len - 1 { 0 } else { i + 1 };
+                state.worktree_list_state.select(Some(next));
+                // Update active worktree for metro
+                state.active_worktree_path = Some(state.worktrees[next].path.clone());
+            }
+        }
+
+        Action::WorktreeSelectPrev => {
+            let len = state.worktrees.len();
+            if len > 0 {
+                let i = state.worktree_list_state.selected().unwrap_or(0);
+                let prev = if i == 0 { len - 1 } else { i - 1 };
+                state.worktree_list_state.select(Some(prev));
+                // Update active worktree for metro
+                state.active_worktree_path = Some(state.worktrees[prev].path.clone());
+            }
+        }
+
+        Action::WorktreesLoaded(mut worktrees) => {
+            // Apply labels from state.labels: set wt.label for each worktree
+            for wt in &mut worktrees {
+                wt.label = state.labels.get(&wt.branch).cloned();
+            }
+
+            // Clamp selected index within new list
+            let clamped = if worktrees.is_empty() {
+                0
+            } else {
+                let current = state.worktree_list_state.selected().unwrap_or(0);
+                current.min(worktrees.len().saturating_sub(1))
+            };
+
+            if !worktrees.is_empty() {
+                state.worktree_list_state.select(Some(clamped));
+                state.active_worktree_path = Some(worktrees[clamped].path.clone());
+            }
+
+            state.worktrees = worktrees;
+        }
+
+        Action::RefreshWorktrees => {
+            let repo_root = state.repo_root.clone();
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                    Ok(wts) => {
+                        let _ = tx.send(Action::WorktreesLoaded(wts));
+                    }
+                    Err(e) => {
+                        tracing::warn!("list_worktrees failed: {e}");
+                    }
+                }
+            });
+        }
+
+        // --- Phase 3: Command dispatch ---
+
+        Action::CommandRun(spec) => {
+            // Clear palette mode whenever a command is dispatched
+            state.palette_mode = None;
+
+            // Get selected worktree (needed for all branches)
+            let wt_branch = if !state.worktrees.is_empty() {
+                let idx = state.worktree_list_state.selected().unwrap_or(0);
+                let idx = idx.min(state.worktrees.len() - 1);
+                Some((state.worktrees[idx].branch.clone(), state.worktrees[idx].stale))
+            } else {
+                None
+            };
+
+            // WORK-06: lazy install — stale worktree + run command triggers yarn install first
+            if let Some((_, stale)) = &wt_branch {
+                if *stale {
+                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. }) {
+                        state.pending_command_after_install = Some(spec);
+                        dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
+                        return;
+                    }
+                }
+            }
+
+            // Pre-processing pipeline
+            if spec.is_destructive() {
+                let branch_name = wt_branch
+                    .map(|(b, _)| b)
+                    .unwrap_or_else(|| "(unknown)".to_string());
+                state.modal = Some(ModalState::Confirm {
+                    prompt: format!("Run '{}' on {}?", spec.label(), branch_name),
+                    pending_command: spec,
+                });
+                return;
+            }
+
+            if spec.needs_text_input() {
+                let prompt = match &spec {
+                    CommandSpec::GitRebase { .. } => "Rebase onto:".to_string(),
+                    CommandSpec::GitCheckout { .. } => "Branch to checkout:".to_string(),
+                    CommandSpec::GitCheckoutNew { .. } => "New branch name:".to_string(),
+                    CommandSpec::YarnJest { .. } => "Jest filter:".to_string(),
+                    _ => "Input:".to_string(),
+                };
+                state.modal = Some(ModalState::TextInput {
+                    prompt,
+                    buffer: String::new(),
+                    pending_template: Box::new(spec),
+                });
+                return;
+            }
+
+            if spec.needs_device_selection() {
+                state.pending_device_command = Some(spec.clone());
+                let tx = metro_tx.clone();
+                let is_android = matches!(spec, CommandSpec::RnRunAndroid { .. });
+                tokio::spawn(async move {
+                    let devices = if is_android {
+                        crate::infra::devices::list_android_devices().await
+                    } else {
+                        crate::infra::devices::list_ios_devices().await
+                    };
+                    match devices {
+                        Ok(devs) => {
+                            let _ = tx.send(Action::DevicesEnumerated(devs));
+                        }
+                        Err(e) => {
+                            tracing::warn!("device enumeration failed: {e}");
+                            let _ = tx.send(Action::DevicesEnumerated(vec![]));
+                        }
+                    }
+                });
+                return;
+            }
+
+            // Normal dispatch
+            dispatch_command(state, spec, metro_tx);
+        }
+
+        // --- Phase 3: Command output events ---
+
+        Action::CommandOutputLine(line) => {
+            state.command_output.push_back(line);
+            if state.command_output.len() > MAX_COMMAND_LINES {
+                state.command_output.pop_front();
+            }
+        }
+
+        Action::CommandExited => {
+            state.running_command = None;
+            state.command_task = None;
+
+            // WORK-06: if yarn install just finished, run the deferred command
+            if let Some(deferred) = state.pending_command_after_install.take() {
+                dispatch_command(state, deferred, metro_tx);
+                return;
+            }
+        }
+
+        Action::CommandOutputClear => {
+            state.command_output.clear();
+            state.command_output_scroll = 0;
+        }
+
+        Action::CommandCancel => {
+            if let Some(task) = state.command_task.take() {
+                task.abort();
+            }
+            state.running_command = None;
+            state.command_output.push_back("[cancelled]".into());
+        }
+
+        // --- Phase 3: Modal actions ---
+
+        Action::ShowCommandPalette => {
+            // Palette activation is handled via EnterGitPalette / EnterRnPalette.
+            // This variant is kept for backward compatibility.
+        }
+
+        Action::ModalConfirm => {
+            if let Some(ModalState::Confirm { pending_command, .. }) = state.modal.take() {
+                // Dispatch directly — skip pre-processing (already confirmed)
+                dispatch_command(state, pending_command, metro_tx);
+            }
+        }
+
+        Action::ModalCancel => {
+            state.modal = None;
+            state.palette_mode = None;
+        }
+
+        Action::ModalInputChar(c) => {
+            if let Some(ModalState::TextInput { buffer, .. }) = state.modal.as_mut() {
+                buffer.push(c);
+            }
+        }
+
+        Action::ModalInputBackspace => {
+            if let Some(ModalState::TextInput { buffer, .. }) = state.modal.as_mut() {
+                buffer.pop();
+            }
+        }
+
+        Action::ModalInputSubmit => {
+            if let Some(modal) = state.modal.take() {
+                match modal {
+                    ModalState::TextInput {
+                        buffer,
+                        pending_template,
+                        ..
+                    } => {
+                        // Check if this is a label submit
+                        if let Some(branch) = state.pending_label_branch.take() {
+                            update(
+                                state,
+                                Action::SetLabel {
+                                    branch,
+                                    label: buffer,
+                                },
+                                metro_tx,
+                                handle_tx,
+                            );
+                        } else {
+                            // Build the real CommandSpec by filling in the text
+                            let real_spec = match *pending_template {
+                                CommandSpec::GitRebase { .. } => {
+                                    CommandSpec::GitRebase { target: buffer }
+                                }
+                                CommandSpec::GitCheckout { .. } => {
+                                    CommandSpec::GitCheckout { branch: buffer }
+                                }
+                                CommandSpec::GitCheckoutNew { .. } => {
+                                    CommandSpec::GitCheckoutNew { branch: buffer }
+                                }
+                                CommandSpec::YarnJest { .. } => {
+                                    CommandSpec::YarnJest { filter: buffer }
+                                }
+                                other => other,
+                            };
+                            dispatch_command(state, real_spec, metro_tx);
+                        }
+                    }
+                    other => {
+                        // Restore modal if wrong type (shouldn't happen)
+                        state.modal = Some(other);
+                    }
+                }
+            }
+        }
+
+        Action::ModalDeviceNext => {
+            if let Some(ModalState::DevicePicker {
+                ref devices,
+                ref mut selected,
+                ..
+            }) = state.modal
+            {
+                if !devices.is_empty() {
+                    *selected = if *selected >= devices.len() - 1 {
+                        0
+                    } else {
+                        *selected + 1
+                    };
+                }
+            }
+        }
+
+        Action::ModalDevicePrev => {
+            if let Some(ModalState::DevicePicker {
+                ref devices,
+                ref mut selected,
+                ..
+            }) = state.modal
+            {
+                if !devices.is_empty() {
+                    *selected = if *selected == 0 {
+                        devices.len() - 1
+                    } else {
+                        *selected - 1
+                    };
+                }
+            }
+        }
+
+        Action::ModalDeviceConfirm => {
+            if let Some(ModalState::DevicePicker {
+                devices,
+                selected,
+                pending_template,
+            }) = state.modal.take()
+            {
+                if let Some(device) = devices.get(selected) {
+                    let real_spec = match *pending_template {
+                        CommandSpec::RnRunAndroid { .. } => CommandSpec::RnRunAndroid {
+                            device_id: device.id.clone(),
+                        },
+                        CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
+                            device_id: device.id.clone(),
+                        },
+                        other => other,
+                    };
+                    dispatch_command(state, real_spec, metro_tx);
+                }
+            }
+        }
+
+        // --- Phase 3: Device enumeration (async callback) ---
+
+        Action::DevicesEnumerated(devices) => {
+            if let Some(spec) = state.pending_device_command.take() {
+                match devices.len() {
+                    0 => {
+                        state
+                            .command_output
+                            .push_back("[error] no devices found".into());
+                    }
+                    1 => {
+                        // Only one device — skip picker
+                        let real_spec = match spec {
+                            CommandSpec::RnRunAndroid { .. } => CommandSpec::RnRunAndroid {
+                                device_id: devices[0].id.clone(),
+                            },
+                            CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
+                                device_id: devices[0].id.clone(),
+                            },
+                            other => other,
+                        };
+                        dispatch_command(state, real_spec, metro_tx);
+                    }
+                    _ => {
+                        // Multiple devices — show picker
+                        state.modal = Some(ModalState::DevicePicker {
+                            devices,
+                            selected: 0,
+                            pending_template: Box::new(spec),
+                        });
+                    }
+                }
+            }
+        }
+
+        // --- Phase 3: Label management ---
+
+        Action::SetLabel { branch, label } => {
+            state.labels.insert(branch.clone(), label.clone());
+            if let Err(e) = crate::infra::labels::save_labels(&state.labels) {
+                tracing::warn!("save_labels failed: {e}");
+            }
+            // Update the matching worktree's label field in memory
+            for wt in &mut state.worktrees {
+                if wt.branch == branch {
+                    wt.label = Some(label.clone());
+                }
+            }
+        }
+
+        Action::StartSetLabel => {
+            if !state.worktrees.is_empty() {
+                let idx = state.worktree_list_state.selected().unwrap_or(0);
+                let idx = idx.min(state.worktrees.len() - 1);
+                let branch = state.worktrees[idx].branch.clone();
+                let current_label = state.worktrees[idx].label.clone().unwrap_or_default();
+                state.pending_label_branch = Some(branch.clone());
+                state.modal = Some(ModalState::TextInput {
+                    prompt: format!("Label for {}:", branch),
+                    buffer: current_label,
+                    pending_template: Box::new(CommandSpec::YarnLint), // sentinel — not used
+                });
+            }
+        }
+
+        // --- Phase 3: Palette mode activation ---
+
+        Action::EnterGitPalette => {
+            state.palette_mode = Some(PaletteMode::Git);
+        }
+
+        Action::EnterRnPalette => {
+            state.palette_mode = Some(PaletteMode::Rn);
         }
     }
 }
@@ -299,12 +865,30 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
     let mut events = EventStream::new();
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(250));
 
-    // Channel for background tasks (log lines, MetroExited) to send Actions back to the loop.
+    // Channel for background tasks (log lines, MetroExited, WorktreesLoaded, etc.)
     let (metro_tx, mut metro_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
 
     // Channel for the spawn task to deliver the MetroHandle once spawning is complete.
-    // MetroHandle is not Clone, so it cannot go through the Action enum — separate channel.
     let (handle_tx, mut handle_rx) = tokio::sync::mpsc::unbounded_channel::<MetroHandle>();
+
+    // Load labels from disk on startup
+    state.labels = crate::infra::labels::load_labels().unwrap_or_default();
+
+    // Spawn initial worktree load
+    {
+        let repo_root = state.repo_root.clone();
+        let init_tx = metro_tx.clone();
+        tokio::spawn(async move {
+            match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                Ok(wts) => {
+                    let _ = init_tx.send(Action::WorktreesLoaded(wts));
+                }
+                Err(e) => {
+                    tracing::warn!("initial worktree load failed: {e}");
+                }
+            }
+        });
+    }
 
     loop {
         // Render first on each iteration — double-buffer diff handles no-change efficiently
@@ -330,7 +914,7 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
                 }
             }
             Some(action) = metro_rx.recv() => {
-                // Background tasks deliver log lines and MetroExited through this arm.
+                // Background tasks deliver log lines, MetroExited, WorktreesLoaded, etc.
                 update(&mut state, action, &metro_tx, &handle_tx);
             }
             Some(handle) = handle_rx.recv() => {
@@ -352,36 +936,29 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 // ---------------------------------------------------------------------------
 
 /// Spawns the metro process and delivers a `MetroHandle` via `handle_tx`.
-///
-/// If spawning fails, sends `MetroExited` via `action_tx` so the UI transitions
-/// back to Stopped (rather than staying in Starting forever).
 async fn spawn_metro_task(
     worktree_path: PathBuf,
     filter: bool,
     action_tx: tokio::sync::mpsc::UnboundedSender<Action>,
     handle_tx: tokio::sync::mpsc::UnboundedSender<MetroHandle>,
 ) {
-    use crate::infra::process::TokioProcessClient;
     use crate::infra::process::ProcessClient;
+    use crate::infra::process::TokioProcessClient;
 
     let client = TokioProcessClient;
     match client.spawn_metro(worktree_path.clone(), filter).await {
         Ok(mut child) => {
             let pid = child.id().unwrap_or(0);
 
-            // Take IO handles immediately — before any kill() call (research pitfall 5).
             let stdout = child.stdout.take().expect("stdout piped");
             let stderr = child.stderr.take().expect("stderr piped");
             let stdin = child.stdin.take().expect("stdin piped");
 
-            // Stdin channel: update() sends bytes via MetroHandle.stdin_tx.
             let (stdin_tx, stdin_rx) = tokio::sync::mpsc::unbounded_channel::<Vec<u8>>();
             let stdin_task = tokio::spawn(stdin_writer(stdin, stdin_rx));
 
-            // Kill channel: MetroStop sends () to signal process task to kill child.
             let (kill_tx, kill_rx) = tokio::sync::oneshot::channel::<()>();
 
-            // Process task owns Child, handles kill and external-death detection.
             let stream_tx = action_tx.clone();
             let stream_task =
                 tokio::spawn(metro_process_task(child, stdout, stderr, kill_rx, stream_tx));
@@ -400,20 +977,16 @@ async fn spawn_metro_task(
                 kill_tx: Some(kill_tx),
             };
 
-            // Deliver the handle — run() will call state.metro.register(handle).
             let _ = handle_tx.send(handle);
         }
         Err(e) => {
             tracing::error!("metro spawn failed: {e}");
-            // Transition UI back to Stopped so user can retry.
             let _ = action_tx.send(Action::MetroExited);
         }
     }
 }
 
-/// Owns the `Child` process. Handles two cases:
-/// 1. Kill signal via `kill_rx` — kills child, polls port free, sends MetroExited.
-/// 2. Child exits on its own (crash, external kill) — sends MetroExited directly.
+/// Owns the `Child` process. Handles kill signal and natural exit.
 async fn metro_process_task(
     mut child: tokio::process::Child,
     stdout: tokio::process::ChildStdout,
@@ -426,12 +999,10 @@ async fn metro_process_task(
 
     tokio::select! {
         _ = kill_rx => {
-            // User-initiated stop — kill child and wait for port to free.
             log_task.abort();
             if let Err(e) = child.kill().await {
                 tracing::error!("metro kill failed: {e}");
             }
-            // Poll for port free: metro's Node subprocess may hold 8081 briefly after SIGKILL.
             for _ in 0..50 {
                 if crate::infra::port::port_is_free(8081) {
                     break;
@@ -441,16 +1012,13 @@ async fn metro_process_task(
             let _ = tx.send(Action::MetroExited);
         }
         _ = child.wait() => {
-            // Metro died on its own — external kill, crash, or normal exit.
             log_task.abort();
             let _ = tx.send(Action::MetroExited);
         }
     }
 }
 
-/// Reads stdout and stderr lines from the metro process and sends them as `MetroLogLine` actions.
-///
-/// Exits when either stream closes (process exited) or the task is aborted by metro_process_task.
+/// Reads stdout and stderr lines from the metro process and sends them as `MetroLogLine`.
 async fn stream_metro_logs(
     stdout: tokio::process::ChildStdout,
     stderr: tokio::process::ChildStderr,
@@ -480,8 +1048,6 @@ async fn stream_metro_logs(
 }
 
 /// Forwards byte buffers from the `rx` channel to the child's stdin handle.
-///
-/// Exits when the channel is closed (stdin_tx dropped by MetroStop) or a write fails.
 async fn stdin_writer(
     mut stdin: tokio::process::ChildStdin,
     mut rx: tokio::sync::mpsc::UnboundedReceiver<Vec<u8>>,

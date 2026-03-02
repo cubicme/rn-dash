@@ -65,4 +65,11 @@ pub enum Action {
     // Phase 3: Label management
     SetLabel { branch: String, label: String },
     StartSetLabel,          // 'L' on selected worktree — opens text input for label
+
+    // Phase 3: Device enumeration (internal — sent by background task, not user)
+    DevicesEnumerated(Vec<crate::domain::command::DeviceInfo>),
+
+    // Phase 3: Command palette activation
+    EnterGitPalette,  // 'g' when WorktreeList focused — activates git palette mode
+    EnterRnPalette,   // 'c' when WorktreeList focused — activates RN palette mode
 }
