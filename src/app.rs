@@ -81,6 +81,9 @@ pub struct AppState {
     // When MetroExited fires and this is true, a new MetroStart is auto-dispatched.
     pub pending_restart: bool,
 
+    // Phase 5: captured target worktree path during worktree switch (consumed by MetroExited)
+    pub pending_switch_path: Option<std::path::PathBuf>,
+
     // --- Phase 3 fields ---
 
     // Worktree browser
@@ -136,6 +139,7 @@ impl Default for AppState {
             log_filter_active: false,
             active_worktree_path: None,
             pending_restart: false,
+            pending_switch_path: None,
             // Phase 3
             worktrees: Vec::new(),
             worktree_list_state,
@@ -277,6 +281,8 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('g') => return Some(Action::EnterGitPalette),
             Char('c') => return Some(Action::EnterRnPalette),
             Char('R') => return Some(Action::RefreshWorktrees),
+            Enter => return Some(Action::WorktreeSwitchToSelected),
+            Char('C') => return Some(Action::OpenClaudeCode),
             _ => {}
         }
     }
@@ -477,6 +483,10 @@ pub fn update(
             state.metro.clear();
             if state.pending_restart {
                 state.pending_restart = false;
+                // Consume pending_switch_path if set (worktree switch takes priority)
+                if let Some(path) = state.pending_switch_path.take() {
+                    state.active_worktree_path = Some(path);
+                }
                 update(state, Action::MetroStart, metro_tx, handle_tx);
             }
         }
@@ -899,6 +909,50 @@ pub fn update(
 
         Action::EnterRnPalette => {
             state.palette_mode = Some(PaletteMode::Rn);
+        }
+
+        // --- Phase 5: Worktree switching and Claude Code ---
+
+        Action::WorktreeSwitchToSelected => {
+            // Capture target path NOW — navigation may change active_worktree_path later
+            let target_path = state.worktrees
+                .get(state.worktree_list_state.selected().unwrap_or(0))
+                .map(|wt| wt.path.clone());
+
+            if state.metro.is_running() {
+                // Kill current → wait for port free → start in new worktree
+                state.pending_switch_path = target_path;
+                state.pending_restart = true;
+                update(state, Action::MetroStop, metro_tx, handle_tx);
+            } else {
+                // Not running — just start directly in selected worktree
+                if let Some(path) = target_path {
+                    state.active_worktree_path = Some(path);
+                }
+                update(state, Action::MetroStart, metro_tx, handle_tx);
+            }
+        }
+
+        Action::OpenClaudeCode => {
+            if !state.tmux_available {
+                state.error_state = Some(ErrorState {
+                    message: "Cannot open Claude Code: not inside a tmux session".into(),
+                    can_retry: false,
+                });
+                return;
+            }
+            if let Some(wt) = state.worktrees.get(
+                state.worktree_list_state.selected().unwrap_or(0)
+            ) {
+                let path = wt.path.clone();
+                let branch = wt.branch.clone();
+                tokio::spawn(async move {
+                    let window_name = format!("claude:{}", branch.split('/').last().unwrap_or(&branch));
+                    if let Err(e) = crate::infra::tmux::open_claude_in_worktree(&path, &window_name) {
+                        tracing::warn!("open claude code failed: {e}");
+                    }
+                });
+            }
         }
 
         // --- Phase 4: JIRA title fetch results ---

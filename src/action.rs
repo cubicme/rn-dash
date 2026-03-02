@@ -75,4 +75,8 @@ pub enum Action {
 
     // Phase 4: JIRA title background fetch results
     JiraTitlesFetched(Vec<(String, String)>),  // (ticket_key, title)
+
+    // Phase 5: Worktree switching and Claude Code
+    WorktreeSwitchToSelected, // Enter on worktree — switch metro to selected worktree
+    OpenClaudeCode,           // C on worktree — open claude in new tmux tab
 }
