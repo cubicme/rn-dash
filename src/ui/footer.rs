@@ -4,7 +4,7 @@ use ratatui::{
     widgets::Paragraph,
     Frame,
 };
-use crate::{app::{AppState, FocusedPanel}, ui::theme};
+use crate::{app::{AppState, FocusedPanel, PaletteMode}, domain::command::ModalState, ui::theme};
 
 /// Renders the footer key hint bar. Always 1 line tall at the bottom of the layout.
 /// Hints change based on which panel is focused — satisfies SHELL-02.
@@ -21,7 +21,7 @@ pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
 }
 
 /// Returns context-sensitive key hints for the current app state.
-/// Help/error overlays show their own hints; normal mode shows panel-specific hints.
+/// Priority order: palette mode → modal state → overlay modes → panel-specific hints.
 fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     if state.show_help {
         return vec![("q/Esc", "close help")];
@@ -29,11 +29,58 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     if state.error_state.is_some() {
         return vec![("r", "retry"), ("q/Esc", "dismiss")];
     }
+
+    // Palette mode hints — checked before panel hints
+    if let Some(ref mode) = state.palette_mode {
+        return match mode {
+            PaletteMode::Git => vec![
+                ("p", "pull"),
+                ("P", "push"),
+                ("d", "reset --hard"),
+                ("b", "checkout"),
+                ("B", "checkout -b"),
+                ("r", "rebase"),
+                ("Esc", "cancel"),
+            ],
+            PaletteMode::Rn => vec![
+                ("a", "clean android"),
+                ("c", "clean pods"),
+                ("n", "rm node_modules"),
+                ("i", "yarn install"),
+                ("p", "pod-install"),
+                ("d", "run-android"),
+                ("s", "run-ios"),
+                ("t", "unit-tests"),
+                ("j", "jest"),
+                ("l", "lint"),
+                ("y", "check-types"),
+                ("Esc", "cancel"),
+            ],
+        };
+    }
+
+    // Modal hints — checked after palette, before panel hints
+    if state.modal.is_some() {
+        return match &state.modal {
+            Some(ModalState::Confirm { .. }) => vec![("Y", "confirm"), ("N/Esc", "cancel")],
+            Some(ModalState::TextInput { .. }) => vec![("Enter", "submit"), ("Esc", "cancel")],
+            Some(ModalState::DevicePicker { .. }) => {
+                vec![("Enter", "select"), ("j/k", "navigate"), ("Esc", "cancel")]
+            }
+            None => unreachable!(),
+        };
+    }
+
     // Common hints always shown in normal mode
     let common: Vec<(&str, &str)> = vec![("?/F1", "help"), ("q", "quit"), ("Tab", "next panel")];
 
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
-        FocusedPanel::WorktreeList => vec![("j/k", "navigate"), ("Enter", "select")],
+        FocusedPanel::WorktreeList => vec![
+            ("j/k", "navigate"),
+            ("g", "git"),
+            ("c", "commands"),
+            ("L", "set label"),
+        ],
         FocusedPanel::MetroPane => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![
                 ("s", "start"),
@@ -48,7 +95,13 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             }
             hints
         },
-        FocusedPanel::CommandOutput => vec![("j/k", "scroll")],
+        FocusedPanel::CommandOutput => {
+            let mut hints: Vec<(&'static str, &'static str)> = vec![("j/k", "scroll")];
+            if state.running_command.is_some() {
+                hints.push(("Ctrl-c", "cancel"));
+            }
+            hints
+        },
     };
 
     // Panel hints first, then common hints

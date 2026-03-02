@@ -8,7 +8,7 @@ use ratatui::{
 /// Renders the help overlay. Called from view() when state.show_help == true.
 /// Uses Clear widget before the table to erase background panels behind the overlay.
 pub fn render_help(f: &mut Frame) {
-    let area = centered_rect(f.area(), 60, 70);
+    let area = centered_rect(f.area(), 60, 80);
 
     let keybindings = vec![
         Row::new(vec!["?  / F1",     "Open this help"]),
@@ -27,11 +27,42 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["l",           "Toggle log panel"]),
         Row::new(vec!["J (shift-j)", "Send debugger command"]),
         Row::new(vec!["R (shift-r)", "Send reload command"]),
+        Row::new(vec!["",            ""]),
+        Row::new(vec!["Worktree List", ""])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Row::new(vec!["j / k",        "Select next/prev worktree"]),
+        Row::new(vec!["g",            "Git command palette"]),
+        Row::new(vec!["c",            "RN command palette"]),
+        Row::new(vec!["L (shift-l)",  "Set custom label"]),
+        Row::new(vec!["R (shift-r)",  "Refresh worktree list"]),
+        Row::new(vec!["",            ""]),
+        Row::new(vec!["Git Palette (g then...)", ""])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Row::new(vec!["p",            "git pull"]),
+        Row::new(vec!["P (shift-p)",  "git push"]),
+        Row::new(vec!["d",            "git reset --hard (confirm)"]),
+        Row::new(vec!["b",            "git checkout <branch>"]),
+        Row::new(vec!["B (shift-b)",  "git checkout -b <branch>"]),
+        Row::new(vec!["r",            "git rebase origin/<branch>"]),
+        Row::new(vec!["",            ""]),
+        Row::new(vec!["RN Palette (c then...)", ""])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
+        Row::new(vec!["a",            "clean android"]),
+        Row::new(vec!["c",            "clean cocoapods (confirm)"]),
+        Row::new(vec!["n",            "rm node_modules (confirm)"]),
+        Row::new(vec!["i",            "yarn install"]),
+        Row::new(vec!["p",            "pod-install"]),
+        Row::new(vec!["d",            "run-android (device select)"]),
+        Row::new(vec!["s",            "run-ios (device select)"]),
+        Row::new(vec!["t",            "unit-tests"]),
+        Row::new(vec!["j",            "jest <filter>"]),
+        Row::new(vec!["l",            "lint --quiet --fix"]),
+        Row::new(vec!["y",            "check-types --incremental"]),
     ];
 
     let table = Table::new(
         keybindings,
-        [Constraint::Length(18), Constraint::Fill(1)],
+        [Constraint::Length(28), Constraint::Fill(1)],
     )
     .block(
         Block::default()
