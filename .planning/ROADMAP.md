@@ -63,7 +63,13 @@ Plans:
   3. User can run any git operation (reset --hard, pull, push, rebase, checkout, checkout -b) on a selected worktree and watch streaming output in a panel; destructive operations (reset --hard) show a confirmation prompt before executing
   4. User can run any RN command (clean android, clean cocoapods, rm node_modules, yarn install, pod-install, run-android with device selection, run-ios with device/simulator selection, unit-tests, jest with filter, lint, check-types) on a selected worktree with streaming output
   5. Dashboard shows a staleness hint when node_modules appears outdated relative to package.json or yarn.lock, and lazily installs dependencies before launching the app if the user has not done so manually
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Domain types: CommandSpec enum, Worktree struct expansion, ModalState, Action enum extensions, serde deps
+- [ ] 03-02-PLAN.md — Infra layer: worktree enumeration, command runner, label persistence, device enumeration
+- [ ] 03-03-PLAN.md — App wiring: AppState extensions, handle_key modal/palette routing, update() for all Phase 3 actions, worktree loading
+- [ ] 03-04-PLAN.md — UI rendering: worktree list widget, command output panel, modals, footer/help updates
 
 ### Phase 4: Config and JIRA Integration
 **Goal**: Users see JIRA ticket titles next to branch names, the JIRA API token is stored securely with correct file permissions, and the dashboard degrades gracefully when JIRA is unreachable
@@ -88,12 +94,12 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
-| 3. Worktree Browser, Git, and RN Commands | 0/TBD | Not started | - |
+| 3. Worktree Browser, Git, and RN Commands | 0/4 | Not started | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |
