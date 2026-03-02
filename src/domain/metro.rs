@@ -49,6 +49,9 @@ pub struct MetroHandle {
     pub stream_task: tokio::task::JoinHandle<()>,
     /// Background task that writes bytes from stdin_tx channel to the child's stdin.
     pub stdin_task: tokio::task::JoinHandle<()>,
+    /// Oneshot sender to signal the metro_process_task to kill the child.
+    /// Wrapped in Option so it can be taken exactly once via kill_tx.take().
+    pub kill_tx: Option<tokio::sync::oneshot::Sender<()>>,
 }
 
 /// Enforces the single-instance invariant: at most one metro process may run at a time.
