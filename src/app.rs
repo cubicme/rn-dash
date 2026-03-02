@@ -892,7 +892,7 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 
     loop {
         // Render first on each iteration — double-buffer diff handles no-change efficiently
-        terminal.draw(|f| crate::ui::view(f, &state))?;
+        terminal.draw(|f| crate::ui::view(f, &mut state))?;
 
         tokio::select! {
             _ = tick.tick() => {

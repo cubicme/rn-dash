@@ -2,13 +2,20 @@ use ratatui::{
     layout::{Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState},
+    widgets::{
+        Block, Borders, HighlightSpacing, List, ListItem, Paragraph,
+        Scrollbar, ScrollbarOrientation, ScrollbarState,
+    },
     Frame,
 };
-use crate::{app::{AppState, FocusedPanel}, domain::metro::MetroStatus, ui::theme};
+use crate::{
+    app::{AppState, FocusedPanel},
+    domain::{metro::MetroStatus, worktree::WorktreeMetroStatus},
+    ui::theme,
+};
 
-/// Renders the worktree list panel (left column). Phase 3 will populate with real worktrees.
-pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &AppState) {
+/// Renders the worktree list panel (left column) with real selectable list.
+pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
     let border_style = if state.focused_panel == FocusedPanel::WorktreeList {
         theme::style_focused_border()
     } else {
@@ -18,8 +25,65 @@ pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &AppState) {
         .title(" Worktrees ")
         .borders(Borders::ALL)
         .border_style(border_style);
-    let placeholder = Paragraph::new("[ worktree list — Phase 3 ]").block(block);
-    f.render_widget(placeholder, area);
+
+    if state.worktrees.is_empty() {
+        let placeholder = Paragraph::new("Loading worktrees...").block(block);
+        f.render_widget(placeholder, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = state.worktrees.iter().map(|wt| {
+        // Metro badge: [M] green-bold if Running, [ ] dark gray if Stopped
+        let (badge_text, badge_style) = match wt.metro_status {
+            WorktreeMetroStatus::Running => (
+                "[M] ",
+                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            ),
+            WorktreeMetroStatus::Stopped => (
+                "[ ] ",
+                Style::default().fg(Color::DarkGray),
+            ),
+        };
+
+        // Display name (label > jira_title > branch)
+        let display = wt.display_name();
+
+        // If a label is set, show branch in parentheses after the label in dim
+        let mut spans = vec![
+            Span::styled(badge_text, badge_style),
+            Span::raw(display),
+        ];
+
+        if wt.label.is_some() || wt.jira_title.is_some() {
+            // Show branch in dim parentheses
+            spans.push(Span::styled(
+                format!(" ({})", wt.branch),
+                Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM),
+            ));
+        }
+
+        // Staleness hint
+        if wt.stale {
+            spans.push(Span::styled(
+                " [stale]",
+                Style::default().fg(Color::Yellow),
+            ));
+        }
+
+        ListItem::new(Line::from(spans))
+    }).collect();
+
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("> ")
+        .highlight_spacing(HighlightSpacing::Always);
+
+    f.render_stateful_widget(list, area, &mut state.worktree_list_state);
 }
 
 /// Renders the metro control pane (top-right) with real status indicator.
@@ -116,17 +180,53 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
     }
 }
 
-/// Renders the command output pane (bottom-right). Phase 3 will stream real command output.
+/// Renders the command output pane (bottom-right) with real streaming output.
 pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
     let border_style = if state.focused_panel == FocusedPanel::CommandOutput {
         theme::style_focused_border()
     } else {
         theme::style_inactive_border()
     };
+
+    // Title shows running command name + [running] indicator when active
+    let title = match &state.running_command {
+        Some(spec) => format!(" Output — {} [running] ", spec.label()),
+        None => " Output ".to_string(),
+    };
+
+    let lines: Vec<Line> = state.command_output.iter()
+        .map(|l| Line::from(l.as_str()))
+        .collect();
+
+    let visible_height = area.height.saturating_sub(2) as usize; // subtract borders
+
+    // Auto-scroll to bottom when scroll is 0 (default); manual scroll overrides
+    let scroll = if state.command_output_scroll == 0 && !lines.is_empty() {
+        lines.len().saturating_sub(visible_height)
+    } else {
+        state.command_output_scroll
+    };
+
     let block = Block::default()
-        .title(" Output ")
+        .title(title)
         .borders(Borders::ALL)
         .border_style(border_style);
-    let placeholder = Paragraph::new("[ command output — Phase 3 ]").block(block);
-    f.render_widget(placeholder, area);
+
+    let paragraph = Paragraph::new(Text::from(lines.clone()))
+        .block(block)
+        .scroll((scroll as u16, 0));
+
+    f.render_widget(paragraph, area);
+
+    // Scrollbar — only rendered when content exceeds visible area
+    if lines.len() > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(lines.len())
+            .position(scroll);
+
+        f.render_stateful_widget(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight),
+            area.inner(Margin { vertical: 1, horizontal: 0 }),
+            &mut scrollbar_state,
+        );
+    }
 }

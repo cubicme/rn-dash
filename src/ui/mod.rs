@@ -2,11 +2,12 @@
 //! Imports: domain types and ratatui ONLY. Never imports infra directly.
 //!
 //! view() is the single render entry point called from app::run().
-//! It is read-only — receives &AppState, mutates nothing.
+//! It accepts &mut AppState because render_stateful_widget requires &mut ListState.
 
 pub mod footer;
 pub mod help_overlay;
 pub mod error_overlay;
+pub mod modals;
 pub mod panels;
 pub mod theme;
 
@@ -20,7 +21,7 @@ use crate::app::AppState;
 /// Layout: left column (worktree list) | right column (metro pane / log panel / command output)
 /// Footer: always rendered at bottom.
 /// Overlays: rendered last so they layer on top of all base content.
-pub fn view(f: &mut Frame, state: &AppState) {
+pub fn view(f: &mut Frame, state: &mut AppState) {
     let area = f.area();
 
     // Vertical split: main content area + footer (3 lines)
@@ -73,5 +74,8 @@ pub fn view(f: &mut Frame, state: &AppState) {
     }
     if let Some(ref error) = state.error_state {
         error_overlay::render_error(f, error);
+    }
+    if let Some(ref modal) = state.modal {
+        modals::render_modal(f, modal);
     }
 }
