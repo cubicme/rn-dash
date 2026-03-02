@@ -36,36 +36,36 @@
 
 ### Worktree Management
 
-- [ ] **WORK-01**: User sees a list of all worktrees with their current branch name
-- [ ] **WORK-02**: User sees the JIRA ticket title next to the branch name (fetched via API from UMP-XXXX pattern)
-- [ ] **WORK-03**: User can set a custom label on a branch that persists across worktrees (label follows the branch, not the worktree)
+- [x] **WORK-01**: User sees a list of all worktrees with their current branch name
+- [x] **WORK-02**: User sees the JIRA ticket title next to the branch name (fetched via API from UMP-XXXX pattern)
+- [x] **WORK-03**: User can set a custom label on a branch that persists across worktrees (label follows the branch, not the worktree)
 - [ ] **WORK-04**: User can switch the "running" worktree which auto-kills metro in current and starts it in the new one
-- [ ] **WORK-05**: User sees dependency staleness hints when node_modules is outdated relative to package.json/yarn.lock
+- [x] **WORK-05**: User sees dependency staleness hints when node_modules is outdated relative to package.json/yarn.lock
 - [ ] **WORK-06**: Stale dependencies are lazily installed before launching the app if user hasn't manually installed
 
 ### Git Operations
 
-- [ ] **GIT-01**: User can run git reset --hard origin/<current-branch> on a selected worktree
-- [ ] **GIT-02**: User can run git pull on a selected worktree
-- [ ] **GIT-03**: User can run git push on a selected worktree
-- [ ] **GIT-04**: User can run git rebase origin/<target-branch> on a selected worktree
-- [ ] **GIT-05**: User can run git checkout <branch> to switch branches in a worktree
-- [ ] **GIT-06**: User can run git checkout -b <branch> to create and switch to a new branch
+- [x] **GIT-01**: User can run git reset --hard origin/<current-branch> on a selected worktree
+- [x] **GIT-02**: User can run git pull on a selected worktree
+- [x] **GIT-03**: User can run git push on a selected worktree
+- [x] **GIT-04**: User can run git rebase origin/<target-branch> on a selected worktree
+- [x] **GIT-05**: User can run git checkout <branch> to switch branches in a worktree
+- [x] **GIT-06**: User can run git checkout -b <branch> to create and switch to a new branch
 
 ### RN Commands
 
-- [ ] **RN-01**: User can run npx react-native clean --include 'android' on a selected worktree
-- [ ] **RN-02**: User can run npx react-native clean --include 'cocoapods' on a selected worktree
-- [ ] **RN-03**: User can run rm -rf node_modules on a selected worktree
-- [ ] **RN-04**: User can run yarn install on a selected worktree
-- [ ] **RN-05**: User can run yarn pod-install on a selected worktree
-- [ ] **RN-06**: User can run npx react-native run-android on a selected worktree with device selection (from adb devices list)
-- [ ] **RN-07**: User can run yarn react-native run-ios on a selected worktree with device/simulator selection
-- [ ] **RN-08**: User can run yarn unit-tests on a selected worktree
-- [ ] **RN-09**: User can run yarn jest with a test filter on a selected worktree
-- [ ] **RN-10**: User can run yarn lint --quiet --fix on a selected worktree
-- [ ] **RN-11**: User can run yarn check-types --incremental on a selected worktree
-- [ ] **RN-12**: User sees streaming command output in a panel while commands execute
+- [x] **RN-01**: User can run npx react-native clean --include 'android' on a selected worktree
+- [x] **RN-02**: User can run npx react-native clean --include 'cocoapods' on a selected worktree
+- [x] **RN-03**: User can run rm -rf node_modules on a selected worktree
+- [x] **RN-04**: User can run yarn install on a selected worktree
+- [x] **RN-05**: User can run yarn pod-install on a selected worktree
+- [x] **RN-06**: User can run npx react-native run-android on a selected worktree with device selection (from adb devices list)
+- [x] **RN-07**: User can run yarn react-native run-ios on a selected worktree with device/simulator selection
+- [x] **RN-08**: User can run yarn unit-tests on a selected worktree
+- [x] **RN-09**: User can run yarn jest with a test filter on a selected worktree
+- [x] **RN-10**: User can run yarn lint --quiet --fix on a selected worktree
+- [x] **RN-11**: User can run yarn check-types --incremental on a selected worktree
+- [x] **RN-12**: User sees streaming command output in a panel while commands execute
 
 ### Integrations
 
@@ -123,30 +123,30 @@
 | METRO-07 | Phase 2 | Complete |
 | METRO-08 | Phase 2 | Complete |
 | METRO-09 | Phase 2 | Complete |
-| WORK-01 | Phase 3 | Pending |
-| WORK-02 | Phase 3 | Pending |
-| WORK-03 | Phase 3 | Pending |
+| WORK-01 | Phase 3 | Complete |
+| WORK-02 | Phase 3 | Complete |
+| WORK-03 | Phase 3 | Complete |
 | WORK-04 | Phase 5 | Pending |
-| WORK-05 | Phase 3 | Pending |
+| WORK-05 | Phase 3 | Complete |
 | WORK-06 | Phase 3 | Pending |
-| GIT-01 | Phase 3 | Pending |
-| GIT-02 | Phase 3 | Pending |
-| GIT-03 | Phase 3 | Pending |
-| GIT-04 | Phase 3 | Pending |
-| GIT-05 | Phase 3 | Pending |
-| GIT-06 | Phase 3 | Pending |
-| RN-01 | Phase 3 | Pending |
-| RN-02 | Phase 3 | Pending |
-| RN-03 | Phase 3 | Pending |
-| RN-04 | Phase 3 | Pending |
-| RN-05 | Phase 3 | Pending |
-| RN-06 | Phase 3 | Pending |
-| RN-07 | Phase 3 | Pending |
-| RN-08 | Phase 3 | Pending |
-| RN-09 | Phase 3 | Pending |
-| RN-10 | Phase 3 | Pending |
-| RN-11 | Phase 3 | Pending |
-| RN-12 | Phase 3 | Pending |
+| GIT-01 | Phase 3 | Complete |
+| GIT-02 | Phase 3 | Complete |
+| GIT-03 | Phase 3 | Complete |
+| GIT-04 | Phase 3 | Complete |
+| GIT-05 | Phase 3 | Complete |
+| GIT-06 | Phase 3 | Complete |
+| RN-01 | Phase 3 | Complete |
+| RN-02 | Phase 3 | Complete |
+| RN-03 | Phase 3 | Complete |
+| RN-04 | Phase 3 | Complete |
+| RN-05 | Phase 3 | Complete |
+| RN-06 | Phase 3 | Complete |
+| RN-07 | Phase 3 | Complete |
+| RN-08 | Phase 3 | Complete |
+| RN-09 | Phase 3 | Complete |
+| RN-10 | Phase 3 | Complete |
+| RN-11 | Phase 3 | Complete |
+| RN-12 | Phase 3 | Complete |
 | INTG-01 | Phase 4 | Pending |
 | INTG-02 | Phase 4 | Pending |
 | INTG-03 | Phase 4 | Pending |

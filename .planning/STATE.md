@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-02T07:13:29.021Z"
+status: in-progress
+last_updated: "2026-03-02T08:25:05Z"
 progress:
-  total_phases: 2
+  total_phases: 5
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 10
+  completed_plans: 7
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
-**Current focus:** Phase 2 — Metro Process Control
+**Current focus:** Phase 3 — Worktree Browser, Git and RN Commands
 
 ## Current Position
 
-Phase: 2 of 5 (Metro Process Control)
-Plan: 3 of 3 in current phase
-Status: Plan 02-03 Complete — Phase 2 all plans done
-Last activity: 2026-03-02 — Completed 02-03 (metro status display, log panel, footer/help keybinding hints)
+Phase: 3 of 5 (Worktree Browser, Git and RN Commands)
+Plan: 1 of 4 in current phase
+Status: Plan 03-01 Complete — domain types established
+Last activity: 2026-03-02 — Completed 03-01 (CommandSpec 17 variants, expanded Worktree struct, Action Phase 3 variants)
 
-Progress: [██████░░░░] 40%
+Progress: [███████░░░] 44%
 
 ## Performance Metrics
 
@@ -42,14 +42,16 @@ Progress: [██████░░░░] 40%
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
 | Phase 2 | 3/3 | 13 min | 4.3 min |
+| Phase 3 | 1/4 | 2 min | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 4 min, 2 min, 3 min, 5 min
+- Last 5 plans: 4 min, 2 min, 3 min, 5 min, 2 min
 - Trend: stable
 
 *Updated after each plan completion*
 | Phase 02-metro-process-control P02 | 5min | 2 tasks | 2 files |
 | Phase 02-metro-process-control P03 | 5 | 2 tasks | 4 files |
+| Phase 03-worktree-browser P01 | 2min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -81,6 +83,9 @@ Recent decisions affecting current work:
 - [02-02]: stream_metro_logs spawned inside metro_process_task and aborted before kill — prevents log lines racing with MetroExited delivery
 - [Phase 02-metro-process-control]: Scrollbar rendered only when log content exceeds visible height
 - [Phase 02-metro-process-control]: J/R footer hints hidden when metro not running to reduce clutter
+- [03-01]: CommandSpec.to_argv() uses yarn check-types --incremental per CLAUDE.md project note
+- [03-01]: Worktree derives PartialEq so Action enum can keep its PartialEq derive on WorktreesLoaded(Vec<Worktree>)
+- [03-01]: Phase 3 Action variants added as exhaustive stubs in app.rs update() — implemented in Plan 03-02
 
 ### Pending Todos
 
@@ -93,6 +98,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T07:12:00Z
-Stopped at: Completed 02-03-PLAN.md — metro status display, log panel rendering, footer/help keybinding hints
+Last session: 2026-03-02T08:25:05Z
+Stopped at: Completed 03-01-PLAN.md — CommandSpec 17 variants, Worktree struct expansion, Action Phase 3 variants
 Resume file: None
