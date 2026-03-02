@@ -34,7 +34,20 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
 
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
         FocusedPanel::WorktreeList => vec![("j/k", "navigate"), ("Enter", "select")],
-        FocusedPanel::MetroPane => vec![("s", "start"), ("x", "stop"), ("r", "restart")],
+        FocusedPanel::MetroPane => {
+            let mut hints: Vec<(&'static str, &'static str)> = vec![
+                ("s", "start"),
+                ("x", "stop"),
+                ("r", "restart"),
+                ("l", "logs"),
+            ];
+            // Show stdin commands only when metro is running
+            if state.metro.is_running() {
+                hints.push(("J", "debugger"));
+                hints.push(("R", "reload"));
+            }
+            hints
+        },
         FocusedPanel::CommandOutput => vec![("j/k", "scroll")],
     };
 

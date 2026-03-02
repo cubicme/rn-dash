@@ -1,5 +1,6 @@
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
+    style::{Modifier, Style},
     widgets::{Block, Borders, Clear, Row, Table},
     Frame,
 };
@@ -18,10 +19,14 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["Tab",         "Focus next panel"]),
         Row::new(vec!["Shift-Tab",   "Focus previous panel"]),
         Row::new(vec!["",            ""]),
-        Row::new(vec!["— Metro (Phase 2) —", ""]),
+        Row::new(vec!["Metro (when metro pane focused)", ""])
+            .style(Style::default().add_modifier(Modifier::BOLD)),
         Row::new(vec!["s",           "Start metro"]),
         Row::new(vec!["x",           "Stop metro"]),
         Row::new(vec!["r",           "Restart metro"]),
+        Row::new(vec!["l",           "Toggle log panel"]),
+        Row::new(vec!["J (shift-j)", "Send debugger command"]),
+        Row::new(vec!["R (shift-r)", "Send reload command"]),
     ];
 
     let table = Table::new(
