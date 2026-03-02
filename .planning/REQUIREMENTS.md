@@ -17,10 +17,10 @@
 ### TUI Shell
 
 - [x] **SHELL-01**: User can navigate the dashboard using vim-style keybindings (hjkl, q, /, ?)
-- [ ] **SHELL-02**: User sees context-sensitive keybinding hints in a footer bar that update per active panel/mode
+- [x] **SHELL-02**: User sees context-sensitive keybinding hints in a footer bar that update per active panel/mode
 - [x] **SHELL-03**: User can move focus between panels using Tab/Shift-Tab or arrow keys
-- [ ] **SHELL-04**: User can open a help overlay (? or F1) listing all available keybindings
-- [ ] **SHELL-05**: User sees error states clearly when commands fail (non-zero exit, with retry/dismiss)
+- [x] **SHELL-04**: User can open a help overlay (? or F1) listing all available keybindings
+- [x] **SHELL-05**: User sees error states clearly when commands fail (non-zero exit, with retry/dismiss)
 
 ### Metro
 
@@ -110,10 +110,10 @@
 | ARCH-05 | Phase 1 | Complete |
 | ARCH-06 | Phase 1 | Complete |
 | SHELL-01 | Phase 1 | Complete |
-| SHELL-02 | Phase 1 | Pending |
+| SHELL-02 | Phase 1 | Complete |
 | SHELL-03 | Phase 1 | Complete |
-| SHELL-04 | Phase 1 | Pending |
-| SHELL-05 | Phase 1 | Pending |
+| SHELL-04 | Phase 1 | Complete |
+| SHELL-05 | Phase 1 | Complete |
 | METRO-01 | Phase 2 | Pending |
 | METRO-02 | Phase 2 | Pending |
 | METRO-03 | Phase 2 | Pending |

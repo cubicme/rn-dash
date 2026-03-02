@@ -12,7 +12,7 @@ Five phases build the UMP Dashboard from a bare terminal skeleton to a fully orc
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer
+- [x] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer (completed 2026-03-02)
 - [ ] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain
 - [ ] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming
 - [ ] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation
@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scaffold and TUI Shell | 2/3 | In Progress|  |
+| 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 0/TBD | Not started | - |
 | 3. Worktree Browser, Git, and RN Commands | 0/TBD | Not started | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
