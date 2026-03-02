@@ -1,0 +1,21 @@
+[package]
+name = "ump-dash"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# TUI core — crossterm accessed via ratatui::crossterm, NOT as a direct dep
+ratatui = { version = "0.30", features = ["crossterm"] }
+
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# Error handling
+anyhow = "1"
+thiserror = "2"
+color-eyre = "0.6"
+
+# Logging (file only — never stdout in TUI)
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
