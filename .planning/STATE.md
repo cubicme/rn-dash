@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T09:05:02.187Z"
+last_updated: "2026-03-02T12:59:16Z"
 progress:
-  total_phases: 3
+  total_phases: 5
   completed_phases: 3
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 13
+  completed_plans: 12
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
-**Current focus:** Phase 3 — Worktree Browser, Git and RN Commands
+**Current focus:** Phase 4 — Config and JIRA Integration
 
 ## Current Position
 
-Phase: 3 of 5 (Worktree Browser, Git and RN Commands) — COMPLETE
-Plan: 5 of 5 in current phase — ALL PLANS COMPLETE
-Status: Plan 03-05 Complete — Gap closure: 6 CommandSpec to_argv() deviations fixed
-Last activity: 2026-03-02 — Completed 03-05 (command.rs to_argv() corrections for RN-01, RN-02, RN-06, RN-07, RN-08, RN-10)
+Phase: 4 of 5 (Config and JIRA Integration) — IN PROGRESS
+Plan: 1 of 2 in current phase — COMPLETE
+Status: Plan 04-01 Complete — Config, JIRA HTTP client, cache, and tmux detection infra modules added
+Last activity: 2026-03-02 — Completed 04-01 (reqwest 0.12, config.rs, jira.rs, jira_cache.rs, mod.rs)
 
-Progress: [████████████░░] 60%
+Progress: [█████████████░] 65%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [████████████░░] 60%
 | Phase 03-worktree-browser P03 | 3min | 2 tasks | 2 files |
 | Phase 03-worktree-browser-git-and-rn-commands P04 | 10 | 2 tasks | 6 files |
 | Phase 03-worktree-browser-git-and-rn-commands P05 | 2min | 1 task | 1 file |
+| Phase 04-config-and-jira-integration P01 | 2min | 1 task | 6 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,10 @@ Recent decisions affecting current work:
 - [Phase 03-04]: Help overlay height increased from 70% to 80%, first column from 18 to 28 chars for Phase 3 keybinding sections
 - [03-05]: RnRunIos keeps yarn as launcher per RN-07 spec, with react-native run-ios as sub-command (not npx)
 - [03-05]: RnCleanAndroid and RnCleanCocoapods both use npx react-native clean --include <target> — unified clean interface replaces separate gradle/pod commands
+- [04-01]: reqwest 0.12 used (0.13 does not exist; plan specified 0.13 but 0.12 is current stable)
+- [04-01]: extract_jira_key() uses match/continue instead of ? operator — ? inside for loop exits the whole function, not just the iteration
+- [04-01]: HttpJiraClient::new() builds bare reqwest::Client with no default auth — auth applied per-request for clarity and auditability
+- [04-01]: save_config() 0600 permissions guarded by #[cfg(unix)] with #[cfg(not(unix))] no-op fallback
 
 ### Pending Todos
 
@@ -112,11 +117,11 @@ None.
 
 ### Blockers/Concerns
 
-- [Phase 4]: JIRA auth method must be confirmed (Cloud = Basic Auth email:token, Data Center = Bearer PAT) before writing the client — wrong choice means zero successful API calls
+- [Phase 4 RESOLVED]: JIRA auth method resolved — DashConfig.auth_mode field supports both "cloud" (basic_auth email:token) and "datacenter" (bearer_auth PAT); user selects via config file
 - [Phase 5]: device selection UI (DevicePicker modal) fully implemented in Phase 3 — adb/xcrun parsers + modal wired and rendered
 
 ## Session Continuity
 
-Last session: 2026-03-02T09:01:00Z
-Stopped at: Completed 03-05-PLAN.md — Phase 3 gap closure complete (6 CommandSpec to_argv() deviations fixed)
+Last session: 2026-03-02T12:59:16Z
+Stopped at: Completed 04-01-PLAN.md — reqwest JIRA infra modules (config.rs, jira.rs, jira_cache.rs) added
 Resume file: None

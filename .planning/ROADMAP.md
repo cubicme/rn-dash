@@ -84,7 +84,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Infra modules: reqwest dep, DashConfig, JiraClient trait + HttpJiraClient, jira_cache, tmux detection, extract_jira_key
+- [x] 04-01-PLAN.md — Infra modules: reqwest dep, DashConfig, JiraClient trait + HttpJiraClient, jira_cache, tmux detection, extract_jira_key
 - [ ] 04-02-PLAN.md — App wiring: JiraTitlesFetched action, AppState Phase 4 fields, startup config/cache load, background fetch trigger, UI title display
 
 ### Phase 5: Worktree Switching and Claude Code
@@ -106,5 +106,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
 | 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
-| 4. Config and JIRA Integration | 0/2 | Not started | - |
+| 4. Config and JIRA Integration | 1/2 | In progress | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |

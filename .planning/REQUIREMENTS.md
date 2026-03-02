@@ -69,11 +69,11 @@
 
 ### Integrations
 
-- [ ] **INTG-01**: Dashboard reads JIRA API token from ~/.config/ump-dash/ config
-- [ ] **INTG-02**: Dashboard fetches JIRA ticket titles by extracting UMP-XXXX from branch names and querying the JIRA REST API
-- [ ] **INTG-03**: Fetched JIRA titles are cached locally to avoid redundant API calls
+- [x] **INTG-01**: Dashboard reads JIRA API token from ~/.config/ump-dash/ config
+- [x] **INTG-02**: Dashboard fetches JIRA ticket titles by extracting UMP-XXXX from branch names and querying the JIRA REST API
+- [x] **INTG-03**: Fetched JIRA titles are cached locally to avoid redundant API calls
 - [ ] **INTG-04**: User can launch Claude Code in a new tmux tab at a selected worktree's directory
-- [ ] **INTG-05**: Dashboard detects it is running inside tmux for tmux-dependent features
+- [x] **INTG-05**: Dashboard detects it is running inside tmux for tmux-dependent features
 
 ## v2 Requirements
 
@@ -147,11 +147,11 @@
 | RN-10 | Phase 3 | Complete |
 | RN-11 | Phase 3 | Complete |
 | RN-12 | Phase 3 | Complete |
-| INTG-01 | Phase 4 | Pending |
-| INTG-02 | Phase 4 | Pending |
-| INTG-03 | Phase 4 | Pending |
+| INTG-01 | Phase 4 | Complete |
+| INTG-02 | Phase 4 | Complete |
+| INTG-03 | Phase 4 | Complete |
 | INTG-04 | Phase 5 | Pending |
-| INTG-05 | Phase 4 | Pending |
+| INTG-05 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 45 total
