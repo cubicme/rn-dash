@@ -106,10 +106,23 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
         };
     }
 
+    // Metro pane specific keybindings — checked before general navigation.
+    // Error overlay intercept above already claims 'r' for RetryLastCommand, so
+    // MetroRestart ('r') is only reachable when no error overlay is showing. Correct priority.
+    if state.focused_panel == FocusedPanel::MetroPane {
+        match key.code {
+            Char('s') => return Some(Action::MetroStart),
+            Char('x') => return Some(Action::MetroStop),
+            Char('r') => return Some(Action::MetroRestart),
+            Char('l') => return Some(Action::MetroToggleLog),
+            // Shift-J / Shift-R avoid conflict with j=FocusDown and r=MetroRestart
+            Char('J') => return Some(Action::MetroSendDebugger),
+            Char('R') => return Some(Action::MetroSendReload),
+            _ => {} // fall through to normal mode navigation
+        }
+    }
+
     // Normal mode keybindings
-    // Note: metro pane keybindings (s, x, r, J, R) are added in Plan 02 once the
-    // async spawn/kill flow is wired up. They need context about whether MetroPane is
-    // focused, which requires the full handle_key() metro-pane branch.
     match key.code {
         Char('q') => Some(Action::Quit),
         Char('?') | F(1) => Some(Action::ShowHelp),
