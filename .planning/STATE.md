@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T13:07:48.074Z"
+last_updated: "2026-03-02T13:58:33Z"
 progress:
   total_phases: 4
   completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 14
+  completed_plans: 14
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 4 of 5 (Config and JIRA Integration) — COMPLETE
-Plan: 2 of 2 in current phase — COMPLETE
-Status: Plan 04-02 Complete — JIRA title fetching wired into TEA loop (AppState, Action enum, WorktreesLoaded, JiraTitlesFetched)
-Last activity: 2026-03-02 — Completed 04-02 (action.rs JiraTitlesFetched, app.rs Phase 4 fields + handlers)
+Plan: 3 of 3 in current phase — COMPLETE
+Status: Plan 04-03 Complete — Worktree list display fixed: branch first, Gray secondary text, Unicode staleness icon
+Last activity: 2026-03-02 — Completed 04-03 (panels.rs rendering reorder, worktree.rs dead_code annotation)
 
-Progress: [██████████████] 77%
+Progress: [████████████████] 82%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [██████████████] 77%
 | Phase 03-worktree-browser-git-and-rn-commands P05 | 2min | 1 task | 1 file |
 | Phase 04-config-and-jira-integration P01 | 2min | 1 task | 6 files |
 | Phase 04-config-and-jira-integration P02 | 2min | 2 tasks | 3 files |
+| Phase 04-config-and-jira-integration P03 | 3min | 1 task | 2 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,10 @@ Recent decisions affecting current work:
 - [04-02]: JiraClient trait requires Debug supertrait — AppState derives Debug so Arc<dyn JiraClient> must satisfy Debug
 - [04-02]: HttpJiraClient derives Debug — reqwest::Client implements Debug, so derive works cleanly
 - [04-02]: panels.rs required no changes — display_name() and dim branch parenthetical were already implemented in Phase 3
+- [04-03]: panels.rs accesses wt.branch directly instead of display_name() for list rendering — display_name() still available for modal/status contexts
+- [04-03]: display_name() annotated #[allow(dead_code)] — preserved for future use even though no current call sites exist
+- [04-03]: Color::Gray used for secondary text (not DarkGray or DIM) — legible on dark terminals per UAT Test 4 findings
+- [04-03]: Unicode U+26A0 warning icon replaces [stale] text badge — compact and universally recognizable
 
 ### Pending Todos
 
@@ -126,6 +131,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T13:04:33Z
-Stopped at: Completed 04-02-PLAN.md — Phase 4 complete: JIRA title fetching wired into TEA loop
+Last session: 2026-03-02T13:58:33Z
+Stopped at: Completed 04-03-PLAN.md — Worktree list display fixed (branch first, Gray secondary, Unicode staleness icon)
 Resume file: None
