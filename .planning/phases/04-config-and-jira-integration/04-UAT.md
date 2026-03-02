@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-config-and-jira-integration
 source: 04-01-SUMMARY.md, 04-02-SUMMARY.md
 started: 2026-03-02T13:30:00Z
-updated: 2026-03-02T13:40:00Z
+updated: 2026-03-02T13:42:00Z
 ---
 
 ## Current Test
@@ -49,10 +49,18 @@ skipped: 1
 
 ## Gaps
 
-- truth: "Worktree entries show JIRA title with branch name visible in dimmed parentheses"
+- truth: "Worktree entries show branch name first, JIRA title second, with visible styling and icon-based status"
   status: failed
   reason: "User reported: the branch name should still be there first. with long titles the branch name is not there and for the others the color is barely visible. for state instead of [stale] and other stats, you can maybe show an icon or something"
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "panels.rs renders display_name() (which returns jira_title) as primary text, branch name as DarkGray+DIM parenthetical that gets truncated on long titles. display_name() priority is label>jira_title>branch but user wants branch first. Status uses text '[stale]' instead of icons."
+  artifacts:
+    - path: "src/ui/panels.rs"
+      issue: "Lines 52-55: display_name() used as primary span; lines 59-62: branch in DarkGray+DIM parenthetical truncated on long titles; lines 66-71: [stale] rendered as text"
+    - path: "src/domain/worktree.rs"
+      issue: "Lines 42-55: display_name() returns single string with jira_title priority over branch"
+  missing:
+    - "Render branch name first, JIRA title second (truncated if needed)"
+    - "Use Color::Gray instead of DarkGray+DIM for better visibility"
+    - "Replace '[stale]' text with Unicode icon (e.g., ⚠ or 󰁥)"
