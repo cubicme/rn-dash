@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T08:25:05Z"
+last_updated: "2026-03-02T08:29:37Z"
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 3 of 5 (Worktree Browser, Git and RN Commands)
-Plan: 1 of 4 in current phase
-Status: Plan 03-01 Complete — domain types established
-Last activity: 2026-03-02 — Completed 03-01 (CommandSpec 17 variants, expanded Worktree struct, Action Phase 3 variants)
+Plan: 2 of 4 in current phase
+Status: Plan 03-02 Complete — infra modules implemented
+Last activity: 2026-03-02 — Completed 03-02 (worktrees.rs, labels.rs, command_runner.rs, devices.rs)
 
-Progress: [███████░░░] 44%
+Progress: [████████░░] 50%
 
 ## Performance Metrics
 
@@ -42,7 +42,7 @@ Progress: [███████░░░] 44%
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
 | Phase 2 | 3/3 | 13 min | 4.3 min |
-| Phase 3 | 1/4 | 2 min | 2 min |
+| Phase 3 | 2/4 | 4 min | 2 min |
 
 **Recent Trend:**
 - Last 5 plans: 4 min, 2 min, 3 min, 5 min, 2 min
@@ -52,6 +52,7 @@ Progress: [███████░░░] 44%
 | Phase 02-metro-process-control P02 | 5min | 2 tasks | 2 files |
 | Phase 02-metro-process-control P03 | 5 | 2 tasks | 4 files |
 | Phase 03-worktree-browser P01 | 2min | 2 tasks | 6 files |
+| Phase 03-worktree-browser P02 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,11 @@ Recent decisions affecting current work:
 - [03-01]: CommandSpec.to_argv() uses yarn check-types --incremental per CLAUDE.md project note
 - [03-01]: Worktree derives PartialEq so Action enum can keep its PartialEq derive on WorktreesLoaded(Vec<Worktree>)
 - [03-01]: Phase 3 Action variants added as exhaustive stubs in app.rs update() — implemented in Plan 03-02
+- [03-02]: WorktreeId derived from full path string — stable identifier independent of branch name
+- [03-02]: check_stale returns true when node_modules absent — safe default (always stale = always install)
+- [03-02]: stream_command_output uses done flags on select! guards — prevents polling closed streams
+- [03-02]: parse_adb_devices sets id=name=serial — adb list has no model names; Phase 5 can enrich
+- [03-02]: parse_xcrun_simctl formats name as "{name} ({state})" to distinguish booted vs shutdown sims
 
 ### Pending Todos
 
@@ -94,10 +100,10 @@ None.
 ### Blockers/Concerns
 
 - [Phase 4]: JIRA auth method must be confirmed (Cloud = Basic Auth email:token, Data Center = Bearer PAT) before writing the client — wrong choice means zero successful API calls
-- [Phase 5]: adb devices + xcrun simctl output parsing may need a targeted research pass during Phase 3 planning (device selection for run-android/run-ios)
+- [Phase 5]: adb devices + xcrun simctl output parsing implemented in 03-02 — parsers are ready, device selection UI is Phase 3 Plan 03-03/03-04
 
 ## Session Continuity
 
-Last session: 2026-03-02T08:25:05Z
-Stopped at: Completed 03-01-PLAN.md — CommandSpec 17 variants, Worktree struct expansion, Action Phase 3 variants
+Last session: 2026-03-02T08:29:37Z
+Stopped at: Completed 03-02-PLAN.md — infra modules (worktrees, labels, command_runner, devices)
 Resume file: None
