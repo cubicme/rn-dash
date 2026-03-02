@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer (completed 2026-03-02)
 - [x] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain (completed 2026-03-02)
 - [x] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress) (completed 2026-03-02)
-- [x] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation (completed 2026-03-02)
+- [ ] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation (gap closure in progress)
 - [ ] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch
 
 ## Phase Details
@@ -81,11 +81,12 @@ Plans:
   2. User sees JIRA ticket titles automatically appear next to branch names for any branch matching the UMP-XXXX pattern — titles load in the background without blocking dashboard startup
   3. Fetched JIRA titles persist to a local cache so they appear on next launch without a network call; when JIRA is unreachable the branch name is shown in place of the title with no error shown to the user
   4. Dashboard correctly detects it is running inside tmux and gates tmux-dependent features (tab creation) on that detection
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [x] 04-01-PLAN.md — Infra modules: reqwest dep, DashConfig, JiraClient trait + HttpJiraClient, jira_cache, tmux detection, extract_jira_key
-- [ ] 04-02-PLAN.md — App wiring: JiraTitlesFetched action, AppState Phase 4 fields, startup config/cache load, background fetch trigger, UI title display
+- [x] 04-02-PLAN.md — App wiring: JiraTitlesFetched action, AppState Phase 4 fields, startup config/cache load, background fetch trigger, UI title display
+- [ ] 04-03-PLAN.md — Gap closure: fix worktree list display (branch first, JIRA title second, visible color, icon staleness)
 
 ### Phase 5: Worktree Switching and Claude Code
 **Goal**: Users can switch the active worktree with one keystroke triggering full metro orchestration, and can open Claude Code in a new tmux tab at any worktree directory
@@ -106,5 +107,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
 | 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
-| 4. Config and JIRA Integration | 2/2 | Complete   | 2026-03-02 |
+| 4. Config and JIRA Integration | 2/3 | Gap closure | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |
