@@ -3,3 +3,5 @@
 
 pub mod port;
 pub mod process;
+pub mod worktrees;
+pub mod labels;
