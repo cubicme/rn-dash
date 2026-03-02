@@ -44,6 +44,10 @@ impl Worktree {
     /// 1. Custom label (user-assigned, follows branch)
     /// 2. JIRA ticket title (Phase 4+)
     /// 3. Branch name (always available)
+    ///
+    /// Used for single-string contexts such as modal titles and status messages.
+    /// The worktree list widget accesses fields directly for layout control.
+    #[allow(dead_code)]
     pub fn display_name(&self) -> &str {
         if let Some(label) = &self.label {
             return label.as_str();

@@ -45,27 +45,29 @@ pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
             ),
         };
 
-        // Display name (label > jira_title > branch)
-        let display = wt.display_name();
-
-        // If a label is set, show branch in parentheses after the label in dim
+        // Branch name first (always visible), then secondary text
         let mut spans = vec![
             Span::styled(badge_text, badge_style),
-            Span::raw(display),
+            Span::raw(&wt.branch),
         ];
 
-        if wt.label.is_some() || wt.jira_title.is_some() {
-            // Show branch in dim parentheses
+        // Secondary text: label takes priority over jira_title
+        if let Some(label) = &wt.label {
             spans.push(Span::styled(
-                format!(" ({})", wt.branch),
-                Style::default().fg(Color::DarkGray).add_modifier(Modifier::DIM),
+                format!(" - {label}"),
+                Style::default().fg(Color::Gray),
+            ));
+        } else if let Some(title) = &wt.jira_title {
+            spans.push(Span::styled(
+                format!(" - {title}"),
+                Style::default().fg(Color::Gray),
             ));
         }
 
-        // Staleness hint
+        // Staleness icon (Unicode warning sign, compact and recognizable)
         if wt.stale {
             spans.push(Span::styled(
-                " [stale]",
+                " \u{26A0}",
                 Style::default().fg(Color::Yellow),
             ));
         }
