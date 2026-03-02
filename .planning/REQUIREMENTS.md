@@ -1,0 +1,163 @@
+# Requirements: UMP Dashboard
+
+**Defined:** 2026-03-02
+**Core Value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
+
+## v1 Requirements
+
+### Architecture
+
+- [ ] **ARCH-01**: Domain logic (worktree model, metro state machine, command dependencies, staleness rules) is pure Rust with zero dependencies on UI or system crates
+- [ ] **ARCH-02**: Infrastructure layer (process spawning, git operations, JIRA HTTP, tmux interaction, file I/O) is behind trait boundaries so implementations can be swapped or tested
+- [ ] **ARCH-03**: UI layer (ratatui widgets, rendering, layout) depends on domain types but never on infrastructure directly
+- [ ] **ARCH-04**: Application layer uses The Elm Architecture (TEA): AppState (model) → Action enum (update) → View functions (render)
+- [ ] **ARCH-05**: Code follows "A Philosophy of Software Design" by John Ousterhout — deep modules with simple interfaces, minimize shallow abstractions
+- [ ] **ARCH-06**: Domain invariants (e.g., "only one metro at a time") are enforced in domain types, not scattered across UI or infra code
+
+### TUI Shell
+
+- [ ] **SHELL-01**: User can navigate the dashboard using vim-style keybindings (hjkl, q, /, ?)
+- [ ] **SHELL-02**: User sees context-sensitive keybinding hints in a footer bar that update per active panel/mode
+- [ ] **SHELL-03**: User can move focus between panels using Tab/Shift-Tab or arrow keys
+- [ ] **SHELL-04**: User can open a help overlay (? or F1) listing all available keybindings
+- [ ] **SHELL-05**: User sees error states clearly when commands fail (non-zero exit, with retry/dismiss)
+
+### Metro
+
+- [ ] **METRO-01**: User can see at a glance which worktree (if any) has metro running, with status indicator (running/stopped)
+- [ ] **METRO-02**: User can start metro (yarn start --reset-cache) from the active worktree
+- [ ] **METRO-03**: User can stop the running metro instance
+- [ ] **METRO-04**: User can restart metro (kill + start) with one keystroke
+- [ ] **METRO-05**: User can view metro log output in a dedicated panel only when a log filter is applied (metro does not stream logs by default)
+- [ ] **METRO-06**: User can scroll through metro log history in the log panel
+- [ ] **METRO-07**: User can send debugger command (j) to the running metro instance
+- [ ] **METRO-08**: User can send reload command (r) to the running metro instance
+- [ ] **METRO-09**: Only one metro instance can run at a time across all worktrees (enforced by the dashboard)
+
+### Worktree Management
+
+- [ ] **WORK-01**: User sees a list of all worktrees with their current branch name
+- [ ] **WORK-02**: User sees the JIRA ticket title next to the branch name (fetched via API from UMP-XXXX pattern)
+- [ ] **WORK-03**: User can set a custom label on a branch that persists across worktrees (label follows the branch, not the worktree)
+- [ ] **WORK-04**: User can switch the "running" worktree which auto-kills metro in current and starts it in the new one
+- [ ] **WORK-05**: User sees dependency staleness hints when node_modules is outdated relative to package.json/yarn.lock
+- [ ] **WORK-06**: Stale dependencies are lazily installed before launching the app if user hasn't manually installed
+
+### Git Operations
+
+- [ ] **GIT-01**: User can run git reset --hard origin/<current-branch> on a selected worktree
+- [ ] **GIT-02**: User can run git pull on a selected worktree
+- [ ] **GIT-03**: User can run git push on a selected worktree
+- [ ] **GIT-04**: User can run git rebase origin/<target-branch> on a selected worktree
+- [ ] **GIT-05**: User can run git checkout <branch> to switch branches in a worktree
+- [ ] **GIT-06**: User can run git checkout -b <branch> to create and switch to a new branch
+
+### RN Commands
+
+- [ ] **RN-01**: User can run npx react-native clean --include 'android' on a selected worktree
+- [ ] **RN-02**: User can run npx react-native clean --include 'cocoapods' on a selected worktree
+- [ ] **RN-03**: User can run rm -rf node_modules on a selected worktree
+- [ ] **RN-04**: User can run yarn install on a selected worktree
+- [ ] **RN-05**: User can run yarn pod-install on a selected worktree
+- [ ] **RN-06**: User can run npx react-native run-android on a selected worktree with device selection (from adb devices list)
+- [ ] **RN-07**: User can run yarn react-native run-ios on a selected worktree with device/simulator selection
+- [ ] **RN-08**: User can run yarn unit-tests on a selected worktree
+- [ ] **RN-09**: User can run yarn jest with a test filter on a selected worktree
+- [ ] **RN-10**: User can run yarn lint --quiet --fix on a selected worktree
+- [ ] **RN-11**: User can run yarn check-types --incremental on a selected worktree
+- [ ] **RN-12**: User sees streaming command output in a panel while commands execute
+
+### Integrations
+
+- [ ] **INTG-01**: Dashboard reads JIRA API token from ~/.config/ump-dash/ config
+- [ ] **INTG-02**: Dashboard fetches JIRA ticket titles by extracting UMP-XXXX from branch names and querying the JIRA REST API
+- [ ] **INTG-03**: Fetched JIRA titles are cached locally to avoid redundant API calls
+- [ ] **INTG-04**: User can launch Claude Code in a new tmux tab at a selected worktree's directory
+- [ ] **INTG-05**: Dashboard detects it is running inside tmux for tmux-dependent features
+
+## v2 Requirements
+
+### Enhanced UX
+
+- **UX-01**: Confirmation dialog before destructive actions (git reset --hard, rm node_modules)
+- **UX-02**: Command flags configuration modal before execution (toggle --reset-cache, --fix, etc.)
+- **UX-03**: Basic mouse scrolling support in log panels
+
+### CI/CD
+
+- **CICD-01**: Show CI/CD pipeline status per worktree (GitHub Actions)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Full git log/diff viewer | lazygit does this better — offer keybinding to open lazygit instead |
+| Real-time JIRA write-back | Scope creep — read-only title fetch is sufficient |
+| Multi-user / team sync | Single-user tool by design |
+| Plugin/extension system | Focused tool — hardcode RN commands, config file for customization |
+| Built-in terminal emulator | Would become tmux replacement — use tmux new-window for ad-hoc shells |
+| Mobile or web UI | Terminal dashboard only |
+| Mouse-first interaction | Keyboard-first for vim/Doom Emacs user |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| ARCH-01 | — | Pending |
+| ARCH-02 | — | Pending |
+| ARCH-03 | — | Pending |
+| ARCH-04 | — | Pending |
+| ARCH-05 | — | Pending |
+| ARCH-06 | — | Pending |
+| SHELL-01 | — | Pending |
+| SHELL-02 | — | Pending |
+| SHELL-03 | — | Pending |
+| SHELL-04 | — | Pending |
+| SHELL-05 | — | Pending |
+| METRO-01 | — | Pending |
+| METRO-02 | — | Pending |
+| METRO-03 | — | Pending |
+| METRO-04 | — | Pending |
+| METRO-05 | — | Pending |
+| METRO-06 | — | Pending |
+| METRO-07 | — | Pending |
+| METRO-08 | — | Pending |
+| METRO-09 | — | Pending |
+| WORK-01 | — | Pending |
+| WORK-02 | — | Pending |
+| WORK-03 | — | Pending |
+| WORK-04 | — | Pending |
+| WORK-05 | — | Pending |
+| WORK-06 | — | Pending |
+| GIT-01 | — | Pending |
+| GIT-02 | — | Pending |
+| GIT-03 | — | Pending |
+| GIT-04 | — | Pending |
+| GIT-05 | — | Pending |
+| GIT-06 | — | Pending |
+| RN-01 | — | Pending |
+| RN-02 | — | Pending |
+| RN-03 | — | Pending |
+| RN-04 | — | Pending |
+| RN-05 | — | Pending |
+| RN-06 | — | Pending |
+| RN-07 | — | Pending |
+| RN-08 | — | Pending |
+| RN-09 | — | Pending |
+| RN-10 | — | Pending |
+| RN-11 | — | Pending |
+| RN-12 | — | Pending |
+| INTG-01 | — | Pending |
+| INTG-02 | — | Pending |
+| INTG-03 | — | Pending |
+| INTG-04 | — | Pending |
+| INTG-05 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 45 total
+- Mapped to phases: 0
+- Unmapped: 45 ⚠️
+
+---
+*Requirements defined: 2026-03-02*
+*Last updated: 2026-03-02 after initial definition*
