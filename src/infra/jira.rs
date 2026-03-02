@@ -18,8 +18,9 @@ use async_trait::async_trait;
 /// Implementing this as a trait lets unit tests inject a fake client without
 /// making real HTTP calls. The bound `Send + Sync` is required so that
 /// implementations can be stored in `Arc<dyn JiraClient>` in the app state.
+/// The `Debug` bound is required because `AppState` derives `Debug`.
 #[async_trait]
-pub trait JiraClient: Send + Sync {
+pub trait JiraClient: Send + Sync + std::fmt::Debug {
     /// Fetches the summary (title) for the given JIRA ticket key (e.g. "UMP-1234").
     ///
     /// Returns `None` on any failure — network error, auth error, missing key, or
@@ -29,6 +30,7 @@ pub trait JiraClient: Send + Sync {
 }
 
 /// Concrete JIRA client that makes real HTTP requests using reqwest.
+#[derive(Debug)]
 pub struct HttpJiraClient {
     client: reqwest::Client,
     base_url: String,

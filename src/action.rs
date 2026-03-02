@@ -72,4 +72,7 @@ pub enum Action {
     // Phase 3: Command palette activation
     EnterGitPalette,  // 'g' when WorktreeList focused — activates git palette mode
     EnterRnPalette,   // 'c' when WorktreeList focused — activates RN palette mode
+
+    // Phase 4: JIRA title background fetch results
+    JiraTitlesFetched(Vec<(String, String)>),  // (ticket_key, title)
 }

@@ -113,6 +113,11 @@ pub struct AppState {
 
     // Pending label branch — set by StartSetLabel, consumed by ModalInputSubmit
     pub pending_label_branch: Option<String>,
+
+    // --- Phase 4 fields ---
+    pub tmux_available: bool,
+    pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
+    pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
 }
 
 impl Default for AppState {
@@ -148,6 +153,10 @@ impl Default for AppState {
             palette_mode: None,
             pending_device_command: None,
             pending_label_branch: None,
+            // Phase 4
+            tmux_available: false,  // set properly in run()
+            jira_title_cache: std::collections::HashMap::new(),
+            jira_client: None,
         }
     }
 }
@@ -502,6 +511,15 @@ pub fn update(
                 wt.label = state.labels.get(&wt.branch).cloned();
             }
 
+            // Phase 4: re-apply cached JIRA titles
+            for wt in &mut worktrees {
+                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch) {
+                    if let Some(title) = state.jira_title_cache.get(&key) {
+                        wt.jira_title = Some(title.clone());
+                    }
+                }
+            }
+
             // Clamp selected index within new list
             let clamped = if worktrees.is_empty() {
                 0
@@ -516,6 +534,33 @@ pub fn update(
             }
 
             state.worktrees = worktrees;
+
+            // Phase 4: fetch titles for uncached branches
+            if let Some(ref client) = state.jira_client {
+                let keys_to_fetch: Vec<(String, String)> = state.worktrees.iter()
+                    .filter_map(|wt| {
+                        let key = crate::infra::jira::extract_jira_key(&wt.branch)?;
+                        if state.jira_title_cache.contains_key(&key) { return None; }
+                        Some((wt.branch.clone(), key))
+                    })
+                    .collect();
+
+                if !keys_to_fetch.is_empty() {
+                    let client = std::sync::Arc::clone(client);
+                    let tx = metro_tx.clone();
+                    tokio::spawn(async move {
+                        let mut results = vec![];
+                        for (_branch, key) in keys_to_fetch {
+                            if let Some(title) = client.fetch_title(&key).await {
+                                results.push((key, title));
+                            }
+                        }
+                        if !results.is_empty() {
+                            let _ = tx.send(Action::JiraTitlesFetched(results));
+                        }
+                    });
+                }
+            }
         }
 
         Action::RefreshWorktrees => {
@@ -855,6 +900,27 @@ pub fn update(
         Action::EnterRnPalette => {
             state.palette_mode = Some(PaletteMode::Rn);
         }
+
+        // --- Phase 4: JIRA title fetch results ---
+
+        Action::JiraTitlesFetched(titles) => {
+            // Update in-memory cache
+            for (key, title) in &titles {
+                state.jira_title_cache.insert(key.clone(), title.clone());
+            }
+            // Persist cache to disk (fire-and-forget, log on error)
+            if let Err(e) = crate::infra::jira_cache::save_jira_cache(&state.jira_title_cache) {
+                tracing::warn!("save_jira_cache failed: {e}");
+            }
+            // Apply titles to currently loaded worktrees
+            for wt in &mut state.worktrees {
+                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch) {
+                    if let Some(title) = state.jira_title_cache.get(&key) {
+                        wt.jira_title = Some(title.clone());
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -873,6 +939,22 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 
     // Load labels from disk on startup
     state.labels = crate::infra::labels::load_labels().unwrap_or_default();
+
+    // Phase 4: tmux detection
+    state.tmux_available = crate::infra::jira::is_inside_tmux();
+
+    // Phase 4: Load config + JIRA client + cache
+    if let Ok(Some(config)) = crate::infra::config::load_config() {
+        match crate::infra::jira::HttpJiraClient::new(&config) {
+            Ok(client) => {
+                state.jira_client = Some(std::sync::Arc::new(client));
+            }
+            Err(e) => {
+                tracing::warn!("JIRA client init failed: {e}");
+            }
+        }
+    }
+    state.jira_title_cache = crate::infra::jira_cache::load_jira_cache().unwrap_or_default();
 
     // Spawn initial worktree load
     {
