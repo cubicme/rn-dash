@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Cargo manifest + layered module stubs (domain/infra/ui isolation boundaries)
-- [ ] 01-02-PLAN.md — TEA app loop: AppState, Action enum, handle_key(), update(), async event loop, terminal lifecycle with panic hook
-- [ ] 01-03-PLAN.md — UI render layer: three-panel layout, footer keyhints, help overlay, error overlay
+- [x] 01-01-PLAN.md — Cargo manifest + layered module stubs (domain/infra/ui isolation boundaries)
+- [x] 01-02-PLAN.md — TEA app loop: AppState, Action enum, handle_key(), update(), async event loop, terminal lifecycle with panic hook
+- [x] 01-03-PLAN.md — UI render layer: three-panel layout, footer keyhints, help overlay, error overlay
 
 ### Phase 2: Metro Process Control
 **Goal**: Users can start, stop, restart, and monitor metro with guaranteed single-instance enforcement — the zombie-process and port-binding bugs are addressed before any downstream features depend on this layer
@@ -46,7 +46,12 @@ Plans:
   2. User can start metro (yarn start --reset-cache) from the focused worktree with one keystroke, and starting metro when another instance is already running automatically kills the existing one first
   3. User can stop and restart metro with single keystrokes, and after stop the port 8081 is verified free before the UI shows status as stopped
   4. User can toggle a log panel that shows metro output only when filtered, can scroll through log history, and can send debugger (j) and reload (r) commands to the running metro instance
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Domain metro types, infra trait contracts, Action enum + AppState extensions
+- [ ] 02-02-PLAN.md — App runtime: metro spawn/kill/restart, mpsc channels, stdin forwarding, death detection
+- [ ] 02-03-PLAN.md — UI rendering: metro status indicator, scrollable log panel, footer + help updates
 
 ### Phase 3: Worktree Browser, Git, and RN Commands
 **Goal**: Users can see all worktrees in a browsable list, run any git operation or RN command on a selected worktree, and watch streaming output — completing the core daily-driver workflow
@@ -88,7 +93,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
-| 2. Metro Process Control | 0/TBD | Not started | - |
+| 2. Metro Process Control | 0/3 | Planned | - |
 | 3. Worktree Browser, Git, and RN Commands | 0/TBD | Not started | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
 | 5. Worktree Switching and Claude Code | 0/TBD | Not started | - |
