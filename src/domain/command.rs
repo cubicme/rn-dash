@@ -47,23 +47,23 @@ impl CommandSpec {
             CommandSpec::GitCheckout { branch } => vec!["git".into(), "checkout".into(), branch.clone()],
             CommandSpec::GitCheckoutNew { branch } => vec!["git".into(), "checkout".into(), "-b".into(), branch.clone()],
 
-            CommandSpec::RnCleanAndroid => vec!["./gradlew".into(), "clean".into()],
-            CommandSpec::RnCleanCocoapods => vec!["pod".into(), "deintegrate".into()],
+            CommandSpec::RnCleanAndroid => vec!["npx".into(), "react-native".into(), "clean".into(), "--include".into(), "android".into()],
+            CommandSpec::RnCleanCocoapods => vec!["npx".into(), "react-native".into(), "clean".into(), "--include".into(), "cocoapods".into()],
             CommandSpec::RmNodeModules => vec!["rm".into(), "-rf".into(), "node_modules".into()],
 
             CommandSpec::YarnInstall => vec!["yarn".into(), "install".into()],
             CommandSpec::YarnPodInstall => vec!["yarn".into(), "pod-install".into()],
 
             CommandSpec::RnRunAndroid { device_id } => {
-                vec!["yarn".into(), "android".into(), "--deviceId".into(), device_id.clone()]
+                vec!["npx".into(), "react-native".into(), "run-android".into(), "--deviceId".into(), device_id.clone()]
             }
             CommandSpec::RnRunIos { device_id } => {
-                vec!["yarn".into(), "ios".into(), "--udid".into(), device_id.clone()]
+                vec!["yarn".into(), "react-native".into(), "run-ios".into(), "--udid".into(), device_id.clone()]
             }
 
-            CommandSpec::YarnUnitTests => vec!["yarn".into(), "test".into()],
+            CommandSpec::YarnUnitTests => vec!["yarn".into(), "unit-tests".into()],
             CommandSpec::YarnJest { filter } => vec!["yarn".into(), "jest".into(), filter.clone()],
-            CommandSpec::YarnLint => vec!["yarn".into(), "lint".into()],
+            CommandSpec::YarnLint => vec!["yarn".into(), "lint".into(), "--quiet".into(), "--fix".into()],
             CommandSpec::YarnCheckTypes => vec!["yarn".into(), "check-types".into(), "--incremental".into()],
         }
     }
@@ -104,16 +104,16 @@ impl CommandSpec {
             CommandSpec::GitRebase { .. } => "git rebase <target>",
             CommandSpec::GitCheckout { .. } => "git checkout <branch>",
             CommandSpec::GitCheckoutNew { .. } => "git checkout -b <branch>",
-            CommandSpec::RnCleanAndroid => "Clean Android (gradlew clean)",
-            CommandSpec::RnCleanCocoapods => "Clean CocoaPods (pod deintegrate)",
+            CommandSpec::RnCleanAndroid => "Clean Android (react-native clean)",
+            CommandSpec::RnCleanCocoapods => "Clean CocoaPods (react-native clean)",
             CommandSpec::RmNodeModules => "Remove node_modules",
             CommandSpec::YarnInstall => "yarn install",
             CommandSpec::YarnPodInstall => "yarn pod-install",
             CommandSpec::RnRunAndroid { .. } => "Run on Android device",
             CommandSpec::RnRunIos { .. } => "Run on iOS device",
-            CommandSpec::YarnUnitTests => "yarn test",
+            CommandSpec::YarnUnitTests => "yarn unit-tests",
             CommandSpec::YarnJest { .. } => "yarn jest <filter>",
-            CommandSpec::YarnLint => "yarn lint",
+            CommandSpec::YarnLint => "yarn lint --quiet --fix",
             CommandSpec::YarnCheckTypes => "yarn check-types --incremental",
         }
     }
