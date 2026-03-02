@@ -77,9 +77,11 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
         FocusedPanel::WorktreeList => vec![
             ("j/k", "navigate"),
+            ("Enter", "switch"),
             ("g", "git"),
             ("c", "commands"),
             ("L", "set label"),
+            ("C", "claude"),
         ],
         FocusedPanel::MetroPane => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![

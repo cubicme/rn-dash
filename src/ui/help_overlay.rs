@@ -31,6 +31,8 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["Worktree List", ""])
             .style(Style::default().add_modifier(Modifier::BOLD)),
         Row::new(vec!["j / k",        "Select next/prev worktree"]),
+        Row::new(vec!["Enter",        "Switch metro to worktree"]),
+        Row::new(vec!["C (shift-c)",  "Open Claude Code (tmux)"]),
         Row::new(vec!["g",            "Git command palette"]),
         Row::new(vec!["c",            "RN command palette"]),
         Row::new(vec!["L (shift-l)",  "Set custom label"]),
