@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in-progress
-last_updated: "2026-03-02T07:00:39Z"
+status: unknown
+last_updated: "2026-03-02T07:06:54.080Z"
 progress:
-  total_phases: 5
+  total_phases: 2
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
 ---
 
 # Project State
@@ -23,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 2 of 5 (Metro Process Control)
-Plan: 1 of 3 in current phase
-Status: Plan 02-01 Complete
-Last activity: 2026-03-02 — Completed 02-01 (domain metro types, infra trait contracts, Action/AppState extensions)
+Plan: 2 of 3 in current phase
+Status: Plan 02-02 Complete
+Last activity: 2026-03-02 — Completed 02-02 (metro keybinding dispatch, async spawn/kill/restart runtime, log streaming, stdin forwarding, death detection)
 
-Progress: [████░░░░░░] 20%
+Progress: [█████░░░░░] 40%
 
 ## Performance Metrics
 
@@ -41,13 +41,14 @@ Progress: [████░░░░░░] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
-| Phase 2 | 1/3 | 3 min | 3 min |
+| Phase 2 | 2/3 | 8 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 4 min, 2 min, 3 min
+- Last 5 plans: 2 min, 4 min, 2 min, 3 min, 5 min
 - Trend: stable
 
 *Updated after each plan completion*
+| Phase 02-metro-process-control P02 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,10 @@ Recent decisions affecting current work:
 - [02-01]: No new crates beyond async-trait — tokio::process and tokio::sync::mpsc already covered by tokio features="full"
 - [02-01]: MetroManager::register() panics on double-registration — explicit invariant over silent overwrite; callers must take_handle() and kill first
 - [02-01]: Pure metro state mutations (toggle, scroll, log append, clear) in update() now; async spawn/kill deferred to Plan 02
+- [02-02]: kill_tx: Option<oneshot::Sender<()>> added to MetroHandle — oneshot is the right primitive for a one-time kill signal; Option allows take() exactly once
+- [02-02]: Separate handle_rx channel for MetroHandle delivery — MetroHandle contains non-Clone JoinHandle so it cannot travel through Action enum; separate channel keeps type boundary clean
+- [02-02]: pending_restart: bool in AppState drives restart chain — MetroRestart/MetroStart-while-running/MetroToggleLog-while-running all set flag; MetroExited checks and re-dispatches MetroStart
+- [02-02]: stream_metro_logs spawned inside metro_process_task and aborted before kill — prevents log lines racing with MetroExited delivery
 
 ### Pending Todos
 
@@ -85,6 +90,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T07:00:39Z
-Stopped at: Completed 02-01-PLAN.md — domain metro types, ProcessClient trait, Action/AppState metro extensions
+Last session: 2026-03-02T07:07:00Z
+Stopped at: Completed 02-02-PLAN.md — metro keybinding dispatch, async spawn/kill/restart runtime, log streaming, stdin forwarding, death detection
 Resume file: None
