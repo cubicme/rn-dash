@@ -103,61 +103,61 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | — | Pending |
-| ARCH-02 | — | Pending |
-| ARCH-03 | — | Pending |
-| ARCH-04 | — | Pending |
-| ARCH-05 | — | Pending |
-| ARCH-06 | — | Pending |
-| SHELL-01 | — | Pending |
-| SHELL-02 | — | Pending |
-| SHELL-03 | — | Pending |
-| SHELL-04 | — | Pending |
-| SHELL-05 | — | Pending |
-| METRO-01 | — | Pending |
-| METRO-02 | — | Pending |
-| METRO-03 | — | Pending |
-| METRO-04 | — | Pending |
-| METRO-05 | — | Pending |
-| METRO-06 | — | Pending |
-| METRO-07 | — | Pending |
-| METRO-08 | — | Pending |
-| METRO-09 | — | Pending |
-| WORK-01 | — | Pending |
-| WORK-02 | — | Pending |
-| WORK-03 | — | Pending |
-| WORK-04 | — | Pending |
-| WORK-05 | — | Pending |
-| WORK-06 | — | Pending |
-| GIT-01 | — | Pending |
-| GIT-02 | — | Pending |
-| GIT-03 | — | Pending |
-| GIT-04 | — | Pending |
-| GIT-05 | — | Pending |
-| GIT-06 | — | Pending |
-| RN-01 | — | Pending |
-| RN-02 | — | Pending |
-| RN-03 | — | Pending |
-| RN-04 | — | Pending |
-| RN-05 | — | Pending |
-| RN-06 | — | Pending |
-| RN-07 | — | Pending |
-| RN-08 | — | Pending |
-| RN-09 | — | Pending |
-| RN-10 | — | Pending |
-| RN-11 | — | Pending |
-| RN-12 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
-| INTG-05 | — | Pending |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
+| ARCH-04 | Phase 1 | Pending |
+| ARCH-05 | Phase 1 | Pending |
+| ARCH-06 | Phase 1 | Pending |
+| SHELL-01 | Phase 1 | Pending |
+| SHELL-02 | Phase 1 | Pending |
+| SHELL-03 | Phase 1 | Pending |
+| SHELL-04 | Phase 1 | Pending |
+| SHELL-05 | Phase 1 | Pending |
+| METRO-01 | Phase 2 | Pending |
+| METRO-02 | Phase 2 | Pending |
+| METRO-03 | Phase 2 | Pending |
+| METRO-04 | Phase 2 | Pending |
+| METRO-05 | Phase 2 | Pending |
+| METRO-06 | Phase 2 | Pending |
+| METRO-07 | Phase 2 | Pending |
+| METRO-08 | Phase 2 | Pending |
+| METRO-09 | Phase 2 | Pending |
+| WORK-01 | Phase 3 | Pending |
+| WORK-02 | Phase 3 | Pending |
+| WORK-03 | Phase 3 | Pending |
+| WORK-04 | Phase 5 | Pending |
+| WORK-05 | Phase 3 | Pending |
+| WORK-06 | Phase 3 | Pending |
+| GIT-01 | Phase 3 | Pending |
+| GIT-02 | Phase 3 | Pending |
+| GIT-03 | Phase 3 | Pending |
+| GIT-04 | Phase 3 | Pending |
+| GIT-05 | Phase 3 | Pending |
+| GIT-06 | Phase 3 | Pending |
+| RN-01 | Phase 3 | Pending |
+| RN-02 | Phase 3 | Pending |
+| RN-03 | Phase 3 | Pending |
+| RN-04 | Phase 3 | Pending |
+| RN-05 | Phase 3 | Pending |
+| RN-06 | Phase 3 | Pending |
+| RN-07 | Phase 3 | Pending |
+| RN-08 | Phase 3 | Pending |
+| RN-09 | Phase 3 | Pending |
+| RN-10 | Phase 3 | Pending |
+| RN-11 | Phase 3 | Pending |
+| RN-12 | Phase 3 | Pending |
+| INTG-01 | Phase 4 | Pending |
+| INTG-02 | Phase 4 | Pending |
+| INTG-03 | Phase 4 | Pending |
+| INTG-04 | Phase 5 | Pending |
+| INTG-05 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 45 total
-- Mapped to phases: 0
-- Unmapped: 45 ⚠️
+- Mapped to phases: 45
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 — phase traceability complete after roadmap creation*
