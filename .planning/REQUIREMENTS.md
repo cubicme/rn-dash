@@ -39,7 +39,7 @@
 - [x] **WORK-01**: User sees a list of all worktrees with their current branch name
 - [x] **WORK-02**: User sees the JIRA ticket title next to the branch name (fetched via API from UMP-XXXX pattern)
 - [x] **WORK-03**: User can set a custom label on a branch that persists across worktrees (label follows the branch, not the worktree)
-- [ ] **WORK-04**: User can switch the "running" worktree which auto-kills metro in current and starts it in the new one
+- [x] **WORK-04**: User can switch the "running" worktree which auto-kills metro in current and starts it in the new one
 - [x] **WORK-05**: User sees dependency staleness hints when node_modules is outdated relative to package.json/yarn.lock
 - [x] **WORK-06**: Stale dependencies are lazily installed before launching the app if user hasn't manually installed
 
@@ -72,7 +72,7 @@
 - [x] **INTG-01**: Dashboard reads JIRA API token from ~/.config/ump-dash/ config
 - [x] **INTG-02**: Dashboard fetches JIRA ticket titles by extracting UMP-XXXX from branch names and querying the JIRA REST API
 - [x] **INTG-03**: Fetched JIRA titles are cached locally to avoid redundant API calls
-- [ ] **INTG-04**: User can launch Claude Code in a new tmux tab at a selected worktree's directory
+- [x] **INTG-04**: User can launch Claude Code in a new tmux tab at a selected worktree's directory
 - [x] **INTG-05**: Dashboard detects it is running inside tmux for tmux-dependent features
 
 ## v2 Requirements
@@ -126,7 +126,7 @@
 | WORK-01 | Phase 3 | Complete |
 | WORK-02 | Phase 3 | Complete |
 | WORK-03 | Phase 3 | Complete |
-| WORK-04 | Phase 5 | Pending |
+| WORK-04 | Phase 5 | Complete |
 | WORK-05 | Phase 3 | Complete |
 | WORK-06 | Phase 3 | Complete |
 | GIT-01 | Phase 3 | Complete |
@@ -150,7 +150,7 @@
 | INTG-01 | Phase 4 | Complete |
 | INTG-02 | Phase 4 | Complete |
 | INTG-03 | Phase 4 | Complete |
-| INTG-04 | Phase 5 | Pending |
+| INTG-04 | Phase 5 | Complete |
 | INTG-05 | Phase 4 | Complete |
 
 **Coverage:**

@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain (completed 2026-03-02)
 - [x] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress) (completed 2026-03-02)
 - [x] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation (gap closure in progress) (completed 2026-03-02)
-- [ ] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch
+- [x] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch (completed 2026-03-02)
 
 ## Phase Details
 
@@ -111,4 +111,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
 | 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
 | 4. Config and JIRA Integration | 3/3 | Complete   | 2026-03-02 |
-| 5. Worktree Switching and Claude Code | 0/1 | Not started | - |
+| 5. Worktree Switching and Claude Code | 1/1 | Complete   | 2026-03-02 |
