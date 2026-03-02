@@ -10,15 +10,15 @@
 - [x] **ARCH-01**: Domain logic (worktree model, metro state machine, command dependencies, staleness rules) is pure Rust with zero dependencies on UI or system crates
 - [x] **ARCH-02**: Infrastructure layer (process spawning, git operations, JIRA HTTP, tmux interaction, file I/O) is behind trait boundaries so implementations can be swapped or tested
 - [x] **ARCH-03**: UI layer (ratatui widgets, rendering, layout) depends on domain types but never on infrastructure directly
-- [ ] **ARCH-04**: Application layer uses The Elm Architecture (TEA): AppState (model) → Action enum (update) → View functions (render)
+- [x] **ARCH-04**: Application layer uses The Elm Architecture (TEA): AppState (model) → Action enum (update) → View functions (render)
 - [x] **ARCH-05**: Code follows "A Philosophy of Software Design" by John Ousterhout — deep modules with simple interfaces, minimize shallow abstractions
-- [ ] **ARCH-06**: Domain invariants (e.g., "only one metro at a time") are enforced in domain types, not scattered across UI or infra code
+- [x] **ARCH-06**: Domain invariants (e.g., "only one metro at a time") are enforced in domain types, not scattered across UI or infra code
 
 ### TUI Shell
 
-- [ ] **SHELL-01**: User can navigate the dashboard using vim-style keybindings (hjkl, q, /, ?)
+- [x] **SHELL-01**: User can navigate the dashboard using vim-style keybindings (hjkl, q, /, ?)
 - [ ] **SHELL-02**: User sees context-sensitive keybinding hints in a footer bar that update per active panel/mode
-- [ ] **SHELL-03**: User can move focus between panels using Tab/Shift-Tab or arrow keys
+- [x] **SHELL-03**: User can move focus between panels using Tab/Shift-Tab or arrow keys
 - [ ] **SHELL-04**: User can open a help overlay (? or F1) listing all available keybindings
 - [ ] **SHELL-05**: User sees error states clearly when commands fail (non-zero exit, with retry/dismiss)
 
@@ -106,12 +106,12 @@
 | ARCH-01 | Phase 1 | Complete |
 | ARCH-02 | Phase 1 | Complete |
 | ARCH-03 | Phase 1 | Complete |
-| ARCH-04 | Phase 1 | Pending |
+| ARCH-04 | Phase 1 | Complete |
 | ARCH-05 | Phase 1 | Complete |
-| ARCH-06 | Phase 1 | Pending |
-| SHELL-01 | Phase 1 | Pending |
+| ARCH-06 | Phase 1 | Complete |
+| SHELL-01 | Phase 1 | Complete |
 | SHELL-02 | Phase 1 | Pending |
-| SHELL-03 | Phase 1 | Pending |
+| SHELL-03 | Phase 1 | Complete |
 | SHELL-04 | Phase 1 | Pending |
 | SHELL-05 | Phase 1 | Pending |
 | METRO-01 | Phase 2 | Pending |

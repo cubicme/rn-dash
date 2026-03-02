@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 1 of 5 (Scaffold and TUI Shell)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: Executing
-Last activity: 2026-03-02 — Completed 01-01 (Cargo scaffold + module stubs)
+Last activity: 2026-03-02 — Completed 01-02 (Core app loop, TEA pattern, terminal lifecycle)
 
-Progress: [██░░░░░░░░] 7%
+Progress: [███░░░░░░░] 13%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 1
-- Average duration: 2 min
-- Total execution time: 0.03 hours
+- Total plans completed: 2
+- Average duration: 3 min
+- Total execution time: 0.10 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| Phase 1 | 1/3 | 2 min | 2 min |
+| Phase 1 | 2/3 | 6 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min
-- Trend: -
+- Last 5 plans: 2 min, 4 min
+- Trend: +2 min (larger plan)
 
 *Updated after each plan completion*
 
@@ -50,6 +50,10 @@ Recent decisions affecting current work:
 - [Research]: JIRA auth method (Cloud vs Data Center) unconfirmed — validate before Phase 4 implementation
 - [01-01]: crossterm imported exclusively via ratatui::crossterm — no standalone crossterm dep to prevent version duplication bugs
 - [01-01]: #![allow(dead_code)] added to stub files — intentionally unused until later phases; remove when stubs get real implementations
+- [01-02]: futures 0.3 added explicitly — futures::StreamExt not transitively available in ratatui 0.30 modularized structure (ratatui-crossterm does not enable event-stream feature by default)
+- [01-02]: crossterm 0.29 event-stream feature enabled via direct Cargo.toml entry — same version, cargo feature-unifies, no duplication; required for EventStream to be accessible
+- [01-02]: TEA invariant established: handle_key() is pure (Option<Action>), update() is sole mutation site — all later phases must follow this pattern
+- [01-02]: Panic hook order: color_eyre::install → custom hook with ratatui::restore → ratatui::init — any deviation causes hook chaining bugs
 
 ### Pending Todos
 
@@ -62,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T05:26:44Z
-Stopped at: Completed 01-01-PLAN.md — Cargo scaffold + module stubs with architecture boundaries
+Last session: 2026-03-02T06:08:58Z
+Stopped at: Completed 01-02-PLAN.md — Core app loop, TEA pattern, terminal lifecycle with panic hook
 Resume file: None

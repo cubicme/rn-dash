@@ -87,7 +87,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Scaffold and TUI Shell | 0/3 | Planned | - |
+| 1. Scaffold and TUI Shell | 2/3 | In Progress|  |
 | 2. Metro Process Control | 0/TBD | Not started | - |
 | 3. Worktree Browser, Git, and RN Commands | 0/TBD | Not started | - |
 | 4. Config and JIRA Integration | 0/TBD | Not started | - |
