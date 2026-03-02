@@ -37,4 +37,32 @@ pub enum Action {
     // Metro background events (not user-triggered — sent by background tasks)
     MetroLogLine(String), // stdout/stderr line from metro streaming task
     MetroExited,          // metro process has stopped (port confirmed free)
+
+    // Phase 3: Worktree navigation
+    WorktreeSelectNext,   // j/Down in WorktreeList panel
+    WorktreeSelectPrev,   // k/Up in WorktreeList panel
+    WorktreesLoaded(Vec<crate::domain::worktree::Worktree>), // background refresh done
+    RefreshWorktrees,     // manual refresh keybinding
+
+    // Phase 3: Command lifecycle
+    CommandRun(crate::domain::command::CommandSpec), // dispatched when command is confirmed/ready
+    CommandOutputLine(String),  // line from command stdout/stderr
+    CommandExited,              // command process has finished
+    CommandOutputClear,         // clear the output panel
+    CommandCancel,              // abort running command
+
+    // Phase 3: Modal flow
+    ShowCommandPalette,     // 'g' for git palette, 'c' for RN command palette (from worktree list)
+    ModalConfirm,           // user pressed Y in confirm dialog
+    ModalCancel,            // user pressed N or Esc in any modal
+    ModalInputChar(char),   // character typed in text input modal
+    ModalInputBackspace,    // backspace in text input modal
+    ModalInputSubmit,       // Enter in text input modal
+    ModalDeviceNext,        // j/Down in device picker
+    ModalDevicePrev,        // k/Up in device picker
+    ModalDeviceConfirm,     // Enter on selected device
+
+    // Phase 3: Label management
+    SetLabel { branch: String, label: String },
+    StartSetLabel,          // 'L' on selected worktree — opens text input for label
 }

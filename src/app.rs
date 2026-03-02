@@ -265,6 +265,30 @@ pub fn update(
                 update(state, Action::MetroStart, metro_tx, handle_tx);
             }
         }
+
+        // Phase 3 actions — stubs that will be implemented in Plan 03-02 (app logic).
+        Action::WorktreeSelectNext
+        | Action::WorktreeSelectPrev
+        | Action::RefreshWorktrees
+        | Action::WorktreesLoaded(_)
+        | Action::CommandRun(_)
+        | Action::CommandOutputLine(_)
+        | Action::CommandExited
+        | Action::CommandOutputClear
+        | Action::CommandCancel
+        | Action::ShowCommandPalette
+        | Action::ModalConfirm
+        | Action::ModalCancel
+        | Action::ModalInputChar(_)
+        | Action::ModalInputBackspace
+        | Action::ModalInputSubmit
+        | Action::ModalDeviceNext
+        | Action::ModalDevicePrev
+        | Action::ModalDeviceConfirm
+        | Action::SetLabel { .. }
+        | Action::StartSetLabel => {
+            // Phase 3 stubs — implemented in Plan 03-02 (app state logic)
+        }
     }
 }
 
