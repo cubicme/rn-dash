@@ -36,6 +36,7 @@ impl Default for MetroStatus {
 /// Owned exclusively by `MetroManager::handle` — never shared or cloned.
 /// Fields are pub so the infra layer (app.rs spawn logic in Plan 02) can construct
 /// and pass this struct across the domain boundary.
+#[derive(Debug)]
 pub struct MetroHandle {
     /// OS process ID — used for status display and external-kill detection.
     pub pid: u32,
@@ -54,6 +55,7 @@ pub struct MetroHandle {
 ///
 /// All metro state transitions go through MetroManager methods. The update() function
 /// in app.rs calls these methods — it never manipulates handles directly.
+#[derive(Debug)]
 pub struct MetroManager {
     /// Private — callers cannot bypass the single-instance check.
     handle: Option<MetroHandle>,

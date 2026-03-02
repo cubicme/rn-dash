@@ -3,6 +3,9 @@ use crate::action::Action;
 use futures::StreamExt;
 use ratatui::crossterm::event::{EventStream, KeyCode, KeyEventKind};
 
+/// Maximum number of metro log lines retained in memory.
+const MAX_LOG_LINES: usize = 1000;
+
 /// Which panel currently has keyboard focus.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum FocusedPanel {
@@ -37,12 +40,44 @@ pub struct ErrorState {
 }
 
 /// Application state — the single source of truth. All mutations happen in update().
-#[derive(Debug, Default)]
+///
+/// No longer derives Default — MetroManager uses new() rather than Default::default().
+#[derive(Debug)]
 pub struct AppState {
+    // Phase 1 fields
     pub focused_panel: FocusedPanel,
     pub show_help: bool,
     pub error_state: Option<ErrorState>,
     pub should_quit: bool,
+
+    // Metro state — single-instance enforced by MetroManager's Option<MetroHandle>
+    pub metro: crate::domain::metro::MetroManager,
+
+    // Log panel
+    pub metro_logs: std::collections::VecDeque<String>,
+    pub log_scroll_offset: usize,
+    pub log_panel_visible: bool,
+    pub log_filter_active: bool,
+
+    // Active worktree (stub until Phase 3 populates the real list)
+    pub active_worktree_path: Option<std::path::PathBuf>,
+}
+
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            focused_panel: FocusedPanel::default(),
+            show_help: false,
+            error_state: None,
+            should_quit: false,
+            metro: crate::domain::metro::MetroManager::new(),
+            metro_logs: std::collections::VecDeque::new(),
+            log_scroll_offset: 0,
+            log_panel_visible: false,
+            log_filter_active: false,
+            active_worktree_path: None,
+        }
+    }
 }
 
 /// Pure function: maps (state, key) → Action. No side effects.
@@ -72,6 +107,9 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     }
 
     // Normal mode keybindings
+    // Note: metro pane keybindings (s, x, r, J, R) are added in Plan 02 once the
+    // async spawn/kill flow is wired up. They need context about whether MetroPane is
+    // focused, which requires the full handle_key() metro-pane branch.
     match key.code {
         Char('q') => Some(Action::Quit),
         Char('?') | F(1) => Some(Action::ShowHelp),
@@ -90,6 +128,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
 /// Pure state transition: state + action → new state.
 pub fn update(state: &mut AppState, action: Action) {
     match action {
+        // Phase 1 actions
         Action::FocusNext => state.focused_panel = state.focused_panel.next(),
         Action::FocusPrev => state.focused_panel = state.focused_panel.prev(),
         Action::FocusUp | Action::FocusDown | Action::FocusLeft | Action::FocusRight => {
@@ -106,6 +145,46 @@ pub fn update(state: &mut AppState, action: Action) {
             state.error_state = None;
         }
         Action::Quit => state.should_quit = true,
+
+        // Metro control actions — async runtime behavior added in Plan 02
+        Action::MetroStart => {
+            // Plan 02 implements runtime behavior
+        }
+        Action::MetroStop => {
+            // Plan 02 implements runtime behavior
+        }
+        Action::MetroRestart => {
+            // Plan 02 implements runtime behavior
+        }
+        Action::MetroSendDebugger => {
+            // Plan 02 implements runtime behavior
+        }
+        Action::MetroSendReload => {
+            // Plan 02 implements runtime behavior
+        }
+
+        // Pure state mutations — implemented here (no async needed)
+        Action::MetroToggleLog => {
+            state.log_panel_visible = !state.log_panel_visible;
+        }
+        Action::MetroScrollUp => {
+            state.log_scroll_offset = state.log_scroll_offset.saturating_sub(1);
+        }
+        Action::MetroScrollDown => {
+            let max = state.metro_logs.len();
+            if state.log_scroll_offset < max {
+                state.log_scroll_offset += 1;
+            }
+        }
+        Action::MetroLogLine(line) => {
+            state.metro_logs.push_back(line);
+            if state.metro_logs.len() > MAX_LOG_LINES {
+                state.metro_logs.pop_front();
+            }
+        }
+        Action::MetroExited => {
+            state.metro.clear();
+        }
     }
 }
 

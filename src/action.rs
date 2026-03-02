@@ -23,4 +23,18 @@ pub enum Action {
 
     // App lifecycle
     Quit, // q (when no overlay active)
+
+    // Metro control (user-triggered)
+    MetroStart,
+    MetroStop,
+    MetroRestart,
+    MetroToggleLog,      // l key — toggles log panel visibility
+    MetroScrollUp,       // k when log panel focused
+    MetroScrollDown,     // j when log panel focused
+    MetroSendDebugger,   // J (shift-j, when metro pane focused) — sends j\n to metro stdin
+    MetroSendReload,     // R (shift-r, when metro pane focused) — sends r\n to metro stdin
+
+    // Metro background events (not user-triggered — sent by background tasks)
+    MetroLogLine(String), // stdout/stderr line from metro streaming task
+    MetroExited,          // metro process has stopped (port confirmed free)
 }
