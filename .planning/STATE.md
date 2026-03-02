@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-02T06:20:10.361Z"
+status: in-progress
+last_updated: "2026-03-02T07:00:39Z"
 progress:
-  total_phases: 1
+  total_phases: 5
   completed_phases: 1
   total_plans: 3
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -18,32 +18,33 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
-**Current focus:** Phase 1 — Scaffold and TUI Shell
+**Current focus:** Phase 2 — Metro Process Control
 
 ## Current Position
 
-Phase: 1 of 5 (Scaffold and TUI Shell)
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-03-02 — Completed 01-03 (UI render layer: panels, footer, help overlay, error overlay)
+Phase: 2 of 5 (Metro Process Control)
+Plan: 1 of 3 in current phase
+Status: Plan 02-01 Complete
+Last activity: 2026-03-02 — Completed 02-01 (domain metro types, infra trait contracts, Action/AppState extensions)
 
 Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 2.7 min
-- Total execution time: 0.13 hours
+- Total plans completed: 4
+- Average duration: 2.8 min
+- Total execution time: 0.15 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 1 | 3/3 | 8 min | 2.7 min |
+| Phase 2 | 1/3 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 4 min, 2 min
+- Last 5 plans: 2 min, 4 min, 2 min, 3 min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -68,6 +69,10 @@ Recent decisions affecting current work:
 - [01-02]: TEA invariant established: handle_key() is pure (Option<Action>), update() is sole mutation site — all later phases must follow this pattern
 - [01-02]: Panic hook order: color_eyre::install → custom hook with ratatui::restore → ratatui::init — any deviation causes hook chaining bugs
 - [01-03]: Unused Stylize trait imports removed from footer.rs and error_overlay.rs — Span::styled() is a free function, trait import not needed, keeping it causes compiler warnings
+- [02-01]: MetroHandle lives in domain/ referencing tokio types — infrastructure-bridging type; ARCH-01 maintained because domain/mod.rs imports no infra
+- [02-01]: No new crates beyond async-trait — tokio::process and tokio::sync::mpsc already covered by tokio features="full"
+- [02-01]: MetroManager::register() panics on double-registration — explicit invariant over silent overwrite; callers must take_handle() and kill first
+- [02-01]: Pure metro state mutations (toggle, scroll, log append, clear) in update() now; async spawn/kill deferred to Plan 02
 
 ### Pending Todos
 
@@ -80,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T06:13:51Z
-Stopped at: Completed 01-03-PLAN.md — UI render layer with panels, footer, help overlay, error overlay
+Last session: 2026-03-02T07:00:39Z
+Stopped at: Completed 02-01-PLAN.md — domain metro types, ProcessClient trait, Action/AppState metro extensions
 Resume file: None

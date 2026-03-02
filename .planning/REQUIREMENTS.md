@@ -24,7 +24,7 @@
 
 ### Metro
 
-- [ ] **METRO-01**: User can see at a glance which worktree (if any) has metro running, with status indicator (running/stopped)
+- [x] **METRO-01**: User can see at a glance which worktree (if any) has metro running, with status indicator (running/stopped)
 - [ ] **METRO-02**: User can start metro (yarn start --reset-cache) from the active worktree
 - [ ] **METRO-03**: User can stop the running metro instance
 - [ ] **METRO-04**: User can restart metro (kill + start) with one keystroke
@@ -32,7 +32,7 @@
 - [ ] **METRO-06**: User can scroll through metro log history in the log panel
 - [ ] **METRO-07**: User can send debugger command (j) to the running metro instance
 - [ ] **METRO-08**: User can send reload command (r) to the running metro instance
-- [ ] **METRO-09**: Only one metro instance can run at a time across all worktrees (enforced by the dashboard)
+- [x] **METRO-09**: Only one metro instance can run at a time across all worktrees (enforced by the dashboard)
 
 ### Worktree Management
 
@@ -114,7 +114,7 @@
 | SHELL-03 | Phase 1 | Complete |
 | SHELL-04 | Phase 1 | Complete |
 | SHELL-05 | Phase 1 | Complete |
-| METRO-01 | Phase 2 | Pending |
+| METRO-01 | Phase 2 | Complete |
 | METRO-02 | Phase 2 | Pending |
 | METRO-03 | Phase 2 | Pending |
 | METRO-04 | Phase 2 | Pending |
@@ -122,7 +122,7 @@
 | METRO-06 | Phase 2 | Pending |
 | METRO-07 | Phase 2 | Pending |
 | METRO-08 | Phase 2 | Pending |
-| METRO-09 | Phase 2 | Pending |
+| METRO-09 | Phase 2 | Complete |
 | WORK-01 | Phase 3 | Pending |
 | WORK-02 | Phase 3 | Pending |
 | WORK-03 | Phase 3 | Pending |
