@@ -28,3 +28,7 @@ tracing-appender = "0.2"
 
 # Async trait support — enables async fn in traits via #[async_trait::async_trait]
 async-trait = "0.1"
+
+# Serialization — used for label persistence (labels.json) and future config
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

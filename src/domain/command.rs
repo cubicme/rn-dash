@@ -1,0 +1,154 @@
+//! Command specification types for the command palette.
+//!
+//! `CommandSpec` describes *what* to run. The infrastructure layer converts it
+//! to an actual process via `to_argv()`. No process spawning happens here.
+
+/// All commands that can be dispatched from the git or RN command palettes.
+/// 17 variants total. Pure data — no I/O.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CommandSpec {
+    // Git commands (6 variants)
+    GitResetHard,
+    GitPull,
+    GitPush,
+    GitRebase { target: String },
+    GitCheckout { branch: String },
+    GitCheckoutNew { branch: String },
+
+    // React Native clean commands (3 variants)
+    RnCleanAndroid,
+    RnCleanCocoapods,
+    RmNodeModules,
+
+    // Yarn commands (2 variants)
+    YarnInstall,
+    YarnPodInstall,
+
+    // RN run commands (2 variants)
+    RnRunAndroid { device_id: String },
+    RnRunIos { device_id: String },
+
+    // Test/quality commands (4 variants)
+    YarnUnitTests,
+    YarnJest { filter: String },
+    YarnLint,
+    YarnCheckTypes,
+}
+
+impl CommandSpec {
+    /// Returns the argv that should be passed to `tokio::process::Command`.
+    /// The first element is the program; the rest are arguments.
+    pub fn to_argv(&self) -> Vec<String> {
+        match self {
+            CommandSpec::GitResetHard => vec!["git".into(), "reset".into(), "--hard".into(), "HEAD".into()],
+            CommandSpec::GitPull => vec!["git".into(), "pull".into()],
+            CommandSpec::GitPush => vec!["git".into(), "push".into()],
+            CommandSpec::GitRebase { target } => vec!["git".into(), "rebase".into(), target.clone()],
+            CommandSpec::GitCheckout { branch } => vec!["git".into(), "checkout".into(), branch.clone()],
+            CommandSpec::GitCheckoutNew { branch } => vec!["git".into(), "checkout".into(), "-b".into(), branch.clone()],
+
+            CommandSpec::RnCleanAndroid => vec!["./gradlew".into(), "clean".into()],
+            CommandSpec::RnCleanCocoapods => vec!["pod".into(), "deintegrate".into()],
+            CommandSpec::RmNodeModules => vec!["rm".into(), "-rf".into(), "node_modules".into()],
+
+            CommandSpec::YarnInstall => vec!["yarn".into(), "install".into()],
+            CommandSpec::YarnPodInstall => vec!["yarn".into(), "pod-install".into()],
+
+            CommandSpec::RnRunAndroid { device_id } => {
+                vec!["yarn".into(), "android".into(), "--deviceId".into(), device_id.clone()]
+            }
+            CommandSpec::RnRunIos { device_id } => {
+                vec!["yarn".into(), "ios".into(), "--udid".into(), device_id.clone()]
+            }
+
+            CommandSpec::YarnUnitTests => vec!["yarn".into(), "test".into()],
+            CommandSpec::YarnJest { filter } => vec!["yarn".into(), "jest".into(), filter.clone()],
+            CommandSpec::YarnLint => vec!["yarn".into(), "lint".into()],
+            CommandSpec::YarnCheckTypes => vec!["yarn".into(), "check-types".into(), "--incremental".into()],
+        }
+    }
+
+    /// Returns true for commands that cannot be undone and require explicit confirmation.
+    pub fn is_destructive(&self) -> bool {
+        matches!(
+            self,
+            CommandSpec::GitResetHard
+                | CommandSpec::RnCleanAndroid
+                | CommandSpec::RnCleanCocoapods
+                | CommandSpec::RmNodeModules
+        )
+    }
+
+    /// Returns true for commands that need a user-supplied text string before running.
+    pub fn needs_text_input(&self) -> bool {
+        matches!(
+            self,
+            CommandSpec::GitRebase { .. }
+                | CommandSpec::GitCheckout { .. }
+                | CommandSpec::GitCheckoutNew { .. }
+                | CommandSpec::YarnJest { .. }
+        )
+    }
+
+    /// Returns true for commands that require the user to pick a connected device first.
+    pub fn needs_device_selection(&self) -> bool {
+        matches!(self, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. })
+    }
+
+    /// Human-readable label shown in the command palette and confirmation dialogs.
+    pub fn label(&self) -> &'static str {
+        match self {
+            CommandSpec::GitResetHard => "git reset --hard HEAD",
+            CommandSpec::GitPull => "git pull",
+            CommandSpec::GitPush => "git push",
+            CommandSpec::GitRebase { .. } => "git rebase <target>",
+            CommandSpec::GitCheckout { .. } => "git checkout <branch>",
+            CommandSpec::GitCheckoutNew { .. } => "git checkout -b <branch>",
+            CommandSpec::RnCleanAndroid => "Clean Android (gradlew clean)",
+            CommandSpec::RnCleanCocoapods => "Clean CocoaPods (pod deintegrate)",
+            CommandSpec::RmNodeModules => "Remove node_modules",
+            CommandSpec::YarnInstall => "yarn install",
+            CommandSpec::YarnPodInstall => "yarn pod-install",
+            CommandSpec::RnRunAndroid { .. } => "Run on Android device",
+            CommandSpec::RnRunIos { .. } => "Run on iOS device",
+            CommandSpec::YarnUnitTests => "yarn test",
+            CommandSpec::YarnJest { .. } => "yarn jest <filter>",
+            CommandSpec::YarnLint => "yarn lint",
+            CommandSpec::YarnCheckTypes => "yarn check-types --incremental",
+        }
+    }
+}
+
+/// State of a modal dialog overlaid on the main UI.
+/// Only one modal can be active at a time.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ModalState {
+    /// User must confirm (Y) or cancel (N/Esc) a destructive action.
+    Confirm {
+        prompt: String,
+        pending_command: CommandSpec,
+    },
+    /// User must type a string (e.g. branch name or jest filter) before the command can run.
+    TextInput {
+        prompt: String,
+        buffer: String,
+        /// Template command — the typed text fills the relevant field on submit.
+        pending_template: Box<CommandSpec>,
+    },
+    /// User must pick a device from a list before a run command can be dispatched.
+    DevicePicker {
+        devices: Vec<DeviceInfo>,
+        selected: usize,
+        /// Template command — the chosen device_id fills the relevant field on confirm.
+        pending_template: Box<CommandSpec>,
+    },
+}
+
+/// Represents one connected device returned by `adb devices` or `xcrun simctl list`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeviceInfo {
+    /// Stable identifier: adb serial or iOS UDID.
+    pub id: String,
+    /// Human-readable display name (model name or simulator name).
+    pub name: String,
+}
