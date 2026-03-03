@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T04:21:53.032Z"
+last_updated: "2026-03-03T04:22:31.731Z"
 progress:
   total_phases: 6
   completed_phases: 5
@@ -64,6 +64,7 @@ Progress: [████████████████████] 100%
 | Phase 05-worktree-switching-and-claude-code P02 | 4 | 2 tasks | 4 files |
 | Phase 05.1-milestone-feedback P02 | 2 | 2 tasks | 4 files |
 | Phase 05.1-milestone-feedback P03 | 6 | 2 tasks | 7 files |
+| Phase 05.1-milestone-feedback P01 | 6 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,9 @@ Recent decisions affecting current work:
 - [05-02]: log_filter_active kept in AppState (always true) to avoid refactoring render code that reads it
 - [Phase 05.1-02]: Multiplexer trait with Send+Sync+Debug supertraits; TmuxAdapter and ZellijAdapter adapters; detect_multiplexer() checks TMUX before ZELLIJ; claude_flags defaults to --dangerously-skip-permissions
 - [Phase 05.1-milestone-feedback]: GitResetHardFetch marked destructive; ShellCommand uses needs_text_input; PaletteMode::Rn removed, replaced with 5-variant scheme (Android/Ios/Clean/Sync/Git); stub arms added for new variants to keep code compiling
+- [Phase 05.1-01]: Output persists per worktree: dispatch_command appends separator (not clear), per CONTEXT.md design
+- [Phase 05.1-01]: WORK-06 lazy install uses queue push: enqueue run command, dispatch yarn install, CommandExited pops original run command
+- [Phase 05.1-01]: CommandCancel is all-or-nothing: clears entire command_queue alongside aborting running task
 
 ### Pending Todos
 
