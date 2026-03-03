@@ -45,13 +45,19 @@ pub struct ErrorState {
     pub can_retry: bool,
 }
 
-/// Whether the command palette is in git or RN mode.
+/// Which submenu the command palette is in (Phase 05.1 expanded scheme).
 #[derive(Debug, Clone, PartialEq)]
 pub enum PaletteMode {
-    /// 'g' was pressed — next key selects a git command.
+    /// 'a' — Android submenu
+    Android,
+    /// 'i' — iOS submenu
+    Ios,
+    /// 'x' — Clean submenu (only sets palette mode before CleanToggle modal opens)
+    Clean,
+    /// 's' — Sync submenu
+    Sync,
+    /// 'g' — Git submenu
     Git,
-    /// 'c' was pressed — next key selects an RN command.
-    Rn,
 }
 
 /// Application state — the single source of truth. All mutations happen in update().
@@ -231,6 +237,15 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('k') | Up => Some(Action::ModalDevicePrev),
                 _ => None,
             },
+            // Phase 05.1: Stubs — real key handling wired in Plan 06 (clean/sync modals)
+            ModalState::CleanToggle { .. } => match key.code {
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
+            ModalState::SyncBeforeRun { .. } => match key.code {
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
         };
     }
 
@@ -253,27 +268,11 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Esc => Some(Action::ModalCancel), // exits palette mode
                 _ => Some(Action::ModalCancel),   // unknown key exits palette
             },
-            PaletteMode::Rn => match key.code {
-                Char('a') => Some(Action::CommandRun(CommandSpec::RnCleanAndroid)),
-                Char('c') => Some(Action::CommandRun(CommandSpec::RnCleanCocoapods)),
-                Char('n') => Some(Action::CommandRun(CommandSpec::RmNodeModules)),
-                Char('i') => Some(Action::CommandRun(CommandSpec::YarnInstall)),
-                Char('p') => Some(Action::CommandRun(CommandSpec::YarnPodInstall)),
-                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid {
-                    device_id: String::new(),
-                })),
-                Char('s') => Some(Action::CommandRun(CommandSpec::RnRunIos {
-                    device_id: String::new(),
-                })),
-                Char('t') => Some(Action::CommandRun(CommandSpec::YarnUnitTests)),
-                Char('j') => Some(Action::CommandRun(CommandSpec::YarnJest {
-                    filter: String::new(),
-                })),
-                Char('l') => Some(Action::CommandRun(CommandSpec::YarnLint)),
-                Char('y') => Some(Action::CommandRun(CommandSpec::YarnCheckTypes)),
-                Esc => Some(Action::ModalCancel), // exits palette mode
-                _ => Some(Action::ModalCancel),   // unknown key exits palette
-            },
+            // Phase 05.1: Stubs for new submenu modes — real routing in Plan 05
+            PaletteMode::Android => Some(Action::ModalCancel),
+            PaletteMode::Ios => Some(Action::ModalCancel),
+            PaletteMode::Clean => Some(Action::ModalCancel),
+            PaletteMode::Sync => Some(Action::ModalCancel),
         };
     }
 
@@ -351,7 +350,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
 /// Used by ModalConfirm to run confirmed destructive commands, and internally after
 /// text-input and device-picker modals complete.
 ///
-/// Clears command_output, sets running_command, spawns the process task.
+/// Appends separator to per-worktree output, sets running_command, spawns the process task.
 fn dispatch_command(
     state: &mut AppState,
     spec: CommandSpec,
@@ -362,17 +361,22 @@ fn dispatch_command(
         let idx = idx.min(state.worktrees.len() - 1);
         state.worktrees[idx].clone()
     } else {
-        // No worktrees loaded yet — can't dispatch
-        state.command_output.push_back("[error] no worktree selected".into());
+        // No worktrees loaded yet — can't dispatch; log to a fallback message (no per-worktree key)
+        tracing::warn!("dispatch_command: no worktree selected, dropping command {:?}", spec.label());
         return;
     };
 
-    // Clear output and prepare header
-    state.command_output.clear();
-    state.command_output_scroll = 0;
-    state
-        .command_output
-        .push_back(format!("--- {} ---", spec.label()));
+    // Append a separator line to per-worktree output — output persists, not cleared on new command
+    let wt_id = wt.id.clone();
+    let output = state.command_output_by_worktree.entry(wt_id.clone()).or_default();
+    output.push_back(format!("--- {} ---", spec.label()));
+    // Cap per-worktree output at MAX_COMMAND_LINES
+    while output.len() > MAX_COMMAND_LINES {
+        output.pop_front();
+    }
+    // Reset scroll for this worktree to show the latest output
+    state.command_output_scroll_by_worktree.insert(wt_id, 0);
+
     state.running_command = Some(spec.clone());
 
     // Abort any existing command task
@@ -412,14 +416,20 @@ pub fn update(
         Action::FocusPrev => state.focused_panel = state.focused_panel.prev(),
         Action::FocusUp => {
             if state.focused_panel == FocusedPanel::CommandOutput {
-                state.command_output_scroll = state.command_output_scroll.saturating_sub(1);
+                if let Some(id) = active_worktree_id(state) {
+                    let scroll = state.command_output_scroll_by_worktree.entry(id).or_insert(0);
+                    *scroll = scroll.saturating_sub(1);
+                }
             }
         }
         Action::FocusDown => {
             if state.focused_panel == FocusedPanel::CommandOutput {
-                let max = state.command_output.len();
-                if state.command_output_scroll < max {
-                    state.command_output_scroll += 1;
+                let max = active_output(state).len();
+                if let Some(id) = active_worktree_id(state) {
+                    let scroll = state.command_output_scroll_by_worktree.entry(id).or_insert(0);
+                    if *scroll < max {
+                        *scroll += 1;
+                    }
                 }
             }
         }
@@ -642,10 +652,11 @@ pub fn update(
             };
 
             // WORK-06: lazy install — stale worktree + run command triggers yarn install first
+            // Queue the original run command; yarn install dispatches now; CommandExited pops queue
             if let Some((_, stale)) = &wt_branch {
                 if *stale {
                     if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. }) {
-                        state.pending_command_after_install = Some(spec);
+                        state.command_queue.push_back(spec);
                         dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
                         return;
                     }
@@ -710,9 +721,12 @@ pub fn update(
         // --- Phase 3: Command output events ---
 
         Action::CommandOutputLine(line) => {
-            state.command_output.push_back(line);
-            if state.command_output.len() > MAX_COMMAND_LINES {
-                state.command_output.pop_front();
+            if let Some(id) = active_worktree_id(state) {
+                let output = state.command_output_by_worktree.entry(id).or_default();
+                output.push_back(line);
+                if output.len() > MAX_COMMAND_LINES {
+                    output.pop_front();
+                }
             }
         }
 
@@ -720,16 +734,17 @@ pub fn update(
             state.running_command = None;
             state.command_task = None;
 
-            // WORK-06: if yarn install just finished, run the deferred command
-            if let Some(deferred) = state.pending_command_after_install.take() {
-                dispatch_command(state, deferred, metro_tx);
-                return;
+            // Drain command queue — pop_front and dispatch if non-empty
+            if let Some(next_spec) = state.command_queue.pop_front() {
+                dispatch_command(state, next_spec, metro_tx);
             }
         }
 
         Action::CommandOutputClear => {
-            state.command_output.clear();
-            state.command_output_scroll = 0;
+            if let Some(id) = active_worktree_id(state) {
+                state.command_output_by_worktree.remove(&id);
+                state.command_output_scroll_by_worktree.remove(&id);
+            }
         }
 
         Action::CommandCancel => {
@@ -737,7 +752,25 @@ pub fn update(
                 task.abort();
             }
             state.running_command = None;
-            state.command_output.push_back("[cancelled]".into());
+            // Also clear pending queue items — cancel is all-or-nothing
+            state.command_queue.clear();
+            if let Some(id) = active_worktree_id(state) {
+                let output = state.command_output_by_worktree.entry(id).or_default();
+                output.push_back("[cancelled]".into());
+                if output.len() > MAX_COMMAND_LINES {
+                    output.pop_front();
+                }
+            }
+        }
+
+        // --- Phase 5.1: Command queue actions ---
+
+        Action::CommandQueuePush(spec) => {
+            state.command_queue.push_back(spec);
+        }
+
+        Action::CommandQueueClear => {
+            state.command_queue.clear();
         }
 
         // --- Phase 3: Modal actions ---
@@ -880,9 +913,10 @@ pub fn update(
             if let Some(spec) = state.pending_device_command.take() {
                 match devices.len() {
                     0 => {
-                        state
-                            .command_output
-                            .push_back("[error] no devices found".into());
+                        if let Some(id) = active_worktree_id(state) {
+                            let output = state.command_output_by_worktree.entry(id).or_default();
+                            output.push_back("[error] no devices found".into());
+                        }
                     }
                     1 => {
                         // Only one device — skip picker
@@ -946,7 +980,9 @@ pub fn update(
         }
 
         Action::EnterRnPalette => {
-            state.palette_mode = Some(PaletteMode::Rn);
+            // EnterRnPalette kept for backward compat — Phase 05.1 will remap 'c' key
+            // to new submenu scheme. For now we just cancel palette mode.
+            state.palette_mode = None;
         }
 
         // --- Phase 5: Worktree switching and Claude Code ---

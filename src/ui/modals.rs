@@ -18,6 +18,13 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
         ModalState::DevicePicker { devices, selected, .. } => {
             render_device_picker_modal(f, devices, *selected)
         }
+        // Phase 05.1: Stubs — real rendering wired in Plan 06 (clean/sync modals)
+        ModalState::CleanToggle { .. } => {
+            render_placeholder_modal(f, " Clean Options ", "Plan 06: clean toggle UI")
+        }
+        ModalState::SyncBeforeRun { .. } => {
+            render_placeholder_modal(f, " Sync Before Run ", "Worktree is stale. Sync before running?")
+        }
     }
 }
 
@@ -122,6 +129,25 @@ fn render_device_picker_modal(
 
     f.render_widget(Clear, area);
     f.render_stateful_widget(list, area, &mut ls);
+}
+
+/// Placeholder modal used for Phase 05.1 stubs while real renderers are implemented in later plans.
+fn render_placeholder_modal(f: &mut Frame, title: &str, message: &str) {
+    let area = centered_rect(f.area(), 50, 25);
+    let lines = vec![
+        Line::from(Span::raw(message)),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[Esc]", Style::default().fg(Color::Red)),
+            Span::raw(" cancel"),
+        ]),
+    ];
+    let block = Block::default()
+        .title(title.to_string())
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow));
+    f.render_widget(Clear, area);
+    f.render_widget(Paragraph::new(lines).block(block), area);
 }
 
 /// Computes a centered Rect of percent_x% width and percent_y% height within the given area.

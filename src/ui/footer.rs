@@ -36,24 +36,40 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             PaletteMode::Git => vec![
                 ("p", "pull"),
                 ("P", "push"),
-                ("d", "reset --hard"),
+                ("X", "reset hard"),
+                ("f", "fetch"),
                 ("b", "checkout"),
-                ("B", "checkout -b"),
+                ("c", "checkout -b"),
                 ("r", "rebase"),
                 ("Esc", "cancel"),
             ],
-            PaletteMode::Rn => vec![
-                ("a", "clean android"),
-                ("c", "clean pods"),
-                ("n", "rm node_modules"),
-                ("i", "yarn install"),
-                ("p", "pod-install"),
+            // Phase 05.1: Stubs — real hints wired in Plan 05 (keybinding remap)
+            PaletteMode::Android => vec![
                 ("d", "run-android"),
-                ("s", "run-ios"),
-                ("t", "unit-tests"),
+                ("e", "pick device"),
+                ("r", "release build"),
+                ("Esc", "cancel"),
+            ],
+            PaletteMode::Ios => vec![
+                ("d", "run-ios device"),
+                ("e", "simulator"),
+                ("p", "pod-install"),
+                ("Esc", "cancel"),
+            ],
+            PaletteMode::Clean => vec![
+                ("n", "node_modules"),
+                ("p", "pods"),
+                ("a", "android"),
+                ("i", "sync after"),
+                ("x", "confirm"),
+                ("Esc", "cancel"),
+            ],
+            PaletteMode::Sync => vec![
+                ("i", "yarn install"),
+                ("u", "unit-tests"),
+                ("t", "check-types"),
                 ("j", "jest"),
                 ("l", "lint"),
-                ("y", "check-types"),
                 ("Esc", "cancel"),
             ],
         };
@@ -66,6 +82,13 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             Some(ModalState::TextInput { .. }) => vec![("Enter", "submit"), ("Esc", "cancel")],
             Some(ModalState::DevicePicker { .. }) => {
                 vec![("Enter", "select"), ("j/k", "navigate"), ("Esc", "cancel")]
+            }
+            // Phase 05.1: Stubs — real hints wired in Plan 06
+            Some(ModalState::CleanToggle { .. }) => {
+                vec![("n/p/a/i", "toggle"), ("x/Enter", "confirm"), ("Esc", "cancel")]
+            }
+            Some(ModalState::SyncBeforeRun { .. }) => {
+                vec![("y", "sync + run"), ("n", "run without sync"), ("Esc", "cancel")]
             }
             None => unreachable!(),
         };

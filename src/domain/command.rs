@@ -33,6 +33,13 @@ pub enum CommandSpec {
     YarnJest { filter: String },
     YarnLint,
     YarnCheckTypes,
+
+    // Phase 05.1 additions (5 variants)
+    GitFetch,                           // g>f: git fetch --all --tags
+    GitResetHardFetch,                  // g>X: fetch first, then reset to origin/<branch>
+    RnReleaseBuild,                     // a>r: gradlew assembleRelease
+    AdbInstallApk,                      // a>r continued: adb install of built APK
+    ShellCommand { command: String },   // !: run arbitrary shell command in worktree dir
 }
 
 impl CommandSpec {
@@ -65,6 +72,22 @@ impl CommandSpec {
             CommandSpec::YarnJest { filter } => vec!["yarn".into(), "jest".into(), filter.clone()],
             CommandSpec::YarnLint => vec!["yarn".into(), "lint".into(), "--quiet".into(), "--fix".into()],
             CommandSpec::YarnCheckTypes => vec!["yarn".into(), "check-types".into(), "--incremental".into()],
+
+            CommandSpec::GitFetch => vec!["git".into(), "fetch".into(), "--all".into(), "--tags".into()],
+            CommandSpec::GitResetHardFetch => {
+                // Two-step operation handled by command_runner — fetch then reset.
+                // to_argv returns the fetch step; the runner handles chaining.
+                vec!["git".into(), "fetch".into(), "--all".into(), "--tags".into()]
+            },
+            CommandSpec::RnReleaseBuild => {
+                vec!["./android/gradlew".into(), "-p".into(), "android".into(), "assembleRelease".into()]
+            },
+            CommandSpec::AdbInstallApk => {
+                vec!["adb".into(), "install".into(), "-r".into(), "android/app/build/outputs/apk/release/app-release.apk".into()]
+            },
+            CommandSpec::ShellCommand { command } => {
+                vec!["sh".into(), "-c".into(), command.clone()]
+            },
         }
     }
 
@@ -73,6 +96,7 @@ impl CommandSpec {
         matches!(
             self,
             CommandSpec::GitResetHard
+                | CommandSpec::GitResetHardFetch
                 | CommandSpec::RnCleanAndroid
                 | CommandSpec::RnCleanCocoapods
                 | CommandSpec::RmNodeModules
@@ -87,6 +111,7 @@ impl CommandSpec {
                 | CommandSpec::GitCheckout { .. }
                 | CommandSpec::GitCheckoutNew { .. }
                 | CommandSpec::YarnJest { .. }
+                | CommandSpec::ShellCommand { .. }
         )
     }
 
@@ -115,8 +140,22 @@ impl CommandSpec {
             CommandSpec::YarnJest { .. } => "yarn jest <filter>",
             CommandSpec::YarnLint => "yarn lint --quiet --fix",
             CommandSpec::YarnCheckTypes => "yarn check-types --incremental",
+            CommandSpec::GitFetch => "git fetch --all --tags",
+            CommandSpec::GitResetHardFetch => "git fetch + reset --hard origin/<branch>",
+            CommandSpec::RnReleaseBuild => "gradlew assembleRelease",
+            CommandSpec::AdbInstallApk => "adb install release APK",
+            CommandSpec::ShellCommand { .. } => "shell command",
         }
     }
+}
+
+/// Toggle state for the clean submenu. Each field represents one cleanable target.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CleanOptions {
+    pub node_modules: bool,
+    pub pods: bool,
+    pub android: bool,
+    pub sync_after: bool, // if true, queue yarn install + pod-install after clean
 }
 
 /// State of a modal dialog overlaid on the main UI.
@@ -141,6 +180,15 @@ pub enum ModalState {
         selected: usize,
         /// Template command — the chosen device_id fills the relevant field on confirm.
         pending_template: Box<CommandSpec>,
+    },
+    /// Clean submenu with toggleable options. User checks items then confirms.
+    CleanToggle {
+        options: CleanOptions,
+    },
+    /// Sync-before-run prompt shown when stale worktree is about to run an app command.
+    SyncBeforeRun {
+        run_command: Box<CommandSpec>,
+        needs_pods: bool,
     },
 }
 
