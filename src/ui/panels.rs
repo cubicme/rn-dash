@@ -14,8 +14,8 @@ use crate::{
     ui::theme,
 };
 
-/// Renders the worktree list panel (left column) with real selectable list.
-pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
+/// Renders the worktree table panel (bottom section) with real selectable list.
+pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let border_style = if state.focused_panel == FocusedPanel::WorktreeTable {
         theme::style_focused_border()
     } else {

@@ -2,7 +2,7 @@
 //! Imports: domain types and ratatui ONLY. Never imports infra directly.
 //!
 //! view() is the single render entry point called from app::run().
-//! It accepts &mut AppState because render_stateful_widget requires &mut ListState.
+//! It accepts &mut AppState because render_stateful_widget requires &mut TableState.
 
 pub mod footer;
 pub mod help_overlay;
@@ -15,60 +15,91 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     Frame,
 };
-use crate::app::AppState;
+use crate::app::{AppState, FocusedPanel};
 
 /// Root render function. Called on every draw cycle from app::run().
-/// Layout: left column (worktree list) | right column (metro pane / log panel / command output)
-/// Footer: always rendered at bottom.
+/// Layout: top (metro + output) | bottom (worktree table) | footer
+/// Fullscreen mode: single panel + footer, activated by ToggleFullscreen.
 /// Overlays: rendered last so they layer on top of all base content.
 pub fn view(f: &mut Frame, state: &mut AppState) {
     let area = f.area();
 
-    // Vertical split: main content area + footer (3 lines)
-    let [main_area, footer_area] = Layout::default()
+    // Fullscreen mode — render only the fullscreened panel + footer
+    if let Some(panel) = state.fullscreen_panel {
+        let [main_area, footer_area] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(0), Constraint::Length(1)])
+            .areas(area);
+
+        match panel {
+            FocusedPanel::MetroPane => {
+                panels::render_metro_pane(f, main_area, state);
+            }
+            FocusedPanel::CommandOutput => {
+                panels::render_command_output(f, main_area, state);
+            }
+            _ => {} // WorktreeTable cannot be fullscreened
+        }
+
+        footer::render_footer(f, footer_area, state);
+
+        // Overlays on top
+        if state.show_help {
+            help_overlay::render_help(f);
+        }
+        if let Some(ref error) = state.error_state {
+            error_overlay::render_error(f, error);
+        }
+        if let Some(ref modal) = state.modal {
+            modals::render_modal(f, modal);
+        }
+        return;
+    }
+
+    // Normal layout: top (metro + output) | bottom (worktree table) | footer
+    let table_height = (state.worktrees.len() as u16 + 3).max(5); // rows + borders + header
+    let [top_area, table_area, footer_area] = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(1)])
+        .constraints([
+            Constraint::Min(8),              // metro + output (flexible)
+            Constraint::Length(table_height), // worktree table (fixed)
+            Constraint::Length(1),            // footer
+        ])
         .areas(area);
 
-    // Horizontal split: left 40% worktree list | right 60% metro + output
-    let [left_area, right_area] = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-        .areas(main_area);
-
-    // Render worktree list (always in the left column)
-    panels::render_worktree_list(f, left_area, state);
-
-    // Right column split depends on log panel visibility:
-    // - Log hidden: metro (40%) | output (60%)
-    // - Log visible: metro (25%) | log (40%) | output (35%)
+    // Top section: metro (left) | command output (right)
+    // When log panel visible: metro (left-top) | log (left-bottom) | output (right)
     if state.log_panel_visible {
-        let [metro_area, log_area, output_area] = Layout::default()
+        let [left_top, right_top] = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .areas(top_area);
+
+        let [metro_area, log_area] = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(25),
-                Constraint::Percentage(40),
-                Constraint::Percentage(35),
-            ])
-            .areas(right_area);
+            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
+            .areas(left_top);
 
         panels::render_metro_pane(f, metro_area, state);
         panels::render_log_panel(f, log_area, state);
-        panels::render_command_output(f, output_area, state);
+        panels::render_command_output(f, right_top, state);
     } else {
         let [metro_area, output_area] = Layout::default()
-            .direction(Direction::Vertical)
+            .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-            .areas(right_area);
+            .areas(top_area);
 
         panels::render_metro_pane(f, metro_area, state);
         panels::render_command_output(f, output_area, state);
     }
 
-    // Render footer (always visible)
+    // Bottom section: worktree table
+    panels::render_worktree_table(f, table_area, state);
+
+    // Footer
     footer::render_footer(f, footer_area, state);
 
-    // Render overlays last — they draw on top of all panels
+    // Overlays last
     if state.show_help {
         help_overlay::render_help(f);
     }

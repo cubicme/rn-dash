@@ -251,14 +251,19 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('k') | Up => Some(Action::ModalDevicePrev),
                 _ => None,
             },
-            // Phase 05.1: Stubs — real key handling wired in Plan 06 (clean/sync modals)
             ModalState::CleanToggle { .. } => match key.code {
+                Char('n') => Some(Action::CleanToggleNodeModules),
+                Char('p') => Some(Action::CleanTogglePods),
+                Char('a') => Some(Action::CleanToggleAndroid),
+                Char('i') => Some(Action::CleanToggleSyncAfter),
+                Char('x') | Enter => Some(Action::CleanConfirm),
                 Esc => Some(Action::ModalCancel),
-                _ => Some(Action::ModalCancel),
+                _ => None,
             },
             ModalState::SyncBeforeRun { .. } => match key.code {
-                Esc => Some(Action::ModalCancel),
-                _ => Some(Action::ModalCancel),
+                Char('y') | Char('Y') => Some(Action::SyncBeforeRunAccept),
+                Char('n') | Char('N') | Esc => Some(Action::SyncBeforeRunDecline),
+                _ => None,
             },
         };
     }
@@ -266,27 +271,47 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     // --- PALETTE MODE ROUTING — after modal, before overlays ---
     if let Some(ref mode) = state.palette_mode {
         return match mode {
+            PaletteMode::Android => match key.code {
+                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new() })),
+                Char('e') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new() })),
+                Char('r') => Some(Action::CommandRun(CommandSpec::RnReleaseBuild)),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
+            PaletteMode::Ios => match key.code {
+                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunIos { device_id: String::new() })),
+                Char('e') => Some(Action::CommandRun(CommandSpec::RnRunIos { device_id: String::new() })),
+                Char('p') => Some(Action::CommandRun(CommandSpec::YarnPodInstall)),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
+            PaletteMode::Clean => match key.code {
+                // Clean palette opens the CleanToggle modal immediately.
+                // If we're here, user is in CleanToggle modal — keys handled by modal interception above.
+                // This arm should not normally be reached; fallback to cancel.
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
+            PaletteMode::Sync => match key.code {
+                Char('i') => Some(Action::CommandRun(CommandSpec::YarnInstall)),
+                Char('u') => Some(Action::CommandRun(CommandSpec::YarnUnitTests)),
+                Char('t') => Some(Action::CommandRun(CommandSpec::YarnCheckTypes)),
+                Char('j') => Some(Action::CommandRun(CommandSpec::YarnJest { filter: String::new() })),
+                Char('l') => Some(Action::CommandRun(CommandSpec::YarnLint)),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
             PaletteMode::Git => match key.code {
+                Char('f') => Some(Action::CommandRun(CommandSpec::GitFetch)),
                 Char('p') => Some(Action::CommandRun(CommandSpec::GitPull)),
                 Char('P') => Some(Action::CommandRun(CommandSpec::GitPush)),
-                Char('d') => Some(Action::CommandRun(CommandSpec::GitResetHard)),
-                Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout {
-                    branch: String::new(),
-                })),
-                Char('B') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew {
-                    branch: String::new(),
-                })),
-                Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase {
-                    target: String::new(),
-                })),
-                Esc => Some(Action::ModalCancel), // exits palette mode
-                _ => Some(Action::ModalCancel),   // unknown key exits palette
+                Char('X') => Some(Action::CommandRun(CommandSpec::GitResetHardFetch)),
+                Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout { branch: String::new() })),
+                Char('c') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew { branch: String::new() })),
+                Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase { target: String::new() })),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
             },
-            // Phase 05.1: Stubs for new submenu modes — real routing in Plan 05
-            PaletteMode::Android => Some(Action::ModalCancel),
-            PaletteMode::Ios => Some(Action::ModalCancel),
-            PaletteMode::Clean => Some(Action::ModalCancel),
-            PaletteMode::Sync => Some(Action::ModalCancel),
         };
     }
 
@@ -315,21 +340,29 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('l') => return Some(Action::MetroToggleLog),
             Char('J') => return Some(Action::MetroSendDebugger),
             Char('R') => return Some(Action::MetroSendReload),
+            Char('f') => return Some(Action::ToggleFullscreen),
+            // Shift-X clears log panel (avoids collision with 'x' which stops metro)
+            Char('X') => return Some(Action::LogPanelClear),
             _ => {} // fall through to normal navigation
         }
     }
 
-    // --- WORKTREE LIST SPECIFIC ---
+    // --- WORKTREE TABLE SPECIFIC ---
     if state.focused_panel == FocusedPanel::WorktreeTable {
         match key.code {
             Char('j') | Down => return Some(Action::WorktreeSelectNext),
             Char('k') | Up => return Some(Action::WorktreeSelectPrev),
-            Char('L') => return Some(Action::StartSetLabel),
+            Char('a') => return Some(Action::EnterAndroidPalette),
+            Char('i') => return Some(Action::EnterIosPalette),
+            Char('x') => return Some(Action::EnterCleanPalette),
+            Char('s') => return Some(Action::EnterSyncPalette),
             Char('g') => return Some(Action::EnterGitPalette),
-            Char('c') => return Some(Action::EnterRnPalette),
+            Char('C') => return Some(Action::OpenClaudeCode),
+            Char('L') => return Some(Action::StartSetLabel),
+            Char('f') => return Some(Action::ToggleFullscreen),
+            Char('!') => return Some(Action::StartShellCommand),
             Char('R') => return Some(Action::RefreshWorktrees),
             Enter => return Some(Action::WorktreeSwitchToSelected),
-            Char('C') => return Some(Action::OpenClaudeCode),
             _ => {}
         }
     }
@@ -341,6 +374,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('k') | Up => return Some(Action::FocusUp),
             Char('X') => return Some(Action::CommandCancel),
             Char('C') => return Some(Action::CommandOutputClear),
+            Char('f') => return Some(Action::ToggleFullscreen),
             _ => {}
         }
     }
@@ -1100,7 +1134,10 @@ pub fn update(
             state.palette_mode = Some(PaletteMode::Ios);
         }
         Action::EnterCleanPalette => {
-            // Plan 06 wires the full CleanToggle modal flow
+            state.palette_mode = Some(PaletteMode::Clean);
+            state.modal = Some(crate::domain::command::ModalState::CleanToggle {
+                options: crate::domain::command::CleanOptions::default(),
+            });
         }
         Action::EnterSyncPalette => {
             state.palette_mode = Some(PaletteMode::Sync);
