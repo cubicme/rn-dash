@@ -1377,9 +1377,10 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
     }
 
     loop {
-        // Render first on each iteration — double-buffer diff handles no-change efficiently
+        // Render once per iteration — after all pending actions have been drained
         terminal.draw(|f| crate::ui::view(f, &mut state))?;
 
+        // Wait for at least one event (blocks until something happens)
         tokio::select! {
             _ = tick.tick() => {
                 // Periodic tick: triggers redraw for time-based UI updates
@@ -1393,19 +1394,30 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
                             update(&mut state, action, &metro_tx, &handle_tx);
                         }
                     }
-                    CE::Resize(_, _) => {
-                        // draw() is called at the top of the loop — resize redraws automatically
-                    }
+                    CE::Resize(_, _) => {}
                     _ => {}
                 }
             }
             Some(action) = metro_rx.recv() => {
-                // Background tasks deliver log lines, MetroExited, WorktreesLoaded, etc.
                 update(&mut state, action, &metro_tx, &handle_tx);
             }
             Some(handle) = handle_rx.recv() => {
-                // Spawn task has successfully created the metro process — register the handle.
                 state.metro.register(handle);
+            }
+        }
+
+        // Drain all pending actions before redrawing — batches bursts of log lines
+        // into a single frame instead of redrawing per-line
+        loop {
+            use tokio::sync::mpsc::error::TryRecvError;
+            match metro_rx.try_recv() {
+                Ok(action) => update(&mut state, action, &metro_tx, &handle_tx),
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => break,
+            }
+            match handle_rx.try_recv() {
+                Ok(handle) => state.metro.register(handle),
+                Err(_) => {}
             }
         }
 
