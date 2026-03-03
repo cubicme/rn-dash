@@ -274,10 +274,24 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
         theme::style_inactive_border()
     };
 
-    // Title shows running command name + [running] indicator when active
+    // Title shows running command name, [running] indicator, and queue count
     let title = match &state.running_command {
-        Some(spec) => format!(" Output — {} [running] ", spec.label()),
-        None => " Output ".to_string(),
+        Some(spec) => {
+            let queue_count = state.command_queue.len();
+            if queue_count > 0 {
+                format!(" Output — {} [running] (+{} queued) ", spec.label(), queue_count)
+            } else {
+                format!(" Output — {} [running] ", spec.label())
+            }
+        }
+        None => {
+            let queue_count = state.command_queue.len();
+            if queue_count > 0 {
+                format!(" Output ({} queued) ", queue_count)
+            } else {
+                " Output ".to_string()
+            }
+        }
     };
 
     let lines: Vec<Line> = crate::app::active_output(state)
