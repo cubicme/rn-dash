@@ -11,3 +11,4 @@ pub mod config;
 pub mod jira;
 pub mod jira_cache;
 pub mod tmux;
+pub mod multiplexer;

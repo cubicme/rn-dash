@@ -1,6 +1,9 @@
 //! Tmux integration — fire-and-forget tmux commands.
 //! Uses std::process::Command directly (not tmux_interface crate — overkill for 2 calls).
 
+/// DEPRECATED: Use multiplexer::TmuxAdapter::new_window() instead.
+/// Kept temporarily until app.rs OpenClaudeCode action is rewired in Plan 05.
+///
 /// Opens Claude Code in a new tmux window at the given worktree path.
 ///
 /// Uses `tmux new-window [shell-command]` form — passes `claude` as the initial
