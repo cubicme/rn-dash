@@ -1,10 +1,10 @@
 use ratatui::{
-    layout::{Margin, Rect},
+    layout::{Constraint, Margin, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, Borders, HighlightSpacing, List, ListItem, Paragraph,
-        Scrollbar, ScrollbarOrientation, ScrollbarState,
+        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        ScrollbarState, Table,
     },
     Frame,
 };
@@ -14,13 +14,25 @@ use crate::{
     ui::theme,
 };
 
-/// Renders the worktree table panel (bottom section) with real selectable list.
+/// Truncates a string to max_width, appending "..." if truncated.
+fn truncate(s: &str, max_width: usize) -> String {
+    if s.len() <= max_width {
+        return s.to_string();
+    }
+    if max_width <= 3 {
+        return s[..max_width].to_string();
+    }
+    format!("{}...", &s[..max_width - 3])
+}
+
+/// Renders the worktree table (bottom section) with structured columns.
 pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let border_style = if state.focused_panel == FocusedPanel::WorktreeTable {
         theme::style_focused_border()
     } else {
         theme::style_inactive_border()
     };
+
     let block = Block::default()
         .title(" Worktrees ")
         .borders(Borders::ALL)
@@ -32,71 +44,90 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         return;
     }
 
-    let items: Vec<ListItem> = state.worktrees.iter().map(|wt| {
-        // Metro badge: [M] green-bold if Running, [ ] dark gray if Stopped
-        let (badge_text, badge_style) = match wt.metro_status {
-            WorktreeMetroStatus::Running => (
-                "[M] ",
-                Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
-            ),
-            WorktreeMetroStatus::Stopped => (
-                "[ ] ",
-                Style::default().fg(Color::DarkGray),
-            ),
-        };
+    let rows: Vec<Row> = state
+        .worktrees
+        .iter()
+        .map(|wt| {
+            let label = wt.label.as_deref().unwrap_or("");
+            let wt_name = wt
+                .path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("?");
+            let branch = &wt.branch;
 
-        // Branch name first (always visible), then secondary text
-        let mut spans = vec![
-            Span::styled(badge_text, badge_style),
-            Span::raw(&wt.branch),
-        ];
+            // Extract ticket number from branch if possible
+            let ticket_num = crate::infra::jira::extract_jira_key(branch).unwrap_or_default();
+            let title = wt.jira_title.as_deref().unwrap_or("");
 
-        // Secondary text: label takes priority over jira_title
-        if let Some(label) = &wt.label {
-            spans.push(Span::styled(
-                format!(" - {label}"),
-                Style::default().fg(Color::Gray),
-            ));
-        } else if let Some(title) = &wt.jira_title {
-            spans.push(Span::styled(
-                format!(" - {title}"),
-                Style::default().fg(Color::Gray),
-            ));
-        }
+            // Status icons: metro=● stale=⚠
+            let mut icons = String::new();
+            if wt.metro_status == WorktreeMetroStatus::Running {
+                icons.push_str("● ");
+            }
+            if wt.stale {
+                icons.push('\u{26A0}');
+            }
 
-        // Staleness icon (Unicode warning sign, compact and recognizable)
-        if wt.stale {
-            spans.push(Span::styled(
-                " \u{26A0}",
-                Style::default().fg(Color::Yellow),
-            ));
-        }
+            let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
+                Style::default().add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
 
-        ListItem::new(Line::from(spans))
-    }).collect();
+            Row::new(vec![
+                Cell::from(truncate(label, 12)),
+                Cell::from(truncate(wt_name, 20)),
+                Cell::from(truncate(branch, 30)),
+                Cell::from(ticket_num),
+                Cell::from(truncate(title, 30)),
+                Cell::from(Span::styled(
+                    icons,
+                    Style::default().fg(Color::Yellow),
+                )),
+            ])
+            .style(row_style)
+        })
+        .collect();
 
-    let list = List::new(items)
-        .block(block)
-        .highlight_style(
-            Style::default()
-                .bg(Color::DarkGray)
-                .add_modifier(Modifier::BOLD),
-        )
-        .highlight_symbol("> ")
-        .highlight_spacing(HighlightSpacing::Always);
+    let header = Row::new(vec![
+        Cell::from("LABEL"),
+        Cell::from("WORKTREE"),
+        Cell::from("BRANCH"),
+        Cell::from("TICKET"),
+        Cell::from("TITLE"),
+        Cell::from(""), // icons column — no header
+    ])
+    .style(
+        Style::default()
+            .fg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    );
 
-    // List widget requires ListState; bridge from TableState's selected index
-    let selected = state.worktree_table_state.selected();
-    let mut list_state = ratatui::widgets::ListState::default();
-    list_state.select(selected);
-    f.render_stateful_widget(list, area, &mut list_state);
-    // Sync any ListState offset changes back to TableState selection
-    if let Some(s) = list_state.selected() {
-        state.worktree_table_state.select(Some(s));
-    }
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(14), // Label
+            Constraint::Length(22), // Worktree name
+            Constraint::Min(15),    // Branch (truncates)
+            Constraint::Length(10), // Ticket #
+            Constraint::Min(15),    // Title (truncates)
+            Constraint::Length(4),  // Icons (fixed)
+        ],
+    )
+    .header(header)
+    .block(block)
+    .row_highlight_style(
+        Style::default()
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    )
+    .highlight_symbol("> ");
+
+    f.render_stateful_widget(table, area, &mut state.worktree_table_state);
 }
 
-/// Renders the metro control pane (top-right) with status line and scrolling log output.
+/// Renders the metro control pane (top-left) with status line and scrolling log output.
 pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
     let border_style = if state.focused_panel == FocusedPanel::MetroPane {
         theme::style_focused_border()
@@ -106,18 +137,27 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Status indicator text and color
     let (status_text, status_style) = match &state.metro.status {
-        MetroStatus::Running { pid: _, worktree_id } =>
-            (format!(" RUNNING  [{}]", worktree_id),
-             Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
-        MetroStatus::Stopped =>
-            (" STOPPED ".to_string(),
-             Style::default().fg(Color::DarkGray)),
-        MetroStatus::Starting =>
-            (" STARTING... ".to_string(),
-             Style::default().fg(Color::Yellow)),
-        MetroStatus::Stopping =>
-            (" STOPPING... ".to_string(),
-             Style::default().fg(Color::Yellow)),
+        MetroStatus::Running {
+            pid: _,
+            worktree_id,
+        } => (
+            format!(" RUNNING  [{}]", worktree_id),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
+        MetroStatus::Stopped => (
+            " STOPPED ".to_string(),
+            Style::default().fg(Color::DarkGray),
+        ),
+        MetroStatus::Starting => (
+            " STARTING... ".to_string(),
+            Style::default().fg(Color::Yellow),
+        ),
+        MetroStatus::Stopping => (
+            " STOPPING... ".to_string(),
+            Style::default().fg(Color::Yellow),
+        ),
     };
 
     let block = Block::default()
@@ -145,7 +185,9 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
             ..inner
         };
 
-        let lines: Vec<Line> = state.metro_logs.iter()
+        let lines: Vec<Line> = state
+            .metro_logs
+            .iter()
             .map(|l| Line::from(l.as_str()))
             .collect();
 
@@ -158,15 +200,13 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
             state.log_scroll_offset
         };
 
-        let paragraph = Paragraph::new(Text::from(lines.clone()))
-            .scroll((scroll as u16, 0));
+        let paragraph = Paragraph::new(Text::from(lines.clone())).scroll((scroll as u16, 0));
 
         f.render_widget(paragraph, log_area);
 
         // Scrollbar when content exceeds visible area
         if lines.len() > visible_height {
-            let mut scrollbar_state = ScrollbarState::new(lines.len())
-                .position(scroll);
+            let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
 
             f.render_stateful_widget(
                 Scrollbar::new(ScrollbarOrientation::VerticalRight),
@@ -185,7 +225,9 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
         theme::style_inactive_border()
     };
 
-    let lines: Vec<Line> = state.metro_logs.iter()
+    let lines: Vec<Line> = state
+        .metro_logs
+        .iter()
         .map(|l| Line::from(l.as_str()))
         .collect();
 
@@ -199,28 +241,32 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
     };
 
     let paragraph = Paragraph::new(Text::from(lines.clone()))
-        .block(Block::default()
-            .title(" Metro Logs ")
-            .borders(Borders::ALL)
-            .border_style(border_style))
+        .block(
+            Block::default()
+                .title(" Metro Logs ")
+                .borders(Borders::ALL)
+                .border_style(border_style),
+        )
         .scroll((scroll as u16, 0));
 
     f.render_widget(paragraph, area);
 
     // Scrollbar — only rendered when content exceeds visible area
     if lines.len() > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(lines.len())
-            .position(scroll);
+        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
 
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight),
-            area.inner(Margin { vertical: 1, horizontal: 0 }),
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
             &mut scrollbar_state,
         );
     }
 }
 
-/// Renders the command output pane (bottom-right) with real streaming output.
+/// Renders the command output pane (top-right) with real streaming output.
 pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
     let border_style = if state.focused_panel == FocusedPanel::CommandOutput {
         theme::style_focused_border()
@@ -234,7 +280,8 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
         None => " Output ".to_string(),
     };
 
-    let lines: Vec<Line> = crate::app::active_output(state).iter()
+    let lines: Vec<Line> = crate::app::active_output(state)
+        .iter()
         .map(|l| Line::from(l.as_str()))
         .collect();
 
@@ -261,12 +308,14 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Scrollbar — only rendered when content exceeds visible area
     if lines.len() > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(lines.len())
-            .position(scroll);
+        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
 
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight),
-            area.inner(Margin { vertical: 1, horizontal: 0 }),
+            area.inner(Margin {
+                vertical: 1,
+                horizontal: 0,
+            }),
             &mut scrollbar_state,
         );
     }
