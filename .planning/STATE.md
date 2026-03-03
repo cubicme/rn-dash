@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T04:36:14.824Z"
+last_updated: "2026-03-03T04:41:09.152Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5.1 of 6 (Milestone Feedback) — Active
-Plan: 7 of 8 in current phase — IN PROGRESS
-Status: Plan 05.1-07 Complete — Footer icon legend added, palette hints updated, help overlay rewritten with 10 sections
-Last activity: 2026-03-03 — Executed 05.1-07: footer two-column layout with icon legend, all 5 palette modes documented, help overlay expanded
+Phase: 5.1 of 6 (Milestone Feedback) — Complete
+Plan: 8 of 8 in current phase — COMPLETE
+Status: Plan 05.1-08 Complete — Release build queue, GitResetHardFetch two-step, sim sort+filter, queue count UI
+Last activity: 2026-03-03 — Executed 05.1-08: Android release two-step queue, GitResetHardFetch chain, iOS sim sort-by-recent with type-to-filter picker, queue count in output panel title
 
-Progress: [████████████████░░░░] 80%
+Progress: [████████████████████] 100%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [████████████████░░░░] 80%
 | Phase 05.1-milestone-feedback P04 | 0 | 2 tasks | 3 files |
 | Phase 05.1-milestone-feedback P07 | 2 | 2 tasks | 2 files |
 | Phase 05.1-milestone-feedback P06 | 2 | 2 tasks | 2 files |
+| Phase 05.1-milestone-feedback P08 | 8 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -150,6 +151,7 @@ Recent decisions affecting current work:
 - [Phase 05.1-07]: Two-column footer layout (Min(0)+Length(20)) splits hints left, icon legend right; help overlay expanded to 70%/85% for 10 sections
 - [Phase 05.1-milestone-feedback]: SyncBeforeRun replaces WORK-06 lazy install — user-visible prompt gives user agency over sync before run
 - [Phase 05.1-milestone-feedback]: CleanConfirm builds all commands first, dispatches first, queues rest — avoids double-dispatch
+- [Phase 05.1-08]: RnReleaseBuild queues AdbInstallApk before dispatch; GitResetHardFetch chains GitFetch dispatch + GitResetHard queue; filter:String in DevicePicker ModalState; ModalDeviceConfirm resolves against filtered list; SimulatorUsed sent on iOS confirm; queue count shown in output panel in 4 states
 
 ### Pending Todos
 
@@ -167,5 +169,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 05.1-07-PLAN.md — footer icon legend, palette hints, help overlay rewrite
-Resume file: .planning/phases/05.1-milestone-feedback/05.1-08-PLAN.md
+Stopped at: Completed 05.1-08-PLAN.md — release build queue, GitResetHardFetch chain, sim sort+filter, queue count UI
+Resume file: Phase 05.1 fully complete — all 8 plans executed

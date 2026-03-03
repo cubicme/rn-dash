@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 **Goal:** UX overhaul based on real usage of the v1 milestone — layout restructure (worktree table at bottom), complete command scheme rework (a/i/x/s/g submenus), command queue system, output persistence per worktree, multiplexer abstraction (tmux + zellij), sync-before-run prompting, simulator sort-by-recent with type-to-filter, and various workflow improvements
 **Requirements**: PHASE-05.1-QUEUE, PHASE-05.1-OUTPUT-PERSIST, PHASE-05.1-MULTIPLEXER, PHASE-05.1-CLAUDE-FLAGS, PHASE-05.1-COMMAND-SCHEME, PHASE-05.1-CLEAN-SUBMENU, PHASE-05.1-SYNC-BEFORE-RUN, PHASE-05.1-SIMULATOR-PICKER, PHASE-05.1-WORKTREE-TABLE, PHASE-05.1-LAYOUT, PHASE-05.1-FULLSCREEN, PHASE-05.1-KEYBINDING-REMAP, PHASE-05.1-CLEAN-MODAL, PHASE-05.1-SYNC-PROMPT, PHASE-05.1-SHELL-CMD, PHASE-05.1-FOOTER, PHASE-05.1-HELP, PHASE-05.1-RELEASE-BUILD, PHASE-05.1-SIM-SORT, PHASE-05.1-QUEUE-UI
 **Depends on:** Phase 5
-**Plans:** 3/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 - [ ] 05.1-01-PLAN.md — Command queue + output persistence (VecDeque queue, per-worktree HashMap)
