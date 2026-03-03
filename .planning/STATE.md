@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T04:22:31.731Z"
+last_updated: "2026-03-03T04:31:07.878Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 24
-  completed_plans: 19
+  completed_plans: 21
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5 of 5 (Worktree Switching and Claude Code) — Gap Closure
-Plan: 2 of 2 in current phase — PLANNED (gap closure from UAT)
-Status: Plan 05-02 Complete — Metro spawn errors surfaced, metro pane shows scrolling log output
-Last activity: 2026-03-03 — Executed 05-02 gap closure: MetroSpawnFailed action, always-on filter, metro pane log rendering
+Phase: 5.1 of 6 (Milestone Feedback) — Active
+Plan: 5 of 8 in current phase — IN PROGRESS
+Status: Plan 05.1-04 Complete — Layout restructured, worktree Table widget implemented, fullscreen mode added
+Last activity: 2026-03-03 — Executed 05.1-04: TableState replaces ListState, render_worktree_table with 6 columns, new vertical layout
 
-Progress: [████████████████████] 100%
+Progress: [████████████████░░░░] 80%
 
 ## Performance Metrics
 
@@ -65,6 +65,8 @@ Progress: [████████████████████] 100%
 | Phase 05.1-milestone-feedback P02 | 2 | 2 tasks | 4 files |
 | Phase 05.1-milestone-feedback P03 | 6 | 2 tasks | 7 files |
 | Phase 05.1-milestone-feedback P01 | 6 | 2 tasks | 3 files |
+| Phase 05.1-milestone-feedback P05 | 12 | 2 tasks | 3 files |
+| Phase 05.1-milestone-feedback P04 | 0 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -138,6 +140,11 @@ Recent decisions affecting current work:
 - [Phase 05.1-01]: Output persists per worktree: dispatch_command appends separator (not clear), per CONTEXT.md design
 - [Phase 05.1-01]: WORK-06 lazy install uses queue push: enqueue run command, dispatch yarn install, CommandExited pops original run command
 - [Phase 05.1-01]: CommandCancel is all-or-nothing: clears entire command_queue alongside aborting running task
+- [Phase 05.1-05]: multiplexer field replaces tmux_available: bool in AppState; detect_multiplexer() in spawn_blocking for OpenClaudeCode avoids Box<dyn Trait>:Clone issue
+- [Phase 05.1-05]: EnterCleanPalette sets both palette_mode and modal simultaneously — CleanToggle modal is always modal-first, palette arm is fallback only
+- [Phase 05.1-05]: Complete keybinding remap: 5-palette scheme (a=Android, i=iOS, x=Clean, s=Sync, g=Git) replaces old 2-palette (g/c) system; C=Claude, L=label, f=fullscreen, !=shell, Enter=switch
+- [Phase 05.1-milestone-feedback]: Table widget replaces List widget for worktrees; TableState is the stable selection primitive going forward
+- [Phase 05.1-04]: Metro-active worktree pinned to index 0 on WorktreesLoaded; selected_worktree_id re-derives table index for stable selection across sorts
 
 ### Pending Todos
 
@@ -155,5 +162,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 05.1-03-PLAN.md — type foundation for phase 05.1 (CommandSpec, CleanOptions, ModalState, PaletteMode, Action variants, check_stale_pods, sim_history)
-Resume file: .planning/phases/05.1-milestone-feedback/05.1-04-PLAN.md
+Stopped at: Completed 05.1-05-PLAN.md — full handle_key() keybinding remap with 5 palette modes, multiplexer AppState field, OpenClaudeCode rewired
+Resume file: .planning/phases/05.1-milestone-feedback/05.1-06-PLAN.md
