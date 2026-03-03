@@ -247,8 +247,12 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             ModalState::DevicePicker { .. } => match key.code {
                 Esc => Some(Action::ModalCancel),
                 Enter => Some(Action::ModalDeviceConfirm),
-                Char('j') | Down => Some(Action::ModalDeviceNext),
-                Char('k') | Up => Some(Action::ModalDevicePrev),
+                Down => Some(Action::ModalDeviceNext),
+                Up => Some(Action::ModalDevicePrev),
+                Backspace => Some(Action::ModalInputBackspace),
+                Char('j') => Some(Action::ModalDeviceNext),
+                Char('k') => Some(Action::ModalDevicePrev),
+                Char(c) if !c.is_ascii_control() => Some(Action::ModalInputChar(c)),
                 _ => None,
             },
             ModalState::CleanToggle { .. } => match key.code {
@@ -785,6 +789,20 @@ pub fn update(
                 return;
             }
 
+            // Android release build: queue adb install to run after assembleRelease completes
+            if matches!(spec, CommandSpec::RnReleaseBuild) {
+                state.command_queue.push_back(CommandSpec::AdbInstallApk);
+                dispatch_command(state, spec, metro_tx);
+                return;
+            }
+
+            // GitResetHardFetch: two-step — dispatch fetch, queue reset --hard origin/<branch>
+            if matches!(spec, CommandSpec::GitResetHardFetch) {
+                state.command_queue.push_back(CommandSpec::GitResetHard);
+                dispatch_command(state, CommandSpec::GitFetch, metro_tx);
+                return;
+            }
+
             // Normal dispatch
             dispatch_command(state, spec, metro_tx);
         }
@@ -864,14 +882,28 @@ pub fn update(
         }
 
         Action::ModalInputChar(c) => {
-            if let Some(ModalState::TextInput { buffer, .. }) = state.modal.as_mut() {
-                buffer.push(c);
+            match state.modal.as_mut() {
+                Some(ModalState::TextInput { buffer, .. }) => {
+                    buffer.push(c);
+                }
+                Some(ModalState::DevicePicker { filter, selected, .. }) => {
+                    filter.push(c);
+                    *selected = 0; // reset selection when filter changes
+                }
+                _ => {}
             }
         }
 
         Action::ModalInputBackspace => {
-            if let Some(ModalState::TextInput { buffer, .. }) = state.modal.as_mut() {
-                buffer.pop();
+            match state.modal.as_mut() {
+                Some(ModalState::TextInput { buffer, .. }) => {
+                    buffer.pop();
+                }
+                Some(ModalState::DevicePicker { filter, selected, .. }) => {
+                    filter.pop();
+                    *selected = 0; // reset selection when filter changes
+                }
+                _ => {}
             }
         }
 
@@ -929,15 +961,18 @@ pub fn update(
             if let Some(ModalState::DevicePicker {
                 ref devices,
                 ref mut selected,
+                ref filter,
                 ..
             }) = state.modal
             {
-                if !devices.is_empty() {
-                    *selected = if *selected >= devices.len() - 1 {
-                        0
-                    } else {
-                        *selected + 1
-                    };
+                let count = if filter.is_empty() {
+                    devices.len()
+                } else {
+                    let lower = filter.to_lowercase();
+                    devices.iter().filter(|d| d.name.to_lowercase().contains(&lower)).count()
+                };
+                if count > 0 {
+                    *selected = if *selected >= count - 1 { 0 } else { *selected + 1 };
                 }
             }
         }
@@ -946,15 +981,18 @@ pub fn update(
             if let Some(ModalState::DevicePicker {
                 ref devices,
                 ref mut selected,
+                ref filter,
                 ..
             }) = state.modal
             {
-                if !devices.is_empty() {
-                    *selected = if *selected == 0 {
-                        devices.len() - 1
-                    } else {
-                        *selected - 1
-                    };
+                let count = if filter.is_empty() {
+                    devices.len()
+                } else {
+                    let lower = filter.to_lowercase();
+                    devices.iter().filter(|d| d.name.to_lowercase().contains(&lower)).count()
+                };
+                if count > 0 {
+                    *selected = if *selected == 0 { count - 1 } else { *selected - 1 };
                 }
             }
         }
@@ -964,18 +1002,32 @@ pub fn update(
                 devices,
                 selected,
                 pending_template,
+                filter,
             }) = state.modal.take()
             {
-                if let Some(device) = devices.get(selected) {
+                // Apply filter to get the actual visible list (mirrors render logic)
+                let filtered: Vec<&crate::domain::command::DeviceInfo> = if filter.is_empty() {
+                    devices.iter().collect()
+                } else {
+                    let lower = filter.to_lowercase();
+                    devices.iter().filter(|d| d.name.to_lowercase().contains(&lower)).collect()
+                };
+                if let Some(device) = filtered.get(selected) {
+                    let device_id = device.id.clone();
+                    let is_ios = matches!(pending_template.as_ref(), CommandSpec::RnRunIos { .. });
                     let real_spec = match *pending_template {
                         CommandSpec::RnRunAndroid { .. } => CommandSpec::RnRunAndroid {
-                            device_id: device.id.clone(),
+                            device_id: device_id.clone(),
                         },
                         CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
-                            device_id: device.id.clone(),
+                            device_id: device_id.clone(),
                         },
                         other => other,
                     };
+                    // Record iOS simulator usage for sort-by-recent
+                    if is_ios {
+                        let _ = metro_tx.send(Action::SimulatorUsed(device_id));
+                    }
                     dispatch_command(state, real_spec, metro_tx);
                 }
             }
@@ -1007,10 +1059,20 @@ pub fn update(
                     }
                     _ => {
                         // Multiple devices — show picker
+                        // Sort iOS simulators by last-used from sim_history
+                        let mut sorted_devices = devices;
+                        if matches!(spec, CommandSpec::RnRunIos { .. }) {
+                            let history = crate::infra::sim_history::load_sim_history();
+                            sorted_devices.sort_by_key(|d| {
+                                history.iter().position(|h| h == &d.id)
+                                    .unwrap_or(usize::MAX)
+                            });
+                        }
                         state.modal = Some(ModalState::DevicePicker {
-                            devices,
+                            devices: sorted_devices,
                             selected: 0,
                             pending_template: Box::new(spec),
+                            filter: String::new(),
                         });
                     }
                 }

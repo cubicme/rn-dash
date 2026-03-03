@@ -180,6 +180,8 @@ pub enum ModalState {
         selected: usize,
         /// Template command — the chosen device_id fills the relevant field on confirm.
         pending_template: Box<CommandSpec>,
+        /// Type-to-filter text — filters the device list by name (case-insensitive).
+        filter: String,
     },
     /// Clean submenu with toggleable options. User checks items then confirms.
     CleanToggle {

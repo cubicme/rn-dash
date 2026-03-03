@@ -15,8 +15,8 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
     match modal {
         ModalState::Confirm { prompt, .. } => render_confirm_modal(f, prompt),
         ModalState::TextInput { prompt, buffer, .. } => render_text_input_modal(f, prompt, buffer),
-        ModalState::DevicePicker { devices, selected, .. } => {
-            render_device_picker_modal(f, devices, *selected)
+        ModalState::DevicePicker { devices, selected, filter, .. } => {
+            render_device_picker_modal(f, devices, *selected, filter)
         }
         ModalState::CleanToggle { options } => render_clean_modal(f, options),
         ModalState::SyncBeforeRun { run_command, needs_pods } => {
@@ -77,31 +77,49 @@ fn render_text_input_modal(f: &mut Frame, prompt: &str, buffer: &str) {
     f.render_widget(Paragraph::new(lines).block(block), area);
 }
 
-/// Renders a device picker modal with a green border and list selection.
+/// Renders a device picker modal with a green border, list selection, and type-to-filter.
 fn render_device_picker_modal(
     f: &mut Frame,
     devices: &[crate::domain::command::DeviceInfo],
     selected: usize,
+    filter: &str,
 ) {
-    let area = centered_rect(f.area(), 60, 50);
+    let area = centered_rect(f.area(), 60, 60);
+
+    // Apply filter (case-insensitive substring match)
+    let filtered: Vec<&crate::domain::command::DeviceInfo> = if filter.is_empty() {
+        devices.iter().collect()
+    } else {
+        let lower = filter.to_lowercase();
+        devices.iter().filter(|d| d.name.to_lowercase().contains(&lower)).collect()
+    };
+
+    // Title shows filter text when active
+    let title = if filter.is_empty() {
+        " Select Device ".to_string()
+    } else {
+        format!(" Select Device — filter: {} ", filter)
+    };
 
     let block = Block::default()
-        .title(" Select Device ")
+        .title(title)
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Green));
 
-    let items: Vec<ListItem> = devices
-        .iter()
-        .map(|d| ListItem::new(Line::from(d.name.as_str())))
-        .collect();
-
-    if items.is_empty() {
+    if filtered.is_empty() {
+        let msg = if devices.is_empty() {
+            "No devices found."
+        } else {
+            "No devices match filter."
+        };
         let para = Paragraph::new(vec![
-            Line::from("No devices found."),
+            Line::from(msg),
             Line::from(""),
             Line::from(vec![
                 Span::styled("[Esc]", Style::default().fg(Color::Red)),
-                Span::raw(" cancel"),
+                Span::raw(" cancel    "),
+                Span::styled("[Backspace]", Style::default().fg(Color::Yellow)),
+                Span::raw(" clear filter"),
             ]),
         ])
         .block(block);
@@ -110,6 +128,14 @@ fn render_device_picker_modal(
         f.render_widget(para, area);
         return;
     }
+
+    // Clamp selected index to filtered list length
+    let clamped_selected = selected.min(filtered.len() - 1);
+
+    let items: Vec<ListItem> = filtered
+        .iter()
+        .map(|d| ListItem::new(Line::from(d.name.as_str())))
+        .collect();
 
     let list = List::new(items)
         .block(block)
@@ -122,7 +148,7 @@ fn render_device_picker_modal(
         .highlight_spacing(ratatui::widgets::HighlightSpacing::Always);
 
     let mut ls = ListState::default();
-    ls.select(Some(selected));
+    ls.select(Some(clamped_selected));
 
     f.render_widget(Clear, area);
     f.render_stateful_widget(list, area, &mut ls);
