@@ -88,7 +88,7 @@ pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
     f.render_stateful_widget(list, area, &mut state.worktree_list_state);
 }
 
-/// Renders the metro control pane (top-right) with real status indicator.
+/// Renders the metro control pane (top-right) with status line and scrolling log output.
 pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
     let border_style = if state.focused_panel == FocusedPanel::MetroPane {
         theme::style_focused_border()
@@ -98,8 +98,8 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Status indicator text and color
     let (status_text, status_style) = match &state.metro.status {
-        MetroStatus::Running { pid, worktree_id } =>
-            (format!(" RUNNING  pid={}  [{}]", pid, worktree_id),
+        MetroStatus::Running { pid: _, worktree_id } =>
+            (format!(" RUNNING  [{}]", worktree_id),
              Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
         MetroStatus::Stopped =>
             (" STOPPED ".to_string(),
@@ -117,25 +117,55 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
         .borders(Borders::ALL)
         .border_style(border_style);
 
-    // Inner area for status content
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    // Render status line at top of inner area
-    let status_line = Line::from(Span::styled(status_text, status_style));
-    let status_para = Paragraph::new(status_line);
-    if inner.height > 0 {
-        let status_area = Rect { height: 1, ..inner };
-        f.render_widget(status_para, status_area);
+    if inner.height == 0 {
+        return;
     }
 
-    // If log filter is active, show a small hint below status
-    if state.log_filter_active && inner.height > 1 {
-        let filter_hint = Paragraph::new(
-            Line::from(Span::styled(" [log filter active]", Style::default().fg(Color::Cyan).add_modifier(Modifier::ITALIC)))
-        );
-        let hint_area = Rect { y: inner.y + 1, height: 1, ..inner };
-        f.render_widget(filter_hint, hint_area);
+    // Status line at top
+    let status_line = Line::from(Span::styled(status_text, status_style));
+    let status_area = Rect { height: 1, ..inner };
+    f.render_widget(Paragraph::new(status_line), status_area);
+
+    // Metro log output below status line (remaining height)
+    if inner.height > 1 {
+        let log_area = Rect {
+            y: inner.y + 1,
+            height: inner.height - 1,
+            ..inner
+        };
+
+        let lines: Vec<Line> = state.metro_logs.iter()
+            .map(|l| Line::from(l.as_str()))
+            .collect();
+
+        let visible_height = log_area.height as usize;
+
+        // Auto-scroll to bottom (always show latest output)
+        let scroll = if state.log_scroll_offset == 0 && !lines.is_empty() {
+            lines.len().saturating_sub(visible_height)
+        } else {
+            state.log_scroll_offset
+        };
+
+        let paragraph = Paragraph::new(Text::from(lines.clone()))
+            .scroll((scroll as u16, 0));
+
+        f.render_widget(paragraph, log_area);
+
+        // Scrollbar when content exceeds visible area
+        if lines.len() > visible_height {
+            let mut scrollbar_state = ScrollbarState::new(lines.len())
+                .position(scroll);
+
+            f.render_stateful_widget(
+                Scrollbar::new(ScrollbarOrientation::VerticalRight),
+                log_area,
+                &mut scrollbar_state,
+            );
+        }
     }
 }
 
