@@ -113,3 +113,20 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
 | 4. Config and JIRA Integration | 3/3 | Complete   | 2026-03-02 |
 | 5. Worktree Switching and Claude Code | 2/2 | Complete   | 2026-03-03 |
+
+### Phase 05.1: milestone-feedback (INSERTED)
+
+**Goal:** UX overhaul based on real usage of the v1 milestone — layout restructure (worktree table at bottom), complete command scheme rework (a/i/x/s/g submenus), command queue system, output persistence per worktree, multiplexer abstraction (tmux + zellij), sync-before-run prompting, simulator sort-by-recent with type-to-filter, and various workflow improvements
+**Requirements**: PHASE-05.1-QUEUE, PHASE-05.1-OUTPUT-PERSIST, PHASE-05.1-MULTIPLEXER, PHASE-05.1-CLAUDE-FLAGS, PHASE-05.1-COMMAND-SCHEME, PHASE-05.1-CLEAN-SUBMENU, PHASE-05.1-SYNC-BEFORE-RUN, PHASE-05.1-SIMULATOR-PICKER, PHASE-05.1-WORKTREE-TABLE, PHASE-05.1-LAYOUT, PHASE-05.1-FULLSCREEN, PHASE-05.1-KEYBINDING-REMAP, PHASE-05.1-CLEAN-MODAL, PHASE-05.1-SYNC-PROMPT, PHASE-05.1-SHELL-CMD, PHASE-05.1-FOOTER, PHASE-05.1-HELP, PHASE-05.1-RELEASE-BUILD, PHASE-05.1-SIM-SORT, PHASE-05.1-QUEUE-UI
+**Depends on:** Phase 5
+**Plans:** 8 plans
+
+Plans:
+- [ ] 05.1-01-PLAN.md — Command queue + output persistence (VecDeque queue, per-worktree HashMap)
+- [ ] 05.1-02-PLAN.md — Multiplexer abstraction (Tmux + Zellij adapters) + claude_flags config
+- [ ] 05.1-03-PLAN.md — Domain type extensions (CommandSpec variants, CleanOptions, PaletteMode, Action variants, stale-pods, sim history)
+- [ ] 05.1-04-PLAN.md — Worktree table layout (Table widget, layout restructure, fullscreen, metro-active pinning)
+- [ ] 05.1-05-PLAN.md — Keybinding remap (5 palette modes, multiplexer integration, CleanToggle/SyncBeforeRun modal interception)
+- [ ] 05.1-06-PLAN.md — Clean/sync/shell modals (CleanToggle wiring, sync-before-run prompt, shell command input)
+- [ ] 05.1-07-PLAN.md — Footer + help overlay (icon legend, new command scheme hints, complete help rewrite)
+- [ ] 05.1-08-PLAN.md — Integration wiring (release build queue, fetch-then-reset, sim sort, type-to-filter, queue UI)
