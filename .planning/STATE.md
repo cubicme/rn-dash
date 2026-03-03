@@ -135,6 +135,10 @@ Recent decisions affecting current work:
 
 None.
 
+### Roadmap Evolution
+
+- Phase 5.1 inserted after Phase 5: milestone-feedback (URGENT)
+
 ### Blockers/Concerns
 
 - [Phase 4 RESOLVED]: JIRA auth method resolved — DashConfig.auth_mode field supports both "cloud" (basic_auth email:token) and "datacenter" (bearer_auth PAT); user selects via config file
@@ -142,6 +146,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-03T00:00:00Z
-Stopped at: Completed 05-02-PLAN.md — Metro spawn error surfacing and log streaming in metro pane
-Resume file: None
+Last session: 2026-03-03
+Stopped at: Phase 5.1 context gathered — milestone feedback decisions captured
+Resume file: .planning/phases/05.1-milestone-feedback/05.1-CONTEXT.md
