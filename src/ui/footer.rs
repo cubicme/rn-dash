@@ -1,5 +1,6 @@
 use ratatui::{
     layout::Rect,
+    style::{Color, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
@@ -8,16 +9,41 @@ use crate::{app::{AppState, FocusedPanel, PaletteMode}, domain::command::ModalSt
 
 /// Renders the footer key hint bar. Always 1 line tall at the bottom of the layout.
 /// Hints change based on which panel is focused — satisfies SHELL-02.
+/// Icon legend (●=metro ⚠=stale) is rendered right-aligned.
 pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
     let hints = key_hints_for(state);
-    let spans: Vec<Span> = hints.iter().flat_map(|(key, desc)| {
+
+    // Build hint spans (left-aligned)
+    let hint_spans: Vec<Span> = hints.iter().flat_map(|(key, desc)| {
         vec![
             Span::styled(*key, theme::style_key_hint()),
             Span::raw(format!(" {}  ", desc)),
         ]
     }).collect();
-    let paragraph = Paragraph::new(Line::from(spans));
-    f.render_widget(paragraph, area);
+
+    // Icon legend (right-aligned)
+    let legend = vec![
+        Span::styled("●", Style::default().fg(Color::Green)),
+        Span::raw("=metro  "),
+        Span::styled("\u{26A0}", Style::default().fg(Color::Yellow)),
+        Span::raw("=stale"),
+    ];
+
+    // Use horizontal layout: hints on left (flexible), legend on right (fixed)
+    let [hint_area, legend_area] = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Horizontal)
+        .constraints([
+            ratatui::layout::Constraint::Min(0),
+            ratatui::layout::Constraint::Length(20),
+        ])
+        .areas(area);
+
+    let hint_line = Paragraph::new(Line::from(hint_spans));
+    let legend_line = Paragraph::new(Line::from(legend))
+        .alignment(ratatui::layout::Alignment::Right);
+
+    f.render_widget(hint_line, hint_area);
+    f.render_widget(legend_line, legend_area);
 }
 
 /// Returns context-sensitive key hints for the current app state.
@@ -33,25 +59,14 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     // Palette mode hints — checked before panel hints
     if let Some(ref mode) = state.palette_mode {
         return match mode {
-            PaletteMode::Git => vec![
-                ("p", "pull"),
-                ("P", "push"),
-                ("X", "reset hard"),
-                ("f", "fetch"),
-                ("b", "checkout"),
-                ("c", "checkout -b"),
-                ("r", "rebase"),
-                ("Esc", "cancel"),
-            ],
-            // Phase 05.1: Stubs — real hints wired in Plan 05 (keybinding remap)
             PaletteMode::Android => vec![
                 ("d", "run-android"),
-                ("e", "pick device"),
+                ("e", "device list"),
                 ("r", "release build"),
                 ("Esc", "cancel"),
             ],
             PaletteMode::Ios => vec![
-                ("d", "run-ios device"),
+                ("d", "device"),
                 ("e", "simulator"),
                 ("p", "pod-install"),
                 ("Esc", "cancel"),
@@ -61,50 +76,66 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("p", "pods"),
                 ("a", "android"),
                 ("i", "sync after"),
-                ("x", "confirm"),
+                ("x/Enter", "confirm"),
                 ("Esc", "cancel"),
             ],
             PaletteMode::Sync => vec![
-                ("i", "yarn install"),
+                ("i", "install"),
                 ("u", "unit-tests"),
                 ("t", "check-types"),
                 ("j", "jest"),
                 ("l", "lint"),
                 ("Esc", "cancel"),
             ],
+            PaletteMode::Git => vec![
+                ("f", "fetch"),
+                ("p", "pull"),
+                ("P", "push"),
+                ("X", "reset hard"),
+                ("b", "checkout"),
+                ("c", "checkout -b"),
+                ("r", "rebase"),
+                ("Esc", "cancel"),
+            ],
         };
     }
 
     // Modal hints — checked after palette, before panel hints
-    if state.modal.is_some() {
-        return match &state.modal {
-            Some(ModalState::Confirm { .. }) => vec![("Y", "confirm"), ("N/Esc", "cancel")],
-            Some(ModalState::TextInput { .. }) => vec![("Enter", "submit"), ("Esc", "cancel")],
-            Some(ModalState::DevicePicker { .. }) => {
+    if let Some(ref modal) = state.modal {
+        return match modal {
+            ModalState::Confirm { .. } => vec![("Y", "confirm"), ("N/Esc", "cancel")],
+            ModalState::TextInput { .. } => vec![("Enter", "submit"), ("Esc", "cancel")],
+            ModalState::DevicePicker { .. } => {
                 vec![("Enter", "select"), ("j/k", "navigate"), ("Esc", "cancel")]
             }
-            // Phase 05.1: Stubs — real hints wired in Plan 06
-            Some(ModalState::CleanToggle { .. }) => {
-                vec![("n/p/a/i", "toggle"), ("x/Enter", "confirm"), ("Esc", "cancel")]
-            }
-            Some(ModalState::SyncBeforeRun { .. }) => {
-                vec![("y", "sync + run"), ("n", "run without sync"), ("Esc", "cancel")]
-            }
-            None => unreachable!(),
+            ModalState::CleanToggle { .. } => vec![
+                ("n", "node_modules"),
+                ("p", "pods"),
+                ("a", "android"),
+                ("i", "sync after"),
+                ("x/Enter", "confirm"),
+                ("Esc", "cancel"),
+            ],
+            ModalState::SyncBeforeRun { .. } => vec![
+                ("Y", "sync first"),
+                ("N", "skip sync"),
+                ("Esc", "cancel"),
+            ],
         };
     }
 
     // Common hints always shown in normal mode
-    let common: Vec<(&str, &str)> = vec![("?/F1", "help"), ("q", "quit"), ("Tab", "next panel")];
+    let common: Vec<(&str, &str)> = vec![("?/F1", "help"), ("q", "quit"), ("Tab", "panel")];
 
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
         FocusedPanel::WorktreeTable => vec![
             ("j/k", "navigate"),
+            ("a", "android"),
+            ("i", "ios"),
+            ("x", "clean"),
+            ("s", "sync"),
+            ("g", "git"),
             ("Enter", "switch"),
-            ("a/i/x/s/g", "submenus"),
-            ("L", "label"),
-            ("C", "claude"),
-            ("f", "fullscreen"),
         ],
         FocusedPanel::MetroPane => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![
@@ -112,6 +143,7 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("x", "stop"),
                 ("r", "restart"),
                 ("l", "logs"),
+                ("f", "fullscreen"),
             ];
             // Show stdin commands only when metro is running
             if state.metro.is_running() {
@@ -121,9 +153,12 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             hints
         },
         FocusedPanel::CommandOutput => {
-            let mut hints: Vec<(&'static str, &'static str)> = vec![("j/k", "scroll")];
+            let mut hints: Vec<(&'static str, &'static str)> = vec![
+                ("j/k", "scroll"),
+                ("f", "fullscreen"),
+            ];
             if state.running_command.is_some() {
-                hints.push(("Ctrl-c", "cancel"));
+                hints.push(("X", "cancel"));
             }
             hints
         },
