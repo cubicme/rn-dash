@@ -1,65 +1,125 @@
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
-    style::{Modifier, Style},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Clear, Row, Table},
     Frame,
 };
 
 /// Renders the help overlay. Called from view() when state.show_help == true.
 /// Uses Clear widget before the table to erase background panels behind the overlay.
+/// Size: 70% width, 85% height to accommodate all keybinding sections.
 pub fn render_help(f: &mut Frame) {
-    let area = centered_rect(f.area(), 60, 80);
+    let area = centered_rect(f.area(), 70, 85);
+
+    let section_style = Style::default().add_modifier(Modifier::BOLD);
+    let dim_style = Style::default().fg(Color::DarkGray);
 
     let keybindings = vec![
-        Row::new(vec!["?  / F1",     "Open this help"]),
-        Row::new(vec!["q  / Esc",    "Close help"]),
-        Row::new(vec!["q",           "Quit (when no overlay)"]),
-        Row::new(vec!["h j k l",     "Navigate within panel"]),
-        Row::new(vec!["↑ ↓ ← →",    "Navigate within panel"]),
-        Row::new(vec!["Tab",         "Focus next panel"]),
-        Row::new(vec!["Shift-Tab",   "Focus previous panel"]),
-        Row::new(vec!["",            ""]),
-        Row::new(vec!["Metro (when metro pane focused)", ""])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
-        Row::new(vec!["s",           "Start metro"]),
-        Row::new(vec!["x",           "Stop metro"]),
-        Row::new(vec!["r",           "Restart metro"]),
-        Row::new(vec!["l",           "Toggle log panel"]),
-        Row::new(vec!["J (shift-j)", "Send debugger command"]),
-        Row::new(vec!["R (shift-r)", "Send reload command"]),
-        Row::new(vec!["",            ""]),
-        Row::new(vec!["Worktree List", ""])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
-        Row::new(vec!["j / k",        "Select next/prev worktree"]),
-        Row::new(vec!["Enter",        "Switch metro to worktree"]),
-        Row::new(vec!["C (shift-c)",  "Open Claude Code (tmux)"]),
-        Row::new(vec!["g",            "Git command palette"]),
-        Row::new(vec!["c",            "RN command palette"]),
-        Row::new(vec!["L (shift-l)",  "Set custom label"]),
-        Row::new(vec!["R (shift-r)",  "Refresh worktree list"]),
-        Row::new(vec!["",            ""]),
-        Row::new(vec!["Git Palette (g then...)", ""])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
-        Row::new(vec!["p",            "git pull"]),
-        Row::new(vec!["P (shift-p)",  "git push"]),
-        Row::new(vec!["d",            "git reset --hard (confirm)"]),
-        Row::new(vec!["b",            "git checkout <branch>"]),
-        Row::new(vec!["B (shift-b)",  "git checkout -b <branch>"]),
-        Row::new(vec!["r",            "git rebase origin/<branch>"]),
-        Row::new(vec!["",            ""]),
-        Row::new(vec!["RN Palette (c then...)", ""])
-            .style(Style::default().add_modifier(Modifier::BOLD)),
-        Row::new(vec!["a",            "clean android"]),
-        Row::new(vec!["c",            "clean cocoapods (confirm)"]),
-        Row::new(vec!["n",            "rm node_modules (confirm)"]),
-        Row::new(vec!["i",            "yarn install"]),
-        Row::new(vec!["p",            "pod-install"]),
-        Row::new(vec!["d",            "run-android (device select)"]),
-        Row::new(vec!["s",            "run-ios (device select)"]),
-        Row::new(vec!["t",            "unit-tests"]),
-        Row::new(vec!["j",            "jest <filter>"]),
-        Row::new(vec!["l",            "lint --quiet --fix"]),
-        Row::new(vec!["y",            "check-types --incremental"]),
+        // Navigation section
+        Row::new(vec!["Navigation", ""])
+            .style(section_style),
+        Row::new(vec!["Tab / Shift-Tab",  "Switch panel"]),
+        Row::new(vec!["j / k",            "Navigate within panel"]),
+        Row::new(vec!["? / F1",           "Open this help"]),
+        Row::new(vec!["q / Esc",          "Quit / close overlay"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Worktree Table section
+        Row::new(vec!["Worktree Table", ""])
+            .style(section_style),
+        Row::new(vec!["Enter",            "Switch metro to worktree"]),
+        Row::new(vec!["a",               "Android submenu"]),
+        Row::new(vec!["i",               "iOS submenu"]),
+        Row::new(vec!["x",               "Clean submenu"]),
+        Row::new(vec!["s",               "Sync submenu"]),
+        Row::new(vec!["g",               "Git submenu"]),
+        Row::new(vec!["C",               "Open Claude Code (tmux/zellij)"]),
+        Row::new(vec!["L",               "Set custom branch label"]),
+        Row::new(vec!["f",               "Toggle fullscreen"]),
+        Row::new(vec!["!",               "Run shell command in worktree"]),
+        Row::new(vec!["R",               "Refresh worktree list"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Android submenu section
+        Row::new(vec!["Android  (a>)", ""])
+            .style(section_style),
+        Row::new(vec!["d",               "run-android (device select)"]),
+        Row::new(vec!["e",               "Device list"]),
+        Row::new(vec!["r",               "Release build (assembleRelease)"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // iOS submenu section
+        Row::new(vec!["iOS  (i>)", ""])
+            .style(section_style),
+        Row::new(vec!["d",               "run-ios (device select)"]),
+        Row::new(vec!["e",               "Simulator (xcrun)"]),
+        Row::new(vec!["p",               "pod-install"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Clean submenu section
+        Row::new(vec!["Clean  (x>)", ""])
+            .style(section_style),
+        Row::new(vec!["n",               "Toggle node_modules"]),
+        Row::new(vec!["p",               "Toggle pods"]),
+        Row::new(vec!["a",               "Toggle android"]),
+        Row::new(vec!["i",               "Toggle sync after"]),
+        Row::new(vec!["x / Enter",       "Confirm and run"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Sync submenu section
+        Row::new(vec!["Sync  (s>)", ""])
+            .style(section_style),
+        Row::new(vec!["i",               "yarn install"]),
+        Row::new(vec!["u",               "yarn unit-tests"]),
+        Row::new(vec!["t",               "yarn check-types --incremental"]),
+        Row::new(vec!["j",               "yarn jest <filter>"]),
+        Row::new(vec!["l",               "yarn lint --quiet --fix"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Git submenu section
+        Row::new(vec!["Git  (g>)", ""])
+            .style(section_style),
+        Row::new(vec!["f",               "git fetch --all --tags"]),
+        Row::new(vec!["p",               "git pull"]),
+        Row::new(vec!["P",               "git push"]),
+        Row::new(vec!["X",               "git fetch + reset --hard origin/<branch>"]),
+        Row::new(vec!["b",               "git checkout <branch>"]),
+        Row::new(vec!["c",               "git checkout -b <branch>"]),
+        Row::new(vec!["r",               "git rebase <target>"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Metro Pane section
+        Row::new(vec!["Metro Pane", ""])
+            .style(section_style),
+        Row::new(vec!["s",               "Start metro"]),
+        Row::new(vec!["x",               "Stop metro"]),
+        Row::new(vec!["r",               "Restart metro"]),
+        Row::new(vec!["l",               "Toggle log panel"]),
+        Row::new(vec!["J",               "Send debugger command (running)"]),
+        Row::new(vec!["R",               "Send reload command (running)"]),
+        Row::new(vec!["X",               "Clear log output"]),
+        Row::new(vec!["f",               "Toggle fullscreen"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Output Pane section
+        Row::new(vec!["Output Pane", ""])
+            .style(section_style),
+        Row::new(vec!["j / k",           "Scroll output"]),
+        Row::new(vec!["X",               "Cancel running command"]),
+        Row::new(vec!["C",               "Clear output"]),
+        Row::new(vec!["f",               "Toggle fullscreen"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Icons legend section
+        Row::new(vec!["Icons", ""])
+            .style(section_style),
+        Row::new(vec!["●  (green)",       "Metro is running"]),
+        Row::new(vec!["\u{26A0}  (yellow)", "Stale dependencies (node_modules/pods)"]),
     ];
 
     let table = Table::new(
