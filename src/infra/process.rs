@@ -21,9 +21,8 @@ pub trait ProcessClient: Send + Sync {
     /// The caller is responsible for taking those handles before any kill call
     /// (see research pitfall 5).
     ///
-    /// `filter`: when true, sets `DEBUG=Metro:*` env var so metro emits log output.
-    /// Metro does NOT stream logs by default (project-confirmed — see CLAUDE.md).
-    async fn spawn_metro(&self, worktree_path: PathBuf, filter: bool) -> anyhow::Result<Child>;
+    /// Always sets `DEBUG=Metro:*` so metro output streams to stdout.
+    async fn spawn_metro(&self, worktree_path: PathBuf) -> anyhow::Result<Child>;
 }
 
 /// Production implementation that calls `tokio::process::Command` directly.
@@ -31,7 +30,7 @@ pub struct TokioProcessClient;
 
 #[async_trait::async_trait]
 impl ProcessClient for TokioProcessClient {
-    async fn spawn_metro(&self, worktree_path: PathBuf, filter: bool) -> anyhow::Result<Child> {
+    async fn spawn_metro(&self, worktree_path: PathBuf) -> anyhow::Result<Child> {
         let mut cmd = tokio::process::Command::new("yarn");
         cmd.args(["start", "--reset-cache"])
             .current_dir(worktree_path)
@@ -47,11 +46,8 @@ impl ProcessClient for TokioProcessClient {
             .stderr(std::process::Stdio::piped())
             .stdin(std::process::Stdio::piped());
 
-        // Metro does not stream logs by default — only when a filter is active.
-        // When filter=true we set DEBUG=Metro:* to activate Metro's internal debug logger.
-        if filter {
-            cmd.env("DEBUG", "Metro:*");
-        }
+        // Always set DEBUG=Metro:* so metro output streams to stdout.
+        cmd.env("DEBUG", "Metro:*");
 
         Ok(cmd.spawn()?)
     }

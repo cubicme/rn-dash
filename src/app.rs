@@ -136,7 +136,7 @@ impl Default for AppState {
             metro_logs: std::collections::VecDeque::new(),
             log_scroll_offset: 0,
             log_panel_visible: false,
-            log_filter_active: false,
+            log_filter_active: true,
             active_worktree_path: None,
             pending_restart: false,
             pending_switch_path: None,
@@ -417,8 +417,7 @@ pub fn update(
                 .active_worktree_path
                 .clone()
                 .unwrap_or_else(|| PathBuf::from("."));
-            let filter = state.log_filter_active;
-            tokio::spawn(spawn_metro_task(worktree_path, filter, tx, htx));
+            tokio::spawn(spawn_metro_task(worktree_path, tx, htx));
         }
 
         Action::MetroStop => {
@@ -454,11 +453,6 @@ pub fn update(
 
         Action::MetroToggleLog => {
             state.log_panel_visible = !state.log_panel_visible;
-            state.log_filter_active = state.log_panel_visible;
-            if state.metro.is_running() {
-                state.pending_restart = true;
-                update(state, Action::MetroStop, metro_tx, handle_tx);
-            }
         }
 
         Action::MetroScrollUp => {
@@ -489,6 +483,16 @@ pub fn update(
                 }
                 update(state, Action::MetroStart, metro_tx, handle_tx);
             }
+        }
+
+        Action::MetroSpawnFailed(msg) => {
+            state.metro.clear();
+            state.pending_restart = false;
+            state.pending_switch_path = None;
+            state.error_state = Some(ErrorState {
+                message: format!("Metro failed to start: {msg}"),
+                can_retry: true,
+            });
         }
 
         // --- Phase 3: Worktree navigation ---
@@ -1074,7 +1078,6 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 /// Spawns the metro process and delivers a `MetroHandle` via `handle_tx`.
 async fn spawn_metro_task(
     worktree_path: PathBuf,
-    filter: bool,
     action_tx: tokio::sync::mpsc::UnboundedSender<Action>,
     handle_tx: tokio::sync::mpsc::UnboundedSender<MetroHandle>,
 ) {
@@ -1082,7 +1085,7 @@ async fn spawn_metro_task(
     use crate::infra::process::TokioProcessClient;
 
     let client = TokioProcessClient;
-    match client.spawn_metro(worktree_path.clone(), filter).await {
+    match client.spawn_metro(worktree_path.clone()).await {
         Ok(mut child) => {
             let pid = child.id().unwrap_or(0);
 
@@ -1117,7 +1120,7 @@ async fn spawn_metro_task(
         }
         Err(e) => {
             tracing::error!("metro spawn failed: {e}");
-            let _ = action_tx.send(Action::MetroExited);
+            let _ = action_tx.send(Action::MetroSpawnFailed(format!("{e}")));
         }
     }
 }

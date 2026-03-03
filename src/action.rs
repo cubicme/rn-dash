@@ -35,8 +35,9 @@ pub enum Action {
     MetroSendReload,     // R (shift-r, when metro pane focused) — sends r\n to metro stdin
 
     // Metro background events (not user-triggered — sent by background tasks)
-    MetroLogLine(String), // stdout/stderr line from metro streaming task
-    MetroExited,          // metro process has stopped (port confirmed free)
+    MetroLogLine(String),       // stdout/stderr line from metro streaming task
+    MetroExited,                // metro process has stopped (port confirmed free)
+    MetroSpawnFailed(String),   // spawn error message — surfaces to error_state
 
     // Phase 3: Worktree navigation
     WorktreeSelectNext,   // j/Down in WorktreeList panel
