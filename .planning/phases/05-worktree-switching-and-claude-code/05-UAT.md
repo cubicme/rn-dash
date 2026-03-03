@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 05-worktree-switching-and-claude-code
 source: 05-01-SUMMARY.md
 started: 2026-03-03T00:00:00Z
-updated: 2026-03-03T00:10:00Z
+updated: 2026-03-03T12:00:00Z
 ---
 
 ## Current Test
@@ -49,7 +49,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Metro switch handles errors gracefully and metro pane streams actual output"
-  status: failed
+  status: resolved
   reason: "User reported: it runs and switches. but 1. if there's an error it just stops; which happened. 2. pid [running] is useless for that big output window. can't we just pipe the output from metro?"
   severity: major
   test: 1
