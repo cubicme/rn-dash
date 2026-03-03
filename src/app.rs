@@ -90,14 +90,16 @@ pub struct AppState {
     pub worktrees: Vec<crate::domain::worktree::Worktree>,
     pub worktree_list_state: ratatui::widgets::ListState,
 
-    // Command output panel
-    pub command_output: std::collections::VecDeque<String>,
-    pub command_output_scroll: usize,
+    // Command queue — FIFO, drained on CommandExited
+    pub command_queue: std::collections::VecDeque<crate::domain::command::CommandSpec>,
+
+    // Per-worktree output persistence
+    pub command_output_by_worktree: std::collections::HashMap<crate::domain::worktree::WorktreeId, std::collections::VecDeque<String>>,
+    pub command_output_scroll_by_worktree: std::collections::HashMap<crate::domain::worktree::WorktreeId, usize>,
+
+    // Currently running command and its task handle
     pub running_command: Option<crate::domain::command::CommandSpec>,
     pub command_task: Option<tokio::task::JoinHandle<()>>,
-
-    // Lazy install (WORK-06): run yarn install before run-android/run-ios if worktree is stale
-    pub pending_command_after_install: Option<crate::domain::command::CommandSpec>,
 
     // Modal state — only one modal active at a time
     pub modal: Option<crate::domain::command::ModalState>,
@@ -143,11 +145,11 @@ impl Default for AppState {
             // Phase 3
             worktrees: Vec::new(),
             worktree_list_state,
-            command_output: std::collections::VecDeque::new(),
-            command_output_scroll: 0,
+            command_queue: std::collections::VecDeque::new(),
+            command_output_by_worktree: std::collections::HashMap::new(),
+            command_output_scroll_by_worktree: std::collections::HashMap::new(),
             running_command: None,
             command_task: None,
-            pending_command_after_install: None,
             modal: None,
             labels: std::collections::HashMap::new(),
             repo_root: PathBuf::from(
@@ -163,6 +165,38 @@ impl Default for AppState {
             jira_client: None,
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Per-worktree output accessor helpers (used by panels.rs)
+// ---------------------------------------------------------------------------
+
+/// Returns the WorktreeId for the currently selected worktree, or None if list is empty.
+pub fn active_worktree_id(state: &AppState) -> Option<crate::domain::worktree::WorktreeId> {
+    if state.worktrees.is_empty() {
+        return None;
+    }
+    let idx = state.worktree_list_state.selected().unwrap_or(0)
+        .min(state.worktrees.len() - 1);
+    Some(state.worktrees[idx].id.clone())
+}
+
+/// Returns a reference to the active worktree's command output deque (empty if none selected).
+pub fn active_output(state: &AppState) -> &std::collections::VecDeque<String> {
+    static EMPTY: std::sync::LazyLock<std::collections::VecDeque<String>> =
+        std::sync::LazyLock::new(std::collections::VecDeque::new);
+    if let Some(id) = active_worktree_id(state) {
+        state.command_output_by_worktree.get(&id).unwrap_or(&EMPTY)
+    } else {
+        &EMPTY
+    }
+}
+
+/// Returns the scroll offset for the active worktree's command output (0 if none selected).
+pub fn active_output_scroll(state: &AppState) -> usize {
+    active_worktree_id(state)
+        .and_then(|id| state.command_output_scroll_by_worktree.get(&id).copied())
+        .unwrap_or(0)
 }
 
 /// Pure function: maps (state, key) → Action. No side effects.

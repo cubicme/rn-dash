@@ -80,4 +80,8 @@ pub enum Action {
     // Phase 5: Worktree switching and Claude Code
     WorktreeSwitchToSelected, // Enter on worktree — switch metro to selected worktree
     OpenClaudeCode,           // C on worktree — open claude in new tmux tab
+
+    // Phase 5.1: Command queue
+    CommandQueuePush(crate::domain::command::CommandSpec), // enqueue without running immediately
+    CommandQueueClear,                                     // discard all pending items in the queue
 }
