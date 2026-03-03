@@ -12,3 +12,4 @@ pub mod jira;
 pub mod jira_cache;
 pub mod tmux;
 pub mod multiplexer;
+pub mod sim_history;

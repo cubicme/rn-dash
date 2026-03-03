@@ -1049,6 +1049,35 @@ pub fn update(
                 }
             }
         }
+
+        // --- Phase 5.1: New submenu and action stubs ---
+
+        Action::EnterAndroidPalette => {
+            state.palette_mode = Some(PaletteMode::Android);
+        }
+        Action::EnterIosPalette => {
+            state.palette_mode = Some(PaletteMode::Ios);
+        }
+        Action::EnterCleanPalette => {
+            // Plan 06 wires the full CleanToggle modal flow
+        }
+        Action::EnterSyncPalette => {
+            state.palette_mode = Some(PaletteMode::Sync);
+        }
+        Action::CleanToggleNodeModules => { /* Plan 06 */ }
+        Action::CleanTogglePods => { /* Plan 06 */ }
+        Action::CleanToggleAndroid => { /* Plan 06 */ }
+        Action::CleanToggleSyncAfter => { /* Plan 06 */ }
+        Action::CleanConfirm => { /* Plan 06 */ }
+        Action::ToggleFullscreen => { /* Plan 08 */ }
+        Action::StartShellCommand => { /* Plan 06 */ }
+        Action::SimulatorUsed(_udid) => { /* Plan 07 */ }
+        Action::SyncBeforeRunAccept => { /* Plan 06 */ }
+        Action::SyncBeforeRunDecline => { /* Plan 06 */ }
+        Action::LogPanelClear => {
+            state.metro_logs.clear();
+            state.log_scroll_offset = 0;
+        }
     }
 }
 

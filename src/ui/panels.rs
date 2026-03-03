@@ -226,17 +226,18 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
         None => " Output ".to_string(),
     };
 
-    let lines: Vec<Line> = state.command_output.iter()
+    let lines: Vec<Line> = crate::app::active_output(state).iter()
         .map(|l| Line::from(l.as_str()))
         .collect();
 
     let visible_height = area.height.saturating_sub(2) as usize; // subtract borders
 
     // Auto-scroll to bottom when scroll is 0 (default); manual scroll overrides
-    let scroll = if state.command_output_scroll == 0 && !lines.is_empty() {
+    let scroll_offset = crate::app::active_output_scroll(state);
+    let scroll = if scroll_offset == 0 && !lines.is_empty() {
         lines.len().saturating_sub(visible_height)
     } else {
-        state.command_output_scroll
+        scroll_offset
     };
 
     let block = Block::default()

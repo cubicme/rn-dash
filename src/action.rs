@@ -84,4 +84,34 @@ pub enum Action {
     // Phase 5.1: Command queue
     CommandQueuePush(crate::domain::command::CommandSpec), // enqueue without running immediately
     CommandQueueClear,                                     // discard all pending items in the queue
+
+    // Phase 5.1: Submenu activation
+    EnterAndroidPalette,    // 'a' when WorktreeTable focused
+    EnterIosPalette,        // 'i' when WorktreeTable focused
+    EnterCleanPalette,      // 'x' when WorktreeTable focused — opens CleanToggle modal
+    EnterSyncPalette,       // 's' when WorktreeTable focused
+    // EnterGitPalette already exists
+
+    // Phase 5.1: Clean toggle actions
+    CleanToggleNodeModules,
+    CleanTogglePods,
+    CleanToggleAndroid,
+    CleanToggleSyncAfter,
+    CleanConfirm,           // dispatches queued clean commands from CleanOptions
+
+    // Phase 5.1: Fullscreen
+    ToggleFullscreen,       // 'f' key — toggle fullscreen for current focused pane
+
+    // Phase 5.1: Shell command
+    StartShellCommand,      // '!' key — opens text input modal for shell command
+
+    // Phase 5.1: Simulator history
+    SimulatorUsed(String),  // record UDID after successful iOS run start
+
+    // Phase 5.1: Sync-before-run
+    SyncBeforeRunAccept,    // user said "Yes" to sync prompt
+    SyncBeforeRunDecline,   // user said "No" to sync prompt — run without sync
+
+    // Phase 5.1: Log panel clear
+    LogPanelClear,          // 'x' when log panel focused — clears metro_logs
 }

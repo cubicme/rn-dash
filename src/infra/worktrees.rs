@@ -117,6 +117,23 @@ pub fn check_stale(worktree_path: &Path) -> bool {
     }
 }
 
+/// Returns true when `ios/Pods` directory is missing or older than `ios/Podfile.lock`.
+/// Used by sync-before-run to determine if pod-install is needed before iOS runs.
+pub fn check_stale_pods(worktree_path: &Path) -> bool {
+    let pods_dir = worktree_path.join("ios").join("Pods");
+    let podfile_lock = worktree_path.join("ios").join("Podfile.lock");
+
+    let pods_mtime = match std::fs::metadata(&pods_dir).and_then(|m| m.modified()) {
+        Ok(t) => t,
+        Err(_) => return true, // Pods/ absent → stale
+    };
+
+    match std::fs::metadata(&podfile_lock).and_then(|m| m.modified()) {
+        Ok(lock_mtime) => pods_mtime < lock_mtime,
+        Err(_) => false, // no Podfile.lock → can't determine staleness
+    }
+}
+
 /// Runs `git worktree list --porcelain` in `repo_root` and parses the output.
 pub async fn list_worktrees(repo_root: &Path) -> anyhow::Result<Vec<Worktree>> {
     let output = tokio::process::Command::new("git")
