@@ -1414,6 +1414,18 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
         }
     }
 
+    // Cleanup: kill all child processes before exiting
+    if let Some(mut handle) = state.metro.take_handle() {
+        if let Some(kill_tx) = handle.kill_tx.take() {
+            let _ = kill_tx.send(());
+        }
+        handle.stream_task.abort();
+        handle.stdin_task.abort();
+    }
+    if let Some(task) = state.command_task.take() {
+        task.abort();
+    }
+
     Ok(())
 }
 
