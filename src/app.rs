@@ -711,13 +711,24 @@ pub fn update(
                 None
             };
 
-            // WORK-06: lazy install — stale worktree + run command triggers yarn install first
-            // Queue the original run command; yarn install dispatches now; CommandExited pops queue
+            // Sync-before-run: stale worktree + run command triggers prompt
             if let Some((_, stale)) = &wt_branch {
                 if *stale {
-                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. }) {
-                        state.command_queue.push_back(spec);
-                        dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
+                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnReleaseBuild) {
+                        let needs_pods = matches!(spec, CommandSpec::RnRunIos { .. });
+                        // Also check pods staleness for iOS
+                        let needs_pods = if needs_pods {
+                            let idx = state.worktree_table_state.selected().unwrap_or(0);
+                            let wt_path = &state.worktrees[idx.min(state.worktrees.len() - 1)].path;
+                            crate::infra::worktrees::check_stale_pods(wt_path)
+                        } else {
+                            false
+                        };
+                        state.modal = Some(ModalState::SyncBeforeRun {
+                            run_command: Box::new(spec),
+                            needs_pods,
+                        });
+                        state.palette_mode = None;
                         return;
                     }
                 }
@@ -897,6 +908,9 @@ pub fn update(
                                 }
                                 CommandSpec::YarnJest { .. } => {
                                     CommandSpec::YarnJest { filter: buffer }
+                                }
+                                CommandSpec::ShellCommand { .. } => {
+                                    CommandSpec::ShellCommand { command: buffer }
                                 }
                                 other => other,
                             };
@@ -1142,11 +1156,58 @@ pub fn update(
         Action::EnterSyncPalette => {
             state.palette_mode = Some(PaletteMode::Sync);
         }
-        Action::CleanToggleNodeModules => { /* Plan 06 */ }
-        Action::CleanTogglePods => { /* Plan 06 */ }
-        Action::CleanToggleAndroid => { /* Plan 06 */ }
-        Action::CleanToggleSyncAfter => { /* Plan 06 */ }
-        Action::CleanConfirm => { /* Plan 06 */ }
+        Action::CleanToggleNodeModules => {
+            if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
+                options.node_modules = !options.node_modules;
+            }
+        }
+        Action::CleanTogglePods => {
+            if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
+                options.pods = !options.pods;
+            }
+        }
+        Action::CleanToggleAndroid => {
+            if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
+                options.android = !options.android;
+            }
+        }
+        Action::CleanToggleSyncAfter => {
+            if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
+                options.sync_after = !options.sync_after;
+            }
+        }
+        Action::CleanConfirm => {
+            if let Some(ModalState::CleanToggle { options }) = state.modal.take() {
+                state.palette_mode = None;
+
+                // Build command sequence from checked options
+                let mut cmds: Vec<CommandSpec> = Vec::new();
+                if options.node_modules {
+                    cmds.push(CommandSpec::RmNodeModules);
+                }
+                if options.pods {
+                    cmds.push(CommandSpec::RnCleanCocoapods);
+                }
+                if options.android {
+                    cmds.push(CommandSpec::RnCleanAndroid);
+                }
+                if options.sync_after {
+                    cmds.push(CommandSpec::YarnInstall);
+                    cmds.push(CommandSpec::YarnPodInstall);
+                }
+
+                if cmds.is_empty() {
+                    return;
+                }
+
+                // Dispatch first, queue rest
+                let first = cmds.remove(0);
+                for cmd in cmds {
+                    state.command_queue.push_back(cmd);
+                }
+                dispatch_command(state, first, metro_tx);
+            }
+        }
         Action::ToggleFullscreen => {
             if state.fullscreen_panel.is_some() {
                 state.fullscreen_panel = None;
@@ -1160,10 +1221,40 @@ pub fn update(
                 }
             }
         }
-        Action::StartShellCommand => { /* Plan 06 */ }
-        Action::SimulatorUsed(_udid) => { /* Plan 07 */ }
-        Action::SyncBeforeRunAccept => { /* Plan 06 */ }
-        Action::SyncBeforeRunDecline => { /* Plan 06 */ }
+        Action::StartShellCommand => {
+            state.modal = Some(ModalState::TextInput {
+                prompt: "Shell command:".to_string(),
+                buffer: String::new(),
+                pending_template: Box::new(CommandSpec::ShellCommand { command: String::new() }),
+            });
+        }
+        Action::SimulatorUsed(udid) => {
+            // Fire-and-forget write to sim history
+            tokio::task::spawn_blocking(move || {
+                if let Err(e) = crate::infra::sim_history::record_sim_used(&udid) {
+                    tracing::warn!("failed to save sim history: {e}");
+                }
+            });
+        }
+        Action::SyncBeforeRunAccept => {
+            if let Some(ModalState::SyncBeforeRun { run_command, needs_pods }) = state.modal.take() {
+                // Enqueue: yarn install, (pod-install if needs_pods), then the run command
+                state.command_queue.push_back(*run_command);
+                if needs_pods {
+                    // Re-order: yarn install first, pod-install, then run
+                    let run = state.command_queue.pop_back().unwrap();
+                    state.command_queue.push_back(CommandSpec::YarnPodInstall);
+                    state.command_queue.push_back(run);
+                }
+                dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
+            }
+        }
+        Action::SyncBeforeRunDecline => {
+            if let Some(ModalState::SyncBeforeRun { run_command, .. }) = state.modal.take() {
+                // Skip sync, dispatch run command directly
+                dispatch_command(state, *run_command, metro_tx);
+            }
+        }
         Action::LogPanelClear => {
             state.metro_logs.clear();
             state.log_scroll_offset = 0;
