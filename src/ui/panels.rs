@@ -16,7 +16,7 @@ use crate::{
 
 /// Renders the worktree list panel (left column) with real selectable list.
 pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
-    let border_style = if state.focused_panel == FocusedPanel::WorktreeList {
+    let border_style = if state.focused_panel == FocusedPanel::WorktreeTable {
         theme::style_focused_border()
     } else {
         theme::style_inactive_border()
@@ -85,7 +85,15 @@ pub fn render_worktree_list(f: &mut Frame, area: Rect, state: &mut AppState) {
         .highlight_symbol("> ")
         .highlight_spacing(HighlightSpacing::Always);
 
-    f.render_stateful_widget(list, area, &mut state.worktree_list_state);
+    // List widget requires ListState; bridge from TableState's selected index
+    let selected = state.worktree_table_state.selected();
+    let mut list_state = ratatui::widgets::ListState::default();
+    list_state.select(selected);
+    f.render_stateful_widget(list, area, &mut list_state);
+    // Sync any ListState offset changes back to TableState selection
+    if let Some(s) = list_state.selected() {
+        state.worktree_table_state.select(Some(s));
+    }
 }
 
 /// Renders the metro control pane (top-right) with status line and scrolling log output.

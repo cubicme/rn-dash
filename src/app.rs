@@ -16,7 +16,7 @@ const MAX_COMMAND_LINES: usize = 1000;
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum FocusedPanel {
     #[default]
-    WorktreeList,
+    WorktreeTable,
     MetroPane,
     CommandOutput,
 }
@@ -24,15 +24,15 @@ pub enum FocusedPanel {
 impl FocusedPanel {
     pub fn next(self) -> Self {
         match self {
-            Self::WorktreeList => Self::MetroPane,
+            Self::WorktreeTable => Self::MetroPane,
             Self::MetroPane => Self::CommandOutput,
-            Self::CommandOutput => Self::WorktreeList,
+            Self::CommandOutput => Self::WorktreeTable,
         }
     }
     pub fn prev(self) -> Self {
         match self {
-            Self::WorktreeList => Self::CommandOutput,
-            Self::MetroPane => Self::WorktreeList,
+            Self::WorktreeTable => Self::CommandOutput,
+            Self::MetroPane => Self::WorktreeTable,
             Self::CommandOutput => Self::MetroPane,
         }
     }
@@ -94,7 +94,9 @@ pub struct AppState {
 
     // Worktree browser
     pub worktrees: Vec<crate::domain::worktree::Worktree>,
-    pub worktree_list_state: ratatui::widgets::ListState,
+    pub worktree_table_state: ratatui::widgets::TableState,
+    pub selected_worktree_id: Option<crate::domain::worktree::WorktreeId>,
+    pub fullscreen_panel: Option<FocusedPanel>,
 
     // Command queue — FIFO, drained on CommandExited
     pub command_queue: std::collections::VecDeque<crate::domain::command::CommandSpec>,
@@ -126,15 +128,22 @@ pub struct AppState {
     pub pending_label_branch: Option<String>,
 
     // --- Phase 4 fields ---
-    pub tmux_available: bool,
     pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
+
+    // --- Phase 5.1 fields ---
+    /// Detected terminal multiplexer (tmux or zellij). None when not inside either.
+    pub multiplexer: Option<Box<dyn crate::infra::multiplexer::Multiplexer>>,
+    /// Claude Code launch flags loaded from config (e.g. "--dangerously-skip-permissions").
+    pub claude_flags: String,
+    /// Loaded dashboard config — kept for runtime access to claude_flags and other settings.
+    pub config: Option<crate::infra::config::DashConfig>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
-        let mut worktree_list_state = ratatui::widgets::ListState::default();
-        worktree_list_state.select(Some(0));
+        let mut worktree_table_state = ratatui::widgets::TableState::default();
+        worktree_table_state.select(Some(0));
         Self {
             focused_panel: FocusedPanel::default(),
             show_help: false,
@@ -150,7 +159,9 @@ impl Default for AppState {
             pending_switch_path: None,
             // Phase 3
             worktrees: Vec::new(),
-            worktree_list_state,
+            worktree_table_state,
+            selected_worktree_id: None,
+            fullscreen_panel: None,
             command_queue: std::collections::VecDeque::new(),
             command_output_by_worktree: std::collections::HashMap::new(),
             command_output_scroll_by_worktree: std::collections::HashMap::new(),
@@ -166,9 +177,12 @@ impl Default for AppState {
             pending_device_command: None,
             pending_label_branch: None,
             // Phase 4
-            tmux_available: false,  // set properly in run()
             jira_title_cache: std::collections::HashMap::new(),
             jira_client: None,
+            // Phase 5.1
+            multiplexer: None,  // set properly in run()
+            claude_flags: "--dangerously-skip-permissions".to_string(),
+            config: None,
         }
     }
 }
@@ -182,7 +196,7 @@ pub fn active_worktree_id(state: &AppState) -> Option<crate::domain::worktree::W
     if state.worktrees.is_empty() {
         return None;
     }
-    let idx = state.worktree_list_state.selected().unwrap_or(0)
+    let idx = state.worktree_table_state.selected().unwrap_or(0)
         .min(state.worktrees.len() - 1);
     Some(state.worktrees[idx].id.clone())
 }
@@ -306,7 +320,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     }
 
     // --- WORKTREE LIST SPECIFIC ---
-    if state.focused_panel == FocusedPanel::WorktreeList {
+    if state.focused_panel == FocusedPanel::WorktreeTable {
         match key.code {
             Char('j') | Down => return Some(Action::WorktreeSelectNext),
             Char('k') | Up => return Some(Action::WorktreeSelectPrev),
@@ -357,7 +371,7 @@ fn dispatch_command(
     metro_tx: &tokio::sync::mpsc::UnboundedSender<Action>,
 ) {
     let wt = if !state.worktrees.is_empty() {
-        let idx = state.worktree_list_state.selected().unwrap_or(0);
+        let idx = state.worktree_table_state.selected().unwrap_or(0);
         let idx = idx.min(state.worktrees.len() - 1);
         state.worktrees[idx].clone()
     } else {
@@ -544,9 +558,11 @@ pub fn update(
         Action::WorktreeSelectNext => {
             let len = state.worktrees.len();
             if len > 0 {
-                let i = state.worktree_list_state.selected().unwrap_or(0);
+                let i = state.worktree_table_state.selected().unwrap_or(0);
                 let next = if i >= len - 1 { 0 } else { i + 1 };
-                state.worktree_list_state.select(Some(next));
+                state.worktree_table_state.select(Some(next));
+                // Update stable selection id
+                state.selected_worktree_id = Some(state.worktrees[next].id.clone());
                 // Update active worktree for metro
                 state.active_worktree_path = Some(state.worktrees[next].path.clone());
             }
@@ -555,9 +571,11 @@ pub fn update(
         Action::WorktreeSelectPrev => {
             let len = state.worktrees.len();
             if len > 0 {
-                let i = state.worktree_list_state.selected().unwrap_or(0);
+                let i = state.worktree_table_state.selected().unwrap_or(0);
                 let prev = if i == 0 { len - 1 } else { i - 1 };
-                state.worktree_list_state.select(Some(prev));
+                state.worktree_table_state.select(Some(prev));
+                // Update stable selection id
+                state.selected_worktree_id = Some(state.worktrees[prev].id.clone());
                 // Update active worktree for metro
                 state.active_worktree_path = Some(state.worktrees[prev].path.clone());
             }
@@ -578,20 +596,28 @@ pub fn update(
                 }
             }
 
-            // Clamp selected index within new list
-            let clamped = if worktrees.is_empty() {
-                0
-            } else {
-                let current = state.worktree_list_state.selected().unwrap_or(0);
-                current.min(worktrees.len().saturating_sub(1))
-            };
-
-            if !worktrees.is_empty() {
-                state.worktree_list_state.select(Some(clamped));
-                state.active_worktree_path = Some(worktrees[clamped].path.clone());
+            // Pin metro-active worktree to top of the list
+            if let Some(metro_idx) = worktrees.iter().position(|wt| {
+                wt.metro_status == crate::domain::worktree::WorktreeMetroStatus::Running
+            }) {
+                if metro_idx != 0 {
+                    let metro_wt = worktrees.remove(metro_idx);
+                    worktrees.insert(0, metro_wt);
+                }
             }
 
             state.worktrees = worktrees;
+
+            if !state.worktrees.is_empty() {
+                // Re-derive selected index from selected_worktree_id (stable across sorts)
+                let selected_idx = state
+                    .selected_worktree_id
+                    .as_ref()
+                    .and_then(|id| state.worktrees.iter().position(|wt| &wt.id == id))
+                    .unwrap_or(0);
+                state.worktree_table_state.select(Some(selected_idx));
+                state.active_worktree_path = Some(state.worktrees[selected_idx].path.clone());
+            }
 
             // Phase 4: fetch titles for uncached branches
             if let Some(ref client) = state.jira_client {
@@ -644,7 +670,7 @@ pub fn update(
 
             // Get selected worktree (needed for all branches)
             let wt_branch = if !state.worktrees.is_empty() {
-                let idx = state.worktree_list_state.selected().unwrap_or(0);
+                let idx = state.worktree_table_state.selected().unwrap_or(0);
                 let idx = idx.min(state.worktrees.len() - 1);
                 Some((state.worktrees[idx].branch.clone(), state.worktrees[idx].stale))
             } else {
@@ -960,7 +986,7 @@ pub fn update(
 
         Action::StartSetLabel => {
             if !state.worktrees.is_empty() {
-                let idx = state.worktree_list_state.selected().unwrap_or(0);
+                let idx = state.worktree_table_state.selected().unwrap_or(0);
                 let idx = idx.min(state.worktrees.len() - 1);
                 let branch = state.worktrees[idx].branch.clone();
                 let current_label = state.worktrees[idx].label.clone().unwrap_or_default();
@@ -990,7 +1016,7 @@ pub fn update(
         Action::WorktreeSwitchToSelected => {
             // Capture target path NOW — navigation may change active_worktree_path later
             let target_path = state.worktrees
-                .get(state.worktree_list_state.selected().unwrap_or(0))
+                .get(state.worktree_table_state.selected().unwrap_or(0))
                 .map(|wt| wt.path.clone());
 
             if state.metro.is_running() {
@@ -1008,25 +1034,40 @@ pub fn update(
         }
 
         Action::OpenClaudeCode => {
-            if !state.tmux_available {
+            if state.multiplexer.is_none() {
                 state.error_state = Some(ErrorState {
-                    message: "Cannot open Claude Code: not inside a tmux session".into(),
+                    message: "Cannot open Claude Code: not inside a tmux or zellij session".into(),
                     can_retry: false,
                 });
                 return;
             }
-            if let Some(wt) = state.worktrees.get(
-                state.worktree_list_state.selected().unwrap_or(0)
-            ) {
-                let path = wt.path.clone();
-                let branch = wt.branch.clone();
-                tokio::spawn(async move {
-                    let window_name = format!("claude:{}", branch.split('/').last().unwrap_or(&branch));
-                    if let Err(e) = crate::infra::tmux::open_claude_in_worktree(&path, &window_name) {
-                        tracing::warn!("open claude code failed: {e}");
+            let wt = if !state.worktrees.is_empty() {
+                let idx = state.worktree_table_state.selected().unwrap_or(0)
+                    .min(state.worktrees.len() - 1);
+                state.worktrees[idx].clone()
+            } else {
+                return;
+            };
+            let path = wt.path.clone();
+            let name = format!(
+                "claude-{}",
+                wt.path.file_name().and_then(|n| n.to_str()).unwrap_or("wt")
+            );
+            let flags = state.claude_flags.clone();
+            let command = if flags.is_empty() {
+                "claude".to_string()
+            } else {
+                format!("claude {}", flags)
+            };
+            tokio::task::spawn_blocking(move || {
+                // Re-detect inside spawn — env vars don't change mid-session, and this avoids
+                // the Clone issue with Box<dyn Multiplexer>.
+                if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
+                    if let Err(e) = mux.new_window(&path, &name, &command) {
+                        tracing::warn!("multiplexer new_window failed: {e}");
                     }
-                });
-            }
+                }
+            });
         }
 
         // --- Phase 4: JIRA title fetch results ---
@@ -1069,7 +1110,19 @@ pub fn update(
         Action::CleanToggleAndroid => { /* Plan 06 */ }
         Action::CleanToggleSyncAfter => { /* Plan 06 */ }
         Action::CleanConfirm => { /* Plan 06 */ }
-        Action::ToggleFullscreen => { /* Plan 08 */ }
+        Action::ToggleFullscreen => {
+            if state.fullscreen_panel.is_some() {
+                state.fullscreen_panel = None;
+            } else {
+                // Only MetroPane and CommandOutput can be fullscreened
+                match state.focused_panel {
+                    FocusedPanel::MetroPane | FocusedPanel::CommandOutput => {
+                        state.fullscreen_panel = Some(state.focused_panel);
+                    }
+                    _ => {} // no-op for WorktreeTable
+                }
+            }
+        }
         Action::StartShellCommand => { /* Plan 06 */ }
         Action::SimulatorUsed(_udid) => { /* Plan 07 */ }
         Action::SyncBeforeRunAccept => { /* Plan 06 */ }
@@ -1097,11 +1150,14 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
     // Load labels from disk on startup
     state.labels = crate::infra::labels::load_labels().unwrap_or_default();
 
-    // Phase 4: tmux detection
-    state.tmux_available = crate::infra::jira::is_inside_tmux();
+    // Phase 5.1: multiplexer detection (replaces tmux_available bool)
+    state.multiplexer = crate::infra::multiplexer::detect_multiplexer();
 
     // Phase 4: Load config + JIRA client + cache
     if let Ok(Some(config)) = crate::infra::config::load_config() {
+        // Extract claude_flags before moving config
+        state.claude_flags = config.claude_flags.clone();
+
         match crate::infra::jira::HttpJiraClient::new(&config) {
             Ok(client) => {
                 state.jira_client = Some(std::sync::Arc::new(client));
@@ -1110,6 +1166,7 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
                 tracing::warn!("JIRA client init failed: {e}");
             }
         }
+        state.config = Some(config);
     }
     state.jira_title_cache = crate::infra::jira_cache::load_jira_cache().unwrap_or_default();
 

@@ -98,13 +98,13 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     let common: Vec<(&str, &str)> = vec![("?/F1", "help"), ("q", "quit"), ("Tab", "next panel")];
 
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
-        FocusedPanel::WorktreeList => vec![
+        FocusedPanel::WorktreeTable => vec![
             ("j/k", "navigate"),
             ("Enter", "switch"),
-            ("g", "git"),
-            ("c", "commands"),
-            ("L", "set label"),
+            ("a/i/x/s/g", "submenus"),
+            ("L", "label"),
             ("C", "claude"),
+            ("f", "fullscreen"),
         ],
         FocusedPanel::MetroPane => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![
