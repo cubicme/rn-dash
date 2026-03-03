@@ -18,12 +18,9 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
         ModalState::DevicePicker { devices, selected, .. } => {
             render_device_picker_modal(f, devices, *selected)
         }
-        // Phase 05.1: Stubs — real rendering wired in Plan 06 (clean/sync modals)
-        ModalState::CleanToggle { .. } => {
-            render_placeholder_modal(f, " Clean Options ", "Plan 06: clean toggle UI")
-        }
-        ModalState::SyncBeforeRun { .. } => {
-            render_placeholder_modal(f, " Sync Before Run ", "Worktree is stale. Sync before running?")
+        ModalState::CleanToggle { options } => render_clean_modal(f, options),
+        ModalState::SyncBeforeRun { run_command, needs_pods } => {
+            render_sync_prompt(f, run_command, *needs_pods)
         }
     }
 }
@@ -131,23 +128,64 @@ fn render_device_picker_modal(
     f.render_stateful_widget(list, area, &mut ls);
 }
 
-/// Placeholder modal used for Phase 05.1 stubs while real renderers are implemented in later plans.
-fn render_placeholder_modal(f: &mut Frame, title: &str, message: &str) {
-    let area = centered_rect(f.area(), 50, 25);
-    let lines = vec![
-        Line::from(Span::raw(message)),
-        Line::from(""),
-        Line::from(vec![
-            Span::styled("[Esc]", Style::default().fg(Color::Red)),
-            Span::raw(" cancel"),
-        ]),
-    ];
-    let block = Block::default()
-        .title(title.to_string())
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Yellow));
+/// Renders the clean toggle modal with checkboxes for each clean option.
+fn render_clean_modal(f: &mut Frame, options: &crate::domain::command::CleanOptions) {
+    let area = centered_rect(f.area(), 50, 60);
+
     f.render_widget(Clear, area);
-    f.render_widget(Paragraph::new(lines).block(block), area);
+
+    let checkbox = |checked: bool| if checked { "[x]" } else { "[ ]" };
+
+    let text = vec![
+        Line::from(Span::styled(" Clean Options ", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(""),
+        Line::from(format!("  n  {} node_modules (rm -rf)", checkbox(options.node_modules))),
+        Line::from(format!("  p  {} CocoaPods (react-native clean)", checkbox(options.pods))),
+        Line::from(format!("  a  {} Android (react-native clean)", checkbox(options.android))),
+        Line::from(format!("  i  {} Sync after clean (yarn + pods)", checkbox(options.sync_after))),
+        Line::from(""),
+        Line::from(Span::styled("  x/Enter = confirm  Esc = cancel", Style::default().fg(Color::DarkGray))),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan))
+        .title(" Clean ");
+
+    f.render_widget(Paragraph::new(text).block(block), area);
+}
+
+/// Renders the sync-before-run prompt when a stale worktree is detected.
+fn render_sync_prompt(
+    f: &mut Frame,
+    run_command: &crate::domain::command::CommandSpec,
+    needs_pods: bool,
+) {
+    let area = centered_rect(f.area(), 60, 40);
+
+    f.render_widget(Clear, area);
+
+    let sync_desc = if needs_pods {
+        "yarn install + pod-install"
+    } else {
+        "yarn install"
+    };
+
+    let text = vec![
+        Line::from(Span::styled(" Stale Dependencies ", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(""),
+        Line::from("  Worktree is stale. Sync before running?"),
+        Line::from(format!("  Will run: {} -> {}", sync_desc, run_command.label())),
+        Line::from(""),
+        Line::from(Span::styled("  Y = sync first  N = skip  Esc = cancel", Style::default().fg(Color::DarkGray))),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow))
+        .title(" Sync ");
+
+    f.render_widget(Paragraph::new(text).block(block), area);
 }
 
 /// Computes a centered Rect of percent_x% width and percent_y% height within the given area.
