@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T14:41:47.939Z"
+last_updated: "2026-03-03T02:33:05.318Z"
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 15
-  completed_plans: 15
+  total_plans: 16
+  completed_plans: 16
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5 of 5 (Worktree Switching and Claude Code) — Plan 1 COMPLETE
-Plan: 1 of 1 in current phase — COMPLETE
-Status: Plan 05-01 Complete — Worktree switching (Enter key) and Claude Code tmux tab launch (C key) implemented
-Last activity: 2026-03-02 — Completed 05-01 (action variants, tmux infra, footer/help overlay)
+Phase: 5 of 5 (Worktree Switching and Claude Code) — Gap Closure
+Plan: 2 of 2 in current phase — PLANNED (gap closure from UAT)
+Status: Plan 05-02 Complete — Metro spawn errors surfaced, metro pane shows scrolling log output
+Last activity: 2026-03-03 — Executed 05-02 gap closure: MetroSpawnFailed action, always-on filter, metro pane log rendering
 
 Progress: [████████████████████] 100%
 
@@ -60,6 +60,8 @@ Progress: [████████████████████] 100%
 | Phase 04-config-and-jira-integration P02 | 2min | 2 tasks | 3 files |
 | Phase 04-config-and-jira-integration P03 | 3min | 1 task | 2 files |
 | Phase 05-worktree-switching-and-claude-code P01 | 2min | 2 tasks | 6 files |
+| Phase 05-worktree-switching-and-claude-code P02 | 4min | 2 tasks | 4 files |
+| Phase 05-worktree-switching-and-claude-code P02 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -124,6 +126,10 @@ Recent decisions affecting current work:
 - [05-01]: open_claude_in_worktree uses shell-command form (not send-keys) to eliminate race condition with shell init
 - [05-01]: OpenClaudeCode spawned via tokio::spawn to avoid blocking event loop on synchronous std::process::Command::status()
 - [05-01]: tmux -d flag used to prevent focus switch away from dashboard when opening Claude Code window
+- [05-02]: MetroSpawnFailed(String) action variant chosen over MetroExited for error case — surfaces error message to user via error_state overlay with can_retry: true
+- [05-02]: filter parameter removed from spawn_metro entirely — DEBUG=Metro:* always set since streaming is always desired
+- [05-02]: MetroToggleLog decoupled from metro restart — toggle only shows/hides dedicated log panel, no restart needed
+- [05-02]: log_filter_active kept in AppState (always true) to avoid refactoring render code that reads it
 
 ### Pending Todos
 
@@ -136,6 +142,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-02T14:37:19Z
-Stopped at: Completed 05-01-PLAN.md — Worktree switching (Enter key) and Claude Code (C key) via tmux
+Last session: 2026-03-03T00:00:00Z
+Stopped at: Completed 05-02-PLAN.md — Metro spawn error surfacing and log streaming in metro pane
 Resume file: None
