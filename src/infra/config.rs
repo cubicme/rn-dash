@@ -16,6 +16,10 @@ fn default_auth_mode() -> String {
     "cloud".to_string()
 }
 
+fn default_claude_flags() -> String {
+    "--dangerously-skip-permissions".to_string()
+}
+
 /// Application configuration stored in ~/.config/ump-dash/config.json.
 ///
 /// Security note: this file is written with 0600 permissions on Unix because
@@ -36,6 +40,11 @@ pub struct DashConfig {
     /// Defaults to "cloud" if not specified in the config file.
     #[serde(default = "default_auth_mode")]
     pub auth_mode: String,
+
+    /// Command-line flags to pass when launching Claude Code (e.g., "--dangerously-skip-permissions").
+    /// Defaults to "--dangerously-skip-permissions" if not specified in the config file.
+    #[serde(default = "default_claude_flags")]
+    pub claude_flags: String,
 }
 
 /// Loads the dashboard configuration from disk.
