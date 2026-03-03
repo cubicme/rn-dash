@@ -162,5 +162,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 05.1-05-PLAN.md — full handle_key() keybinding remap with 5 palette modes, multiplexer AppState field, OpenClaudeCode rewired
-Resume file: .planning/phases/05.1-milestone-feedback/05.1-06-PLAN.md
+Stopped at: Completed 05.1-04-PLAN.md — layout restructure, worktree Table widget, fullscreen mode
+Resume file: .planning/phases/05.1-milestone-feedback/05.1-05-PLAN.md
