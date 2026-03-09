@@ -3,7 +3,8 @@ use ratatui::{
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{
-        Block, Borders, Cell, Paragraph, Row, Scrollbar, ScrollbarOrientation,
+        Block, BorderType, Cell, Paragraph, Row, Scrollbar,
+        ScrollbarOrientation,
         ScrollbarState, Table,
     },
     Frame,
@@ -33,9 +34,9 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         theme::style_inactive_border()
     };
 
-    let block = Block::default()
+    let block = Block::bordered()
+        .border_type(BorderType::Double)
         .title(" Worktrees ")
-        .borders(Borders::ALL)
         .border_style(border_style);
 
     if state.worktrees.is_empty() {
@@ -135,34 +136,27 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
         theme::style_inactive_border()
     };
 
-    // Status indicator text and color
-    let (status_text, status_style) = match &state.metro.status {
+    // Dynamic title based on metro status
+    let title = match &state.metro.status {
         MetroStatus::Running {
             pid: _,
             worktree_id,
-        } => (
-            format!(" RUNNING  [{}]", worktree_id),
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD),
-        ),
-        MetroStatus::Stopped => (
-            " STOPPED ".to_string(),
-            Style::default().fg(Color::DarkGray),
-        ),
-        MetroStatus::Starting => (
-            " STARTING... ".to_string(),
-            Style::default().fg(Color::Yellow),
-        ),
-        MetroStatus::Stopping => (
-            " STOPPING... ".to_string(),
-            Style::default().fg(Color::Yellow),
-        ),
+        } => {
+            let wt_display = if worktree_id.len() > 30 {
+                format!("{}...", &worktree_id[..27])
+            } else {
+                worktree_id.clone()
+            };
+            format!(" Metro -- running ({}) ", wt_display)
+        }
+        MetroStatus::Stopped => " Metro -- stopped ".to_string(),
+        MetroStatus::Starting => " Metro -- starting... ".to_string(),
+        MetroStatus::Stopping => " Metro -- stopping... ".to_string(),
     };
 
-    let block = Block::default()
-        .title(" Metro ")
-        .borders(Borders::ALL)
+    let block = Block::bordered()
+        .border_type(BorderType::Double)
+        .title(title)
         .border_style(border_style);
 
     let inner = block.inner(area);
@@ -172,48 +166,35 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
         return;
     }
 
-    // Status line at top
-    let status_line = Line::from(Span::styled(status_text, status_style));
-    let status_area = Rect { height: 1, ..inner };
-    f.render_widget(Paragraph::new(status_line), status_area);
+    // Metro log output fills entire inner area (status moved to title)
+    let lines: Vec<Line> = state
+        .metro_logs
+        .iter()
+        .map(|l| Line::from(l.as_str()))
+        .collect();
 
-    // Metro log output below status line (remaining height)
-    if inner.height > 1 {
-        let log_area = Rect {
-            y: inner.y + 1,
-            height: inner.height - 1,
-            ..inner
-        };
+    let visible_height = inner.height as usize;
 
-        let lines: Vec<Line> = state
-            .metro_logs
-            .iter()
-            .map(|l| Line::from(l.as_str()))
-            .collect();
+    // Auto-scroll to bottom (always show latest output)
+    let scroll = if state.log_scroll_offset == 0 && !lines.is_empty() {
+        lines.len().saturating_sub(visible_height)
+    } else {
+        state.log_scroll_offset
+    };
 
-        let visible_height = log_area.height as usize;
+    let paragraph = Paragraph::new(Text::from(lines.clone())).scroll((scroll as u16, 0));
 
-        // Auto-scroll to bottom (always show latest output)
-        let scroll = if state.log_scroll_offset == 0 && !lines.is_empty() {
-            lines.len().saturating_sub(visible_height)
-        } else {
-            state.log_scroll_offset
-        };
+    f.render_widget(paragraph, inner);
 
-        let paragraph = Paragraph::new(Text::from(lines.clone())).scroll((scroll as u16, 0));
+    // Scrollbar when content exceeds visible area
+    if lines.len() > visible_height {
+        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
 
-        f.render_widget(paragraph, log_area);
-
-        // Scrollbar when content exceeds visible area
-        if lines.len() > visible_height {
-            let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
-
-            f.render_stateful_widget(
-                Scrollbar::new(ScrollbarOrientation::VerticalRight),
-                log_area,
-                &mut scrollbar_state,
-            );
-        }
+        f.render_stateful_widget(
+            Scrollbar::new(ScrollbarOrientation::VerticalRight),
+            inner,
+            &mut scrollbar_state,
+        );
     }
 }
 
@@ -242,9 +223,9 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
 
     let paragraph = Paragraph::new(Text::from(lines.clone()))
         .block(
-            Block::default()
-                .title(" Metro Logs ")
-                .borders(Borders::ALL)
+            Block::bordered()
+                .border_type(BorderType::Double)
+                .title(" Metro Log ")
                 .border_style(border_style),
         )
         .scroll((scroll as u16, 0));
@@ -309,9 +290,9 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
         scroll_offset
     };
 
-    let block = Block::default()
+    let block = Block::bordered()
+        .border_type(BorderType::Double)
         .title(title)
-        .borders(Borders::ALL)
         .border_style(border_style);
 
     let paragraph = Paragraph::new(Text::from(lines.clone()))
