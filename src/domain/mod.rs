@@ -3,4 +3,5 @@
 //! file's architectural note for the rationale. mod.rs itself imports nothing from infra.
 pub mod command;
 pub mod metro;
+pub mod refresh;
 pub mod worktree;
