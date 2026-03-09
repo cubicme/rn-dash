@@ -279,6 +279,11 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('n') | Char('N') | Esc => Some(Action::SyncBeforeRunDecline),
                 _ => None,
             },
+            ModalState::ExternalMetroConflict { pid, .. } => match key.code {
+                Char('y') | Char('Y') | Enter => Some(Action::KillExternalMetro(*pid)),
+                Char('n') | Char('N') | Esc => Some(Action::ModalCancel),
+                _ => None,
+            },
         };
     }
 
@@ -546,6 +551,18 @@ pub fn update(
                 update(state, Action::MetroStop, metro_tx, handle_tx);
                 return;
             }
+            // Check for external metro conflict before spawning
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                if let Some(info) = crate::infra::port::detect_external_metro(8081).await {
+                    let _ = tx.send(Action::ExternalMetroDetected(info));
+                } else {
+                    let _ = tx.send(Action::MetroStartConfirmed);
+                }
+            });
+        }
+
+        Action::MetroStartConfirmed => {
             state.metro.set_starting();
             let tx = metro_tx.clone();
             let htx = handle_tx.clone();
@@ -641,6 +658,24 @@ pub fn update(
             state.error_state = Some(ErrorState {
                 message: format!("Metro failed to start: {msg}"),
                 can_retry: true,
+            });
+        }
+
+        Action::ExternalMetroDetected(info) => {
+            state.modal = Some(ModalState::ExternalMetroConflict {
+                pid: info.pid,
+                working_dir: info.working_dir,
+            });
+        }
+
+        Action::KillExternalMetro(pid) => {
+            state.modal = None;
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                let _ = crate::infra::port::kill_process(pid).await;
+                // Wait briefly for port to free, then auto-start metro
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                let _ = tx.send(Action::MetroStartConfirmed);
             });
         }
 
@@ -1509,6 +1544,16 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
                 Err(e) => {
                     tracing::warn!("initial worktree load failed: {e}");
                 }
+            }
+        });
+    }
+
+    // Check for external metro on startup
+    {
+        let startup_tx = metro_tx.clone();
+        tokio::spawn(async move {
+            if let Some(info) = crate::infra::port::detect_external_metro(8081).await {
+                let _ = startup_tx.send(Action::ExternalMetroDetected(info));
             }
         });
     }

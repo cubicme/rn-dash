@@ -121,6 +121,10 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("N", "skip sync"),
                 ("Esc", "cancel"),
             ],
+            ModalState::ExternalMetroConflict { .. } => vec![
+                ("Y", "kill it"),
+                ("N/Esc", "cancel"),
+            ],
         };
     }
 

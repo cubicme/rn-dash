@@ -22,6 +22,9 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
         ModalState::SyncBeforeRun { run_command, needs_pods } => {
             render_sync_prompt(f, run_command, *needs_pods)
         }
+        ModalState::ExternalMetroConflict { pid, working_dir } => {
+            render_external_metro_modal(f, *pid, working_dir)
+        }
     }
 }
 
@@ -210,6 +213,39 @@ fn render_sync_prompt(
         .borders(Borders::ALL)
         .border_style(Style::default().fg(Color::Yellow))
         .title(" Sync ");
+
+    f.render_widget(Paragraph::new(text).block(block), area);
+}
+
+/// Renders the external metro conflict modal with PID and working directory info.
+fn render_external_metro_modal(f: &mut Frame, pid: u32, working_dir: &str) {
+    let area = centered_rect(f.area(), 60, 30);
+
+    f.render_widget(Clear, area);
+
+    let text = vec![
+        Line::from(Span::styled(
+            " External Metro Detected ",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
+        Line::from(""),
+        Line::from(format!("  Another process is using port 8081")),
+        Line::from(format!("  PID: {pid}")),
+        Line::from(format!("  Directory: {working_dir}")),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("[Y]", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+            Span::raw(" Kill it    "),
+            Span::styled("[N/Esc]", Style::default().fg(Color::Red)),
+            Span::raw(" Cancel"),
+        ]),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_type(ratatui::widgets::BorderType::Double)
+        .border_style(Style::default().fg(Color::Red))
+        .title(" External Metro ");
 
     f.render_widget(Paragraph::new(text).block(block), area);
 }
