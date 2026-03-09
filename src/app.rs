@@ -576,8 +576,20 @@ pub fn update(
         }
 
         Action::MetroSendDebugger => {
-            if let Err(e) = state.metro.send_stdin(b"j\n".to_vec()) {
-                tracing::warn!("send debugger failed: {e}");
+            match state.metro.send_stdin(b"j\n".to_vec()) {
+                Ok(()) => {
+                    state.metro_logs.push_back("[debugger command sent]".into());
+                    if state.metro_logs.len() > MAX_LOG_LINES {
+                        state.metro_logs.pop_front();
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("send debugger failed: {e}");
+                    state.metro_logs.push_back(format!("[debugger send failed: {e}]"));
+                    if state.metro_logs.len() > MAX_LOG_LINES {
+                        state.metro_logs.pop_front();
+                    }
+                }
             }
         }
 
@@ -815,7 +827,7 @@ pub fn update(
                     let devices = if is_android {
                         crate::infra::devices::list_android_devices().await
                     } else {
-                        crate::infra::devices::list_ios_devices().await
+                        crate::infra::devices::list_ios_physical_devices().await
                     };
                     match devices {
                         Ok(devs) => {

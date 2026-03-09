@@ -114,6 +114,57 @@ pub fn parse_xcrun_simctl(json_output: &str) -> Vec<DeviceInfo> {
     result
 }
 
+/// Parses `xcrun xctrace list devices` output into a list of physical iOS devices.
+///
+/// Sample output:
+/// ```text
+/// == Devices ==
+/// My iPhone (17.0) (00008120-XXXXXXXXXXXX)
+/// iPad Pro (16.6) (00008103-YYYYYYYYYYYY)
+///
+/// == Simulators ==
+/// iPhone 15 Pro Simulator (17.0) (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
+/// ```
+///
+/// Only entries before the "== Simulators ==" header are returned (physical devices).
+pub fn parse_xctrace_devices(output: &str) -> Vec<DeviceInfo> {
+    let mut result = Vec::new();
+    let mut in_devices_section = false;
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("== Devices ==") {
+            in_devices_section = true;
+            continue;
+        }
+        if trimmed.starts_with("== Simulators ==") {
+            break; // stop at simulators
+        }
+        if !in_devices_section || trimmed.is_empty() {
+            continue;
+        }
+        // Skip the local Mac entry (no parenthesized UDID at end, or contains "this computer")
+        // Format: "Name (OS version) (UDID)"
+        // We need at least two parenthesized groups
+        if let Some(udid_start) = trimmed.rfind('(') {
+            let udid_end = trimmed.len().saturating_sub(1); // last char should be ')'
+            if udid_end > udid_start && trimmed.ends_with(')') {
+                let udid = &trimmed[udid_start + 1..udid_end];
+                // UDIDs for physical devices are hex strings (no dashes in the short form)
+                // or UUID format. Skip if it looks like a version number only.
+                if udid.len() >= 16 {
+                    let name = trimmed[..udid_start].trim().trim_end_matches(' ');
+                    result.push(DeviceInfo {
+                        id: udid.to_string(),
+                        name: name.to_string(),
+                    });
+                }
+            }
+        }
+    }
+    result
+}
+
 // ---------------------------------------------------------------------------
 // Async runners
 // ---------------------------------------------------------------------------
@@ -130,7 +181,7 @@ pub async fn list_android_devices() -> anyhow::Result<Vec<DeviceInfo>> {
 }
 
 /// Runs `xcrun simctl list devices available --json` and returns available iOS simulators.
-pub async fn list_ios_devices() -> anyhow::Result<Vec<DeviceInfo>> {
+pub async fn list_ios_simulators() -> anyhow::Result<Vec<DeviceInfo>> {
     let output = tokio::process::Command::new("xcrun")
         .args(["simctl", "list", "devices", "available", "--json"])
         .output()
@@ -143,4 +194,21 @@ pub async fn list_ios_devices() -> anyhow::Result<Vec<DeviceInfo>> {
 
     let text = String::from_utf8(output.stdout)?;
     Ok(parse_xcrun_simctl(&text))
+}
+
+/// Runs `xcrun xctrace list devices` and returns connected physical iOS devices.
+/// Falls back to empty list if xctrace is not available.
+pub async fn list_ios_physical_devices() -> anyhow::Result<Vec<DeviceInfo>> {
+    let output = tokio::process::Command::new("xcrun")
+        .args(["xctrace", "list", "devices"])
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("xcrun xctrace failed: {}", stderr);
+    }
+
+    let text = String::from_utf8_lossy(&output.stdout).to_string();
+    Ok(parse_xctrace_devices(&text))
 }
