@@ -192,6 +192,11 @@ pub enum ModalState {
         run_command: Box<CommandSpec>,
         needs_pods: bool,
     },
+    /// External metro conflict — another process occupies port 8081.
+    ExternalMetroConflict {
+        pid: u32,
+        working_dir: String,
+    },
 }
 
 /// Represents one connected device returned by `adb devices` or `xcrun simctl list`.
