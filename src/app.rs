@@ -820,12 +820,36 @@ pub fn update(
         }
 
         Action::CommandExited => {
-            state.running_command = None;
+            let completed_cmd = state.running_command.take();
             state.command_task = None;
 
             // Drain command queue — pop_front and dispatch if non-empty
             if let Some(next_spec) = state.command_queue.pop_front() {
                 dispatch_command(state, next_spec, metro_tx);
+            }
+
+            // Dispatch post-command refreshes based on the completed command
+            if let Some(ref cmd) = completed_cmd {
+                let refresh = crate::domain::refresh::refresh_needed(cmd);
+                if refresh.worktrees {
+                    // Full worktree reload (also re-checks staleness and triggers JIRA fetch
+                    // via WorktreesLoaded handler when branch names change)
+                    let repo_root = state.repo_root.clone();
+                    let tx = metro_tx.clone();
+                    tokio::spawn(async move {
+                        match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                            Ok(wts) => { let _ = tx.send(Action::WorktreesLoaded(wts)); }
+                            Err(e) => { tracing::warn!("post-command worktree refresh failed: {e}"); }
+                        }
+                    });
+                } else if refresh.staleness {
+                    // Staleness-only refresh: re-check the active worktree without full reload
+                    if let Some(idx) = state.worktree_table_state.selected() {
+                        if let Some(wt) = state.worktrees.get_mut(idx) {
+                            wt.stale = crate::infra::worktrees::check_stale(&wt.path);
+                        }
+                    }
+                }
             }
         }
 

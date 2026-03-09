@@ -84,18 +84,21 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
     Ok(worktrees)
 }
 
-/// Returns true when `node_modules` is older than `package.json` or `yarn.lock`.
+/// Returns true when dependencies are stale (need `yarn install`).
+///
+/// Uses `node_modules/.yarn-integrity` as the sentinel file — yarn writes
+/// this on every successful install, making it a reliable mtime reference.
 ///
 /// Staleness rules:
-/// - node_modules doesn't exist → stale (needs `yarn install`)
-/// - package.json / yarn.lock don't exist → not stale (nothing to check against)
-/// - Otherwise: stale if node_modules mtime < max(package.json mtime, yarn.lock mtime)
+/// - `.yarn-integrity` doesn't exist → stale (never installed or node_modules removed)
+/// - `package.json` / `yarn.lock` don't exist → not stale (nothing to check against)
+/// - Otherwise: stale if `.yarn-integrity` mtime < max(package.json mtime, yarn.lock mtime)
 pub fn check_stale(worktree_path: &Path) -> bool {
-    let nm = worktree_path.join("node_modules");
+    let integrity = worktree_path.join("node_modules").join(".yarn-integrity");
 
-    let nm_mtime = match std::fs::metadata(&nm).and_then(|m| m.modified()) {
+    let integrity_mtime = match std::fs::metadata(&integrity).and_then(|m| m.modified()) {
         Ok(t) => t,
-        Err(_) => return true, // node_modules absent → definitely stale
+        Err(_) => return true, // .yarn-integrity absent → definitely stale
     };
 
     // Gather mtimes for the lock files that indicate dependencies changed
@@ -112,7 +115,7 @@ pub fn check_stale(worktree_path: &Path) -> bool {
     }
 
     match max_lock_mtime {
-        Some(lock_mtime) => nm_mtime < lock_mtime,
+        Some(lock_mtime) => integrity_mtime < lock_mtime,
         None => false, // no lock files → can't determine staleness
     }
 }
