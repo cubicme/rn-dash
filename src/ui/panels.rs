@@ -50,16 +50,19 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         .iter()
         .map(|wt| {
             let label = wt.label.as_deref().unwrap_or("");
-            let wt_name = wt
-                .path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("?");
             let branch = &wt.branch;
 
             // Extract ticket number from branch if possible
             let ticket_num = crate::infra::jira::extract_jira_key(branch).unwrap_or_default();
             let title = wt.jira_title.as_deref().unwrap_or("");
+
+            // Merged ticket display: "UMP-1234 Title text" or just one or the other
+            let ticket_display = match (ticket_num.is_empty(), title.is_empty()) {
+                (false, false) => format!("{} {}", ticket_num, title),
+                (false, true) => ticket_num,
+                (true, false) => title.to_string(),
+                (true, true) => String::new(),
+            };
 
             // Status icons: metro=● stale=⚠
             let mut icons = String::new();
@@ -71,33 +74,29 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             }
 
             let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
-                Style::default().add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::White)
+                    .bg(Color::DarkGray)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
 
             Row::new(vec![
+                Cell::from(Span::styled(icons, Style::default().fg(Color::Yellow))),
                 Cell::from(truncate(label, 12)),
-                Cell::from(truncate(wt_name, 20)),
-                Cell::from(truncate(branch, 30)),
-                Cell::from(ticket_num),
-                Cell::from(truncate(title, 30)),
-                Cell::from(Span::styled(
-                    icons,
-                    Style::default().fg(Color::Yellow),
-                )),
+                Cell::from(truncate(branch, 18)),
+                Cell::from(ticket_display),
             ])
             .style(row_style)
         })
         .collect();
 
     let header = Row::new(vec![
+        Cell::from(""),
         Cell::from("LABEL"),
-        Cell::from("WORKTREE"),
         Cell::from("BRANCH"),
         Cell::from("TICKET"),
-        Cell::from("TITLE"),
-        Cell::from(""), // icons column — no header
     ])
     .style(
         Style::default()
@@ -108,12 +107,10 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let table = Table::new(
         rows,
         [
+            Constraint::Length(4),  // Status icons
             Constraint::Length(14), // Label
-            Constraint::Length(22), // Worktree name
-            Constraint::Min(15),    // Branch (truncates)
-            Constraint::Length(10), // Ticket #
-            Constraint::Min(15),    // Title (truncates)
-            Constraint::Length(4),  // Icons (fixed)
+            Constraint::Length(20), // Branch
+            Constraint::Min(30),   // Ticket (merged number + title)
         ],
     )
     .header(header)
