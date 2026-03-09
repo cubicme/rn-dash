@@ -172,8 +172,8 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
 
     let visible_height = inner.height as usize;
 
-    // Auto-scroll to bottom (always show latest output)
-    let scroll = if state.log_scroll_offset == 0 && !lines.is_empty() {
+    // Auto-scroll to bottom when auto_follow is enabled
+    let scroll = if state.metro_log_auto_follow && !lines.is_empty() {
         lines.len().saturating_sub(visible_height)
     } else {
         state.log_scroll_offset
@@ -211,8 +211,8 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
 
     let visible_height = area.height.saturating_sub(2) as usize; // subtract borders
 
-    // Auto-scroll to bottom when scroll offset is 0 (default)
-    let scroll = if state.log_scroll_offset == 0 && !lines.is_empty() {
+    // Auto-scroll to bottom when auto_follow is enabled
+    let scroll = if state.metro_log_auto_follow && !lines.is_empty() {
         lines.len().saturating_sub(visible_height)
     } else {
         state.log_scroll_offset

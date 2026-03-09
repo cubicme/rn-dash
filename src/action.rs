@@ -114,4 +114,11 @@ pub enum Action {
 
     // Phase 5.1: Log panel clear
     LogPanelClear,          // 'x' when log panel focused — clears metro_logs
+
+    // Phase 5.2: Universal scroll
+    ScrollToTop,            // gg (two g presses) — scroll to top of focused scrollable pane
+    ScrollToBottom,         // G — scroll to bottom, re-enable auto-follow
+    SetPendingG,            // first g press in scrollable pane — pending gg sequence
+    CommandOutputScrollUp,  // k in CommandOutput pane — scroll up
+    CommandOutputScrollDown,// j in CommandOutput pane — scroll down
 }

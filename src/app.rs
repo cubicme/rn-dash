@@ -131,6 +131,13 @@ pub struct AppState {
     pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
 
+    // --- Phase 5.2 fields ---
+    /// When true, metro log pane auto-scrolls to bottom on new content.
+    /// Set false on manual scroll up. Set true on ScrollToBottom (G).
+    pub metro_log_auto_follow: bool,
+    /// First 'g' press sets this true; second 'g' triggers ScrollToTop. Cleared on any other action.
+    pub pending_g: bool,
+
     // --- Phase 5.1 fields ---
     /// Detected terminal multiplexer (tmux or zellij). None when not inside either.
     pub multiplexer: Option<Box<dyn crate::infra::multiplexer::Multiplexer>>,
@@ -176,6 +183,9 @@ impl Default for AppState {
             palette_mode: None,
             pending_device_command: None,
             pending_label_branch: None,
+            // Phase 5.2
+            metro_log_auto_follow: true,
+            pending_g: false,
             // Phase 4
             jira_title_cache: std::collections::HashMap::new(),
             jira_client: None,
@@ -335,6 +345,13 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
         };
     }
 
+    // --- FULLSCREEN: Tab exits fullscreen ---
+    if state.fullscreen_panel.is_some() {
+        if key.code == Tab {
+            return Some(Action::ToggleFullscreen);
+        }
+    }
+
     // --- METRO PANE SPECIFIC ---
     if state.focused_panel == FocusedPanel::MetroPane {
         match key.code {
@@ -342,9 +359,19 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('x') => return Some(Action::MetroStop),
             Char('r') => return Some(Action::MetroRestart),
             Char('l') => return Some(Action::MetroToggleLog),
+            Char('j') => return Some(Action::MetroScrollDown),
+            Char('k') => return Some(Action::MetroScrollUp),
             Char('J') => return Some(Action::MetroSendDebugger),
             Char('R') => return Some(Action::MetroSendReload),
             Char('f') => return Some(Action::ToggleFullscreen),
+            Char('G') => return Some(Action::ScrollToBottom),
+            Char('g') => {
+                if state.pending_g {
+                    return Some(Action::ScrollToTop);
+                } else {
+                    return Some(Action::SetPendingG);
+                }
+            }
             // Shift-X clears log panel (avoids collision with 'x' which stops metro)
             Char('X') => return Some(Action::LogPanelClear),
             _ => {} // fall through to normal navigation
@@ -374,8 +401,16 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     // --- COMMAND OUTPUT SPECIFIC ---
     if state.focused_panel == FocusedPanel::CommandOutput {
         match key.code {
-            Char('j') | Down => return Some(Action::FocusDown),
-            Char('k') | Up => return Some(Action::FocusUp),
+            Char('j') | Down => return Some(Action::CommandOutputScrollDown),
+            Char('k') | Up => return Some(Action::CommandOutputScrollUp),
+            Char('G') => return Some(Action::ScrollToBottom),
+            Char('g') => {
+                if state.pending_g {
+                    return Some(Action::ScrollToTop);
+                } else {
+                    return Some(Action::SetPendingG);
+                }
+            }
             Char('X') => return Some(Action::CommandCancel),
             Char('C') => return Some(Action::CommandOutputClear),
             Char('f') => return Some(Action::ToggleFullscreen),
@@ -462,6 +497,11 @@ pub fn update(
     metro_tx: &tokio::sync::mpsc::UnboundedSender<Action>,
     handle_tx: &tokio::sync::mpsc::UnboundedSender<MetroHandle>,
 ) {
+    // Clear pending_g on any action except SetPendingG
+    if !matches!(action, Action::SetPendingG) {
+        state.pending_g = false;
+    }
+
     match action {
         // Phase 1 actions
         Action::FocusNext => state.focused_panel = state.focused_panel.next(),
@@ -552,6 +592,7 @@ pub fn update(
         }
 
         Action::MetroScrollUp => {
+            state.metro_log_auto_follow = false;
             state.log_scroll_offset = state.log_scroll_offset.saturating_sub(1);
         }
 
@@ -1344,6 +1385,66 @@ pub fn update(
         Action::LogPanelClear => {
             state.metro_logs.clear();
             state.log_scroll_offset = 0;
+            state.metro_log_auto_follow = true;
+        }
+
+        // --- Phase 5.2: Universal scroll ---
+
+        Action::ScrollToTop => {
+            match state.focused_panel {
+                FocusedPanel::MetroPane => {
+                    state.log_scroll_offset = 0;
+                    state.metro_log_auto_follow = false;
+                }
+                FocusedPanel::CommandOutput => {
+                    if let Some(id) = active_worktree_id(state) {
+                        state.command_output_scroll_by_worktree.insert(id, 0);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Action::ScrollToBottom => {
+            match state.focused_panel {
+                FocusedPanel::MetroPane => {
+                    // Set offset to max so rendering shows the bottom
+                    let max = state.metro_logs.len();
+                    state.log_scroll_offset = max;
+                    state.metro_log_auto_follow = true;
+                }
+                FocusedPanel::CommandOutput => {
+                    if let Some(id) = active_worktree_id(state) {
+                        let max = state.command_output_by_worktree
+                            .get(&id)
+                            .map(|o| o.len())
+                            .unwrap_or(0);
+                        state.command_output_scroll_by_worktree.insert(id, max);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        Action::SetPendingG => {
+            state.pending_g = true;
+        }
+
+        Action::CommandOutputScrollUp => {
+            if let Some(id) = active_worktree_id(state) {
+                let scroll = state.command_output_scroll_by_worktree.entry(id).or_insert(0);
+                *scroll = scroll.saturating_sub(1);
+            }
+        }
+
+        Action::CommandOutputScrollDown => {
+            let max = active_output(state).len();
+            if let Some(id) = active_worktree_id(state) {
+                let scroll = state.command_output_scroll_by_worktree.entry(id).or_insert(0);
+                if *scroll < max {
+                    *scroll += 1;
+                }
+            }
         }
     }
 }
