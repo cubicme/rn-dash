@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-02-PLAN.md
-last_updated: "2026-03-09T08:00:25.170Z"
-last_activity: "2026-03-09 — Executed 05.2-01: Double-line borders, dynamic pane titles, 4-column table restructure, metro highlight fix"
+stopped_at: Completed 05.2-03-PLAN.md
+last_updated: "2026-03-09T08:05:10.930Z"
+last_activity: "2026-03-09 — Executed 05.2-02: refresh_needed() domain function, CommandExited wiring, .yarn-integrity staleness"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 28
-  completed_plans: 26
-  percent: 89
+  completed_plans: 27
+  percent: 93
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 5.2 of 7 (Milestone Feedbacks)
-Plan: 2 of 4 in current phase — COMPLETE
-Status: Plan 05.2-02 Complete — Data dependency model and staleness fix
-Last activity: 2026-03-09 — Executed 05.2-02: refresh_needed() domain function, CommandExited wiring, .yarn-integrity staleness
+Plan: 3 of 4 in current phase — COMPLETE
+Status: Plan 05.2-03 Complete — Navigation enhancements and bug fixes
+Last activity: 2026-03-09 — Executed 05.2-03: universal scroll, auto-follow, fullscreen Tab exit, iOS device picker, debugger feedback
 
-Progress: [█████████░] 93%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 93%
 | Phase 05.1-milestone-feedback P08 | 8 | 2 tasks | 4 files |
 | Phase 05.2 P01 | 2 | 2 tasks | 1 files |
 | Phase 05.2 P02 | 2 | 2 tasks | 4 files |
+| Phase 05.2 P03 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -159,6 +160,7 @@ Recent decisions affecting current work:
 - [Phase 05.1-08]: RnReleaseBuild queues AdbInstallApk before dispatch; GitResetHardFetch chains GitFetch dispatch + GitResetHard queue; filter:String in DevicePicker ModalState; ModalDeviceConfirm resolves against filtered list; SimulatorUsed sent on iOS confirm; queue count shown in output panel in 4 states
 - [Phase 05.2]: Block::bordered() with BorderType::Double replaces Block::default().borders(Borders::ALL) for all panes
 - [Phase 05.2]: RefreshSet as plain struct with bool fields; .yarn-integrity sentinel replaces node_modules dir mtime
+- [Phase 05.2]: pending_g two-key sequence via SetPendingG action; auto_follow flag replaces offset==0 sentinel
 
 ### Pending Todos
 
@@ -176,6 +178,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T08:00:25.168Z
-Stopped at: Completed 05.2-02-PLAN.md
+Last session: 2026-03-09T08:05:10.928Z
+Stopped at: Completed 05.2-03-PLAN.md
 Resume file: None
