@@ -119,7 +119,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 **Goal:** Bug fixes and UX polish from real usage — double-line border visual overhaul, dynamic pane titles, table column restructuring, data dependency model (refresh_needed), staleness detection rewrite (.yarn-integrity), universal vim scrolling (hjkl/G/gg), metro auto-follow, external metro conflict detection, and bug fixes (iOS device picker, metro highlight, debugger, fullscreen Tab)
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05, FIX-06
 **Depends on:** Phase 5.1
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [ ] 05.2-01-PLAN.md — Visual polish: double-line borders, dynamic pane titles, table column restructure, metro highlight fix
