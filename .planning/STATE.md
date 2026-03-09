@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-03-PLAN.md
-last_updated: "2026-03-09T08:05:10.930Z"
-last_activity: "2026-03-09 — Executed 05.2-02: refresh_needed() domain function, CommandExited wiring, .yarn-integrity staleness"
+stopped_at: Completed 05.2-04-PLAN.md
+last_updated: "2026-03-09T08:09:25.000Z"
+last_activity: "2026-03-09 — Executed 05.2-04: external metro conflict detection, modal, kill-and-auto-start"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 28
-  completed_plans: 27
-  percent: 93
+  completed_plans: 28
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5.2 of 7 (Milestone Feedbacks)
-Plan: 3 of 4 in current phase — COMPLETE
-Status: Plan 05.2-03 Complete — Navigation enhancements and bug fixes
-Last activity: 2026-03-09 — Executed 05.2-03: universal scroll, auto-follow, fullscreen Tab exit, iOS device picker, debugger feedback
+Phase: 5.2 of 7 (Milestone Feedbacks) — COMPLETE
+Plan: 4 of 4 in current phase — COMPLETE
+Status: Plan 05.2-04 Complete — External metro conflict detection and resolution
+Last activity: 2026-03-09 — Executed 05.2-04: external metro conflict detection, modal, kill-and-auto-start
 
-Progress: [██████████] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [██████████] 96%
 | Phase 05.2 P01 | 2 | 2 tasks | 1 files |
 | Phase 05.2 P02 | 2 | 2 tasks | 4 files |
 | Phase 05.2 P03 | 3 | 2 tasks | 4 files |
+| Phase 05.2 P04 | 3 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,7 @@ Recent decisions affecting current work:
 - [Phase 05.2]: Block::bordered() with BorderType::Double replaces Block::default().borders(Borders::ALL) for all panes
 - [Phase 05.2]: RefreshSet as plain struct with bool fields; .yarn-integrity sentinel replaces node_modules dir mtime
 - [Phase 05.2]: pending_g two-key sequence via SetPendingG action; auto_follow flag replaces offset==0 sentinel
+- [Phase 05.2-04]: MetroStart refactored to async detection gate: detect_external_metro first, MetroStartConfirmed if clear; 500ms delay after kill before auto-start
 
 ### Pending Todos
 
@@ -178,6 +180,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T08:05:10.928Z
-Stopped at: Completed 05.2-03-PLAN.md
+Last session: 2026-03-09T08:09:25.000Z
+Stopped at: Completed 05.2-04-PLAN.md
 Resume file: None
