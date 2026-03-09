@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Phase 05.2 context gathered
-last_updated: "2026-03-09T06:58:57.010Z"
-last_activity: "2026-03-03 — Executed 05.1-08: Android release two-step queue, GitResetHardFetch chain, iOS sim sort-by-recent with type-to-filter picker, queue count in output panel title"
+stopped_at: Completed 05.2-01-PLAN.md
+last_updated: "2026-03-09T07:56:45.799Z"
+last_activity: "2026-03-09 — Executed 05.2-01: Double-line borders, dynamic pane titles, 4-column table restructure, metro highlight fix"
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  total_plans: 28
+  completed_plans: 25
+  percent: 89
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5.1 of 6 (Milestone Feedback) — Complete
-Plan: 8 of 8 in current phase — COMPLETE
-Status: Plan 05.1-08 Complete — Release build queue, GitResetHardFetch two-step, sim sort+filter, queue count UI
-Last activity: 2026-03-03 — Executed 05.1-08: Android release two-step queue, GitResetHardFetch chain, iOS sim sort-by-recent with type-to-filter picker, queue count in output panel title
+Phase: 5.2 of 7 (Milestone Feedbacks)
+Plan: 1 of 4 in current phase — COMPLETE
+Status: Plan 05.2-01 Complete — Double-line borders, dynamic pane titles, 4-column table, metro highlight
+Last activity: 2026-03-09 — Executed 05.2-01: Double-line borders, dynamic pane titles, 4-column table restructure, metro highlight fix
 
-Progress: [████████████████████] 100%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [████████████████████] 100%
 | Phase 05.1-milestone-feedback P07 | 2 | 2 tasks | 2 files |
 | Phase 05.1-milestone-feedback P06 | 2 | 2 tasks | 2 files |
 | Phase 05.1-milestone-feedback P08 | 8 | 2 tasks | 4 files |
+| Phase 05.2 P01 | 2 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,7 @@ Recent decisions affecting current work:
 - [Phase 05.1-milestone-feedback]: SyncBeforeRun replaces WORK-06 lazy install — user-visible prompt gives user agency over sync before run
 - [Phase 05.1-milestone-feedback]: CleanConfirm builds all commands first, dispatches first, queues rest — avoids double-dispatch
 - [Phase 05.1-08]: RnReleaseBuild queues AdbInstallApk before dispatch; GitResetHardFetch chains GitFetch dispatch + GitResetHard queue; filter:String in DevicePicker ModalState; ModalDeviceConfirm resolves against filtered list; SimulatorUsed sent on iOS confirm; queue count shown in output panel in 4 states
+- [Phase 05.2]: Block::bordered() with BorderType::Double replaces Block::default().borders(Borders::ALL) for all panes
 
 ### Pending Todos
 
@@ -172,6 +174,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T06:58:57.007Z
-Stopped at: Phase 05.2 context gathered
-Resume file: .planning/phases/05.2-milestone-feedbacks/05.2-CONTEXT.md
+Last session: 2026-03-09T07:56:45.796Z
+Stopped at: Completed 05.2-01-PLAN.md
+Resume file: None
