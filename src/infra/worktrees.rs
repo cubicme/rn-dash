@@ -86,19 +86,47 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
 
 /// Returns true when dependencies are stale (need `yarn install`).
 ///
-/// Uses `node_modules/.yarn-integrity` as the sentinel file — yarn writes
-/// this on every successful install, making it a reliable mtime reference.
+/// Multi-sentinel approach to support different yarn versions:
+/// 1. `node_modules/.yarn-integrity` — yarn v1 (classic) sentinel
+/// 2. `node_modules/.yarn-state` — yarn berry (v2/v3/v4) with nodeLinker: node-modules
+/// 3. If `node_modules` exists but no sentinel found — assume NOT stale (benefit of the doubt)
+/// 4. If `node_modules` does not exist — stale (never installed)
 ///
-/// Staleness rules:
-/// - `.yarn-integrity` doesn't exist → stale (never installed or node_modules removed)
-/// - `package.json` / `yarn.lock` don't exist → not stale (nothing to check against)
-/// - Otherwise: stale if `.yarn-integrity` mtime < max(package.json mtime, yarn.lock mtime)
+/// When a sentinel IS found, staleness = sentinel mtime < max(package.json, yarn.lock) mtime.
 pub fn check_stale(worktree_path: &Path) -> bool {
-    let integrity = worktree_path.join("node_modules").join(".yarn-integrity");
+    let node_modules = worktree_path.join("node_modules");
 
-    let integrity_mtime = match std::fs::metadata(&integrity).and_then(|m| m.modified()) {
-        Ok(t) => t,
-        Err(_) => return true, // .yarn-integrity absent → definitely stale
+    // If node_modules doesn't exist at all, definitely stale
+    if !node_modules.exists() {
+        tracing::debug!(
+            path = %worktree_path.display(),
+            "check_stale: true — node_modules absent"
+        );
+        return true;
+    }
+
+    // Try sentinel files in order of preference
+    let sentinels = [
+        node_modules.join(".yarn-integrity"), // yarn v1 classic
+        node_modules.join(".yarn-state"),     // yarn berry (nodeLinker: node-modules)
+    ];
+
+    let sentinel_mtime = sentinels.iter().find_map(|sentinel| {
+        std::fs::metadata(sentinel)
+            .and_then(|m| m.modified())
+            .ok()
+    });
+
+    let sentinel_mtime = match sentinel_mtime {
+        Some(t) => t,
+        None => {
+            // node_modules exists but no known sentinel — benefit of the doubt
+            tracing::debug!(
+                path = %worktree_path.display(),
+                "check_stale: false — node_modules exists, no sentinel found (unknown yarn version)"
+            );
+            return false;
+        }
     };
 
     // Gather mtimes for the lock files that indicate dependencies changed
@@ -114,10 +142,19 @@ pub fn check_stale(worktree_path: &Path) -> bool {
         }
     }
 
-    match max_lock_mtime {
-        Some(lock_mtime) => integrity_mtime < lock_mtime,
+    let stale = match max_lock_mtime {
+        Some(lock_mtime) => sentinel_mtime < lock_mtime,
         None => false, // no lock files → can't determine staleness
+    };
+
+    if stale {
+        tracing::debug!(
+            path = %worktree_path.display(),
+            "check_stale: true — sentinel older than lock files"
+        );
     }
+
+    stale
 }
 
 /// Returns true when `ios/Pods` directory is missing or older than `ios/Podfile.lock`.
