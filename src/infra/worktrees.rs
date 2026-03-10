@@ -68,6 +68,7 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
         let id = WorktreeId(path_str.to_string());
 
         let stale = check_stale(&path);
+        let stale_pods = check_stale_pods(&path);
 
         worktrees.push(Worktree {
             id,
@@ -78,6 +79,7 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
             jira_title: None,
             label: None,
             stale,
+            stale_pods,
         });
     }
 

@@ -65,13 +65,18 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
                 (true, true) => String::new(),
             };
 
-            // Status icons: metro=● stale=⚠
-            let mut icons = String::new();
+            // Status icons: metro=● (green), yarn stale=⚠ (yellow), pods stale=◉ (red)
+            let mut icon_spans: Vec<Span> = Vec::new();
             if wt.metro_status == WorktreeMetroStatus::Running {
-                icons.push_str("● ");
+                icon_spans.push(Span::styled("●", Style::default().fg(Color::Green)));
             }
             if wt.stale {
-                icons.push('\u{26A0}');
+                if !icon_spans.is_empty() { icon_spans.push(Span::raw(" ")); }
+                icon_spans.push(Span::styled("\u{26A0}", Style::default().fg(Color::Yellow)));
+            }
+            if wt.stale_pods {
+                if !icon_spans.is_empty() { icon_spans.push(Span::raw(" ")); }
+                icon_spans.push(Span::styled("\u{25C9}", Style::default().fg(Color::Red)));
             }
 
             let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
@@ -83,7 +88,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             };
 
             Row::new(vec![
-                Cell::from(Span::styled(icons, Style::default().fg(Color::Yellow))),
+                Cell::from(Line::from(icon_spans)),
                 Cell::from(truncate(label, 12)),
                 Cell::from(truncate(branch, 18)),
                 Cell::from(ticket_display),
@@ -107,7 +112,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let table = Table::new(
         rows,
         [
-            Constraint::Length(4),  // Status icons
+            Constraint::Length(6),  // Status icons (metro + yarn + pods)
             Constraint::Length(14), // Label
             Constraint::Length(20), // Branch
             Constraint::Min(30),   // Ticket (merged number + title)

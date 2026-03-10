@@ -37,6 +37,8 @@ pub struct Worktree {
     pub label: Option<String>,
     /// True when `node_modules` mtime is older than `package.json` or `yarn.lock`.
     pub stale: bool,
+    /// True when `ios/Pods` is missing or older than `ios/Podfile.lock`.
+    pub stale_pods: bool,
 }
 
 impl Worktree {
