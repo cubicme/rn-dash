@@ -593,9 +593,9 @@ pub fn update(
         }
 
         Action::MetroSendDebugger => {
-            match state.metro.send_stdin(b"j\n".to_vec()) {
+            match state.metro.send_stdin(b"d\n".to_vec()) {
                 Ok(()) => {
-                    state.metro_logs.push_back("[debugger command sent]".into());
+                    state.metro_logs.push_back("[debugger toggle sent (d)]".into());
                     if state.metro_logs.len() > MAX_LOG_LINES {
                         state.metro_logs.pop_front();
                     }
@@ -1385,6 +1385,7 @@ pub fn update(
         Action::ToggleFullscreen => {
             if state.fullscreen_panel.is_some() {
                 state.fullscreen_panel = None;
+                state.focused_panel = state.focused_panel.next();
             } else {
                 // Only MetroPane and CommandOutput can be fullscreened
                 match state.focused_panel {
