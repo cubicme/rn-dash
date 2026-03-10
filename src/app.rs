@@ -931,11 +931,10 @@ pub fn update(
                         }
                     });
                 } else if refresh.staleness {
-                    // Staleness-only refresh: re-check the active worktree without full reload
-                    if let Some(idx) = state.worktree_table_state.selected() {
-                        if let Some(wt) = state.worktrees.get_mut(idx) {
-                            wt.stale = crate::infra::worktrees::check_stale(&wt.path);
-                        }
+                    // Staleness refresh: re-check ALL worktrees (cheap I/O, ensures
+                    // correct state even if user changed selection during command)
+                    for wt in state.worktrees.iter_mut() {
+                        wt.stale = crate::infra::worktrees::check_stale(&wt.path);
                     }
                 }
             }
