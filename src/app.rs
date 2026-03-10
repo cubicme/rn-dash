@@ -935,6 +935,7 @@ pub fn update(
                     // correct state even if user changed selection during command)
                     for wt in state.worktrees.iter_mut() {
                         wt.stale = crate::infra::worktrees::check_stale(&wt.path);
+                        wt.stale_pods = crate::infra::worktrees::check_stale_pods(&wt.path);
                     }
                 }
             }
