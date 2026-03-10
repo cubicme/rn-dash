@@ -119,13 +119,16 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 **Goal:** Bug fixes and UX polish from real usage — double-line border visual overhaul, dynamic pane titles, table column restructuring, data dependency model (refresh_needed), staleness detection rewrite (.yarn-integrity), universal vim scrolling (hjkl/G/gg), metro auto-follow, external metro conflict detection, and bug fixes (iOS device picker, metro highlight, debugger, fullscreen Tab)
 **Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05, FIX-06
 **Depends on:** Phase 5.1
-**Plans:** 4/4 plans complete
+**Plans:** 7 plans (4 complete + 3 gap closure)
 
 Plans:
-- [ ] 05.2-01-PLAN.md — Visual polish: double-line borders, dynamic pane titles, table column restructure, metro highlight fix
-- [ ] 05.2-02-PLAN.md — Data dependency model (refresh_needed) + staleness detection rewrite (.yarn-integrity)
-- [ ] 05.2-03-PLAN.md — Navigation enhancements (universal scroll, auto-follow, fullscreen Tab) + bug fixes (iOS picker, debugger)
-- [ ] 05.2-04-PLAN.md — External metro conflict detection (port 8081 check, kill prompt, auto-start)
+- [x] 05.2-01-PLAN.md — Visual polish: double-line borders, dynamic pane titles, table column restructure, metro highlight fix
+- [x] 05.2-02-PLAN.md — Data dependency model (refresh_needed) + staleness detection rewrite (.yarn-integrity)
+- [x] 05.2-03-PLAN.md — Navigation enhancements (universal scroll, auto-follow, fullscreen Tab) + bug fixes (iOS picker, debugger)
+- [x] 05.2-04-PLAN.md — External metro conflict detection (port 8081 check, kill prompt, auto-start)
+- [ ] 05.2-05-PLAN.md — Gap closure: pane title color, separate status icons, metro-active row highlight
+- [ ] 05.2-06-PLAN.md — Gap closure: staleness detection fix (multi-yarn-version) + post-command refresh
+- [ ] 05.2-07-PLAN.md — Gap closure: scrollbar position, Tab-fullscreen-cycle, metro debugger toggle
 
 ### Phase 05.1: milestone-feedback (INSERTED)
 
