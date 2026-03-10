@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-04-PLAN.md
-last_updated: "2026-03-09T08:14:06.035Z"
+stopped_at: Completed 05.2-07-PLAN.md
+last_updated: "2026-03-10T09:03:57.313Z"
 last_activity: "2026-03-09 — Executed 05.2-04: external metro conflict detection, modal, kill-and-auto-start"
 progress:
   total_phases: 7
-  completed_phases: 7
-  total_plans: 28
-  completed_plans: 28
+  completed_phases: 6
+  total_plans: 31
+  completed_plans: 30
   percent: 100
 ---
 
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 
 ## Current Position
 
-Phase: 5.2 of 7 (Milestone Feedbacks) — COMPLETE
-Plan: 4 of 4 in current phase — COMPLETE
-Status: Plan 05.2-04 Complete — External metro conflict detection and resolution
-Last activity: 2026-03-09 — Executed 05.2-04: external metro conflict detection, modal, kill-and-auto-start
+Phase: 5.2 of 7 (Milestone Feedbacks) — IN PROGRESS
+Plan: 7 of 7 in current phase
+Status: Plan 05.2-07 Complete — UAT behavior fixes (scrollbar, fullscreen tab, debugger)
+Last activity: 2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command
 
-Progress: [██████████] 100%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -77,6 +77,8 @@ Progress: [██████████] 100%
 | Phase 05.2 P02 | 2 | 2 tasks | 4 files |
 | Phase 05.2 P03 | 3 | 2 tasks | 4 files |
 | Phase 05.2 P04 | 3 | 2 tasks | 6 files |
+| Phase 05.2 P06 | 1 | 2 tasks | 2 files |
+| Phase 05.2 P07 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -163,6 +165,8 @@ Recent decisions affecting current work:
 - [Phase 05.2]: RefreshSet as plain struct with bool fields; .yarn-integrity sentinel replaces node_modules dir mtime
 - [Phase 05.2]: pending_g two-key sequence via SetPendingG action; auto_follow flag replaces offset==0 sentinel
 - [Phase 05.2-04]: MetroStart refactored to async detection gate: detect_external_metro first, MetroStartConfirmed if clear; 500ms delay after kill before auto-start
+- [Phase 05.2]: Multi-sentinel staleness: .yarn-integrity (v1) then .yarn-state (berry); benefit of the doubt when no sentinel found
+- [Phase 05.2]: ScrollbarState range set to max_scroll for correct position mapping; metro debugger sends d instead of j
 
 ### Pending Todos
 
@@ -180,6 +184,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-09T08:09:25.000Z
-Stopped at: Completed 05.2-04-PLAN.md
+Last session: 2026-03-10T09:03:57.310Z
+Stopped at: Completed 05.2-07-PLAN.md
 Resume file: None
