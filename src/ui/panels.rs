@@ -37,6 +37,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let block = Block::bordered()
         .border_type(BorderType::Double)
         .title(" Worktrees ")
+        .title_style(Style::default().fg(Color::White))
         .border_style(border_style);
 
     if state.worktrees.is_empty() {
@@ -75,8 +76,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
             let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
                 Style::default()
-                    .fg(Color::White)
-                    .bg(Color::DarkGray)
+                    .fg(Color::Green)
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -154,6 +154,7 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
     let block = Block::bordered()
         .border_type(BorderType::Double)
         .title(title)
+        .title_style(Style::default().fg(Color::White))
         .border_style(border_style);
 
     let inner = block.inner(area);
@@ -224,6 +225,7 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
             Block::bordered()
                 .border_type(BorderType::Double)
                 .title(" Metro Log ")
+                .title_style(Style::default().fg(Color::White))
                 .border_style(border_style),
         )
         .scroll((scroll as u16, 0));
@@ -292,6 +294,7 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
     let block = Block::bordered()
         .border_type(BorderType::Double)
         .title(title)
+        .title_style(Style::default().fg(Color::White))
         .border_style(border_style);
 
     let paragraph = Paragraph::new(Text::from(lines.clone()))
