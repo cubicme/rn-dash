@@ -185,7 +185,8 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Scrollbar when content exceeds visible area
     if lines.len() > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
+        let max_scroll = lines.len() - visible_height;
+        let mut scrollbar_state = ScrollbarState::new(max_scroll).position(scroll.min(max_scroll));
 
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight),
@@ -231,7 +232,8 @@ pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Scrollbar — only rendered when content exceeds visible area
     if lines.len() > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
+        let max_scroll = lines.len() - visible_height;
+        let mut scrollbar_state = ScrollbarState::new(max_scroll).position(scroll.min(max_scroll));
 
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight),
@@ -300,7 +302,8 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Scrollbar — only rendered when content exceeds visible area
     if lines.len() > visible_height {
-        let mut scrollbar_state = ScrollbarState::new(lines.len()).position(scroll);
+        let max_scroll = lines.len() - visible_height;
+        let mut scrollbar_state = ScrollbarState::new(max_scroll).position(scroll.min(max_scroll));
 
         f.render_stateful_widget(
             Scrollbar::new(ScrollbarOrientation::VerticalRight),
