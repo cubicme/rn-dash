@@ -89,51 +89,54 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
 /// Returns true when dependencies are stale (need `yarn install`).
 ///
 /// Multi-sentinel approach to support different yarn versions:
-/// 1. `node_modules/.yarn-integrity` — yarn v1 (classic) sentinel
-/// 2. `node_modules/.yarn-state` — yarn berry (v2/v3/v4) with nodeLinker: node-modules
-/// 3. If `node_modules` exists but no sentinel found — assume NOT stale (benefit of the doubt)
-/// 4. If `node_modules` does not exist — stale (never installed)
+/// 1. `.yarn/install-state.gz` — yarn Berry (v2/v3/v4) ALWAYS creates this on every install,
+///    regardless of linker mode (pnp, node-modules, or pnpm). Most reliable Berry sentinel.
+/// 2. `node_modules/.yarn-integrity` — yarn v1 (classic) sentinel
+/// 3. If no sentinel found and `node_modules` absent — stale (never installed)
+/// 4. If no sentinel found but `node_modules` exists — assume NOT stale (benefit of the doubt)
 ///
 /// When a sentinel IS found, staleness = sentinel mtime < max(package.json, yarn.lock) mtime.
 pub fn check_stale(worktree_path: &Path) -> bool {
-    let node_modules = worktree_path.join("node_modules");
+    // Berry install-state.gz: most reliable for Yarn Berry (v2/v3/v4).
+    // Always created/updated on `yarn install` regardless of nodeLinker setting.
+    let berry_state = worktree_path.join(".yarn").join("install-state.gz");
 
-    // If node_modules doesn't exist at all, definitely stale
-    if !node_modules.exists() {
-        tracing::debug!(
-            path = %worktree_path.display(),
-            "check_stale: true — node_modules absent"
-        );
-        return true;
-    }
+    // Classic yarn v1 sentinel
+    let yarn_integrity = worktree_path.join("node_modules").join(".yarn-integrity");
 
-    // Try sentinel files in order of preference
-    let sentinels = [
-        node_modules.join(".yarn-integrity"), // yarn v1 classic
-        node_modules.join(".yarn-state"),     // yarn berry (nodeLinker: node-modules)
-    ];
-
-    let sentinel_mtime = sentinels.iter().find_map(|sentinel| {
-        std::fs::metadata(sentinel)
-            .and_then(|m| m.modified())
-            .ok()
-    });
+    // Try Berry install-state.gz first, then classic .yarn-integrity
+    let sentinel_mtime = std::fs::metadata(&berry_state)
+        .and_then(|m| m.modified())
+        .ok()
+        .or_else(|| {
+            std::fs::metadata(&yarn_integrity)
+                .and_then(|m| m.modified())
+                .ok()
+        });
 
     let sentinel_mtime = match sentinel_mtime {
         Some(t) => t,
         None => {
-            // node_modules exists but no known sentinel — benefit of the doubt
+            // No sentinel found at all — check if node_modules exists
+            let node_modules = worktree_path.join("node_modules");
+            if !node_modules.exists() {
+                tracing::debug!(
+                    path = %worktree_path.display(),
+                    "check_stale: true — no sentinel and no node_modules"
+                );
+                return true; // Nothing installed
+            }
+            // node_modules exists but no sentinel — benefit of the doubt
             tracing::debug!(
                 path = %worktree_path.display(),
-                "check_stale: false — node_modules exists, no sentinel found (unknown yarn version)"
+                "check_stale: false — no sentinel found, node_modules exists"
             );
             return false;
         }
     };
 
-    // Gather mtimes for the lock files that indicate dependencies changed
+    // Compare sentinel against lock files
     let mut max_lock_mtime: Option<std::time::SystemTime> = None;
-
     for lock_file in &["package.json", "yarn.lock"] {
         let lock_path = worktree_path.join(lock_file);
         if let Ok(mtime) = std::fs::metadata(&lock_path).and_then(|m| m.modified()) {
@@ -149,12 +152,12 @@ pub fn check_stale(worktree_path: &Path) -> bool {
         None => false, // no lock files → can't determine staleness
     };
 
-    if stale {
-        tracing::debug!(
-            path = %worktree_path.display(),
-            "check_stale: true — sentinel older than lock files"
-        );
-    }
+    tracing::debug!(
+        path = %worktree_path.display(),
+        sentinel = if berry_state.exists() { ".yarn/install-state.gz" } else { "node_modules/.yarn-integrity" },
+        stale,
+        "check_stale result"
+    );
 
     stale
 }
