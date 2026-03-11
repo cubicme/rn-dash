@@ -722,6 +722,18 @@ pub fn update(
                 }
             }
 
+            // Derive metro_status from current MetroManager state
+            if let crate::domain::metro::MetroStatus::Running { ref worktree_id, .. } = state.metro.status {
+                for wt in &mut worktrees {
+                    let wt_name = wt.path.file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("");
+                    if wt_name == worktree_id {
+                        wt.metro_status = crate::domain::worktree::WorktreeMetroStatus::Running;
+                    }
+                }
+            }
+
             // Pin metro-active worktree to top of the list
             if let Some(metro_idx) = worktrees.iter().position(|wt| {
                 wt.metro_status == crate::domain::worktree::WorktreeMetroStatus::Running
