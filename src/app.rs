@@ -593,9 +593,9 @@ pub fn update(
         }
 
         Action::MetroSendDebugger => {
-            match state.metro.send_stdin(b"d\n".to_vec()) {
+            match state.metro.send_stdin(b"j\n".to_vec()) {
                 Ok(()) => {
-                    state.metro_logs.push_back("[debugger toggle sent (d)]".into());
+                    state.metro_logs.push_back("[debugger toggle sent (j)]".into());
                     if state.metro_logs.len() > MAX_LOG_LINES {
                         state.metro_logs.pop_front();
                     }
