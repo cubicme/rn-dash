@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-07-PLAN.md
-last_updated: "2026-03-10T09:10:53.132Z"
+stopped_at: Completed 05.2-09-PLAN.md
+last_updated: "2026-03-11T10:48:05.640Z"
 last_activity: "2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command"
 progress:
   total_phases: 7
-  completed_phases: 7
-  total_plans: 31
-  completed_plans: 31
+  completed_phases: 6
+  total_plans: 34
+  completed_plans: 32
   percent: 97
 ---
 
@@ -80,6 +80,7 @@ Progress: [██████████] 97%
 | Phase 05.2 P05 | 3 | 2 tasks | 3 files |
 | Phase 05.2 P06 | 1 | 2 tasks | 2 files |
 | Phase 05.2 P07 | 1 | 2 tasks | 2 files |
+| Phase 05.2 P09 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -169,6 +170,8 @@ Recent decisions affecting current work:
 - [Phase 05.2]: Multi-sentinel staleness: .yarn-integrity (v1) then .yarn-state (berry); benefit of the doubt when no sentinel found
 - [Phase 05.2]: ScrollbarState range set to max_scroll for correct position mapping; metro debugger sends d instead of j
 - [Phase 05.2-05]: title_style(White) on all Block widgets for readable inactive pane titles; metro-active row uses fg(Green)+BOLD instead of bg(DarkGray); per-category icon Spans with individual colors
+- [Phase 05.2]: Berry install-state.gz checked before .yarn-integrity — most reliable cross-linker sentinel
+- [Phase 05.2]: Metro debugger reverted from d to j — React Native CLI uses j for debugger toggle
 
 ### Pending Todos
 
@@ -186,6 +189,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T09:03:57.310Z
-Stopped at: Completed 05.2-07-PLAN.md
+Last session: 2026-03-11T10:48:05.637Z
+Stopped at: Completed 05.2-09-PLAN.md
 Resume file: None
