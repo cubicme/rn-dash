@@ -65,19 +65,22 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
                 (true, true) => String::new(),
             };
 
-            // Status icons: metro=● (green), yarn stale=⚠ (yellow), pods stale=◉ (red)
+            // Status icons: always show Y (yarn) and /P (pods) with color indicating freshness
             let mut icon_spans: Vec<Span> = Vec::new();
+
+            // Metro indicator (only when running)
             if wt.metro_status == WorktreeMetroStatus::Running {
                 icon_spans.push(Span::styled("●", Style::default().fg(Color::Green)));
+                icon_spans.push(Span::raw(" "));
             }
-            if wt.stale {
-                if !icon_spans.is_empty() { icon_spans.push(Span::raw(" ")); }
-                icon_spans.push(Span::styled("\u{26A0}", Style::default().fg(Color::Yellow)));
-            }
-            if wt.stale_pods {
-                if !icon_spans.is_empty() { icon_spans.push(Span::raw(" ")); }
-                icon_spans.push(Span::styled("\u{25C9}", Style::default().fg(Color::Red)));
-            }
+
+            // Yarn staleness: Y always shown, green=fresh, red=stale
+            let yarn_color = if wt.stale { Color::Red } else { Color::Green };
+            icon_spans.push(Span::styled("Y", Style::default().fg(yarn_color)));
+
+            // Pods staleness: /P always shown, green=fresh, red=stale
+            let pods_color = if wt.stale_pods { Color::Red } else { Color::Green };
+            icon_spans.push(Span::styled("/P", Style::default().fg(pods_color)));
 
             let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
                 Style::default()
@@ -87,11 +90,18 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
                 Style::default()
             };
 
+            // Extract dir name from path
+            let dir_name = wt.path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
             Row::new(vec![
                 Cell::from(Line::from(icon_spans)),
                 Cell::from(truncate(label, 12)),
                 Cell::from(truncate(branch, 18)),
                 Cell::from(ticket_display),
+                Cell::from(dir_name),
             ])
             .style(row_style)
         })
@@ -102,6 +112,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         Cell::from("LABEL"),
         Cell::from("BRANCH"),
         Cell::from("TICKET"),
+        Cell::from("DIR"),
     ])
     .style(
         Style::default()
@@ -112,10 +123,11 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let table = Table::new(
         rows,
         [
-            Constraint::Length(6),  // Status icons (metro + yarn + pods)
+            Constraint::Length(8),  // Status icons (metro + Y + /P)
             Constraint::Length(14), // Label
             Constraint::Length(20), // Branch
-            Constraint::Min(30),   // Ticket (merged number + title)
+            Constraint::Min(20),   // Ticket (merged number + title)
+            Constraint::Length(16), // Dir
         ],
     )
     .header(header)
