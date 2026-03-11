@@ -156,10 +156,24 @@ pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
             pid: _,
             worktree_id,
         } => {
-            let wt_display = if worktree_id.len() > 30 {
-                format!("{}...", &worktree_id[..27])
+            // Look up the actual worktree to get the preferred display name
+            let wt_display = state
+                .worktrees
+                .iter()
+                .find(|wt| {
+                    wt.path
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("")
+                        == worktree_id
+                })
+                .map(|wt| wt.preferred_prefix())
+                .unwrap_or_else(|| worktree_id.clone());
+
+            let wt_display = if wt_display.len() > 30 {
+                format!("{}...", &wt_display[..27])
             } else {
-                worktree_id.clone()
+                wt_display
             };
             format!(" Metro -- running ({}) ", wt_display)
         }
