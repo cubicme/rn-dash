@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-09-PLAN.md
-last_updated: "2026-03-11T10:48:05.640Z"
+stopped_at: Completed 05.2-10-PLAN.md
+last_updated: "2026-03-11T10:48:49.725Z"
 last_activity: "2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 34
   percent: 97
 ---
 
@@ -81,6 +81,8 @@ Progress: [██████████] 97%
 | Phase 05.2 P06 | 1 | 2 tasks | 2 files |
 | Phase 05.2 P07 | 1 | 2 tasks | 2 files |
 | Phase 05.2 P09 | 1 | 2 tasks | 2 files |
+| Phase 05.2 P08 | 2 | 2 tasks | 2 files |
+| Phase 05.2 P10 | 2 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -172,6 +174,8 @@ Recent decisions affecting current work:
 - [Phase 05.2-05]: title_style(White) on all Block widgets for readable inactive pane titles; metro-active row uses fg(Green)+BOLD instead of bg(DarkGray); per-category icon Spans with individual colors
 - [Phase 05.2]: Berry install-state.gz checked before .yarn-integrity — most reliable cross-linker sentinel
 - [Phase 05.2]: Metro debugger reverted from d to j — React Native CLI uses j for debugger toggle
+- [Phase 05.2]: Metro status derived from MetroManager state in WorktreesLoaded; Y/P letter icons always visible
+- [Phase 05.2]: jira_key stored on Worktree struct to keep domain pure; preferred_prefix() as single naming source of truth
 
 ### Pending Todos
 
@@ -189,6 +193,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T10:48:05.637Z
-Stopped at: Completed 05.2-09-PLAN.md
+Last session: 2026-03-11T10:48:49.723Z
+Stopped at: Completed 05.2-10-PLAN.md
 Resume file: None
