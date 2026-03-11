@@ -39,6 +39,9 @@ pub struct Worktree {
     pub stale: bool,
     /// True when `ios/Pods` is missing or older than `ios/Podfile.lock`.
     pub stale_pods: bool,
+    /// Extracted JIRA ticket key (e.g. "UMP-1234") from the branch name.
+    /// Set during WorktreesLoaded via infra::jira::extract_jira_key().
+    pub jira_key: Option<String>,
 }
 
 impl Worktree {
@@ -58,5 +61,29 @@ impl Worktree {
             return title.as_str();
         }
         self.branch.as_str()
+    }
+
+    /// Returns the preferred display prefix for this worktree, in priority order:
+    /// 1. Custom label (user-assigned)
+    /// 2. JIRA ticket key (e.g. "UMP-1234") -- short identifier, not full title
+    /// 3. Branch name
+    /// 4. Workspace directory name (fallback)
+    ///
+    /// Used as the single source of truth for naming: Claude tab name, metro pane title, etc.
+    pub fn preferred_prefix(&self) -> String {
+        if let Some(label) = &self.label {
+            return label.clone();
+        }
+        if let Some(key) = &self.jira_key {
+            return key.clone();
+        }
+        if !self.branch.is_empty() && self.branch != "(unknown)" {
+            return self.branch.clone();
+        }
+        self.path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("worktree")
+            .to_string()
     }
 }

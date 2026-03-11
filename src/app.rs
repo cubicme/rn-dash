@@ -1283,10 +1283,7 @@ pub fn update(
                 return;
             };
             let path = wt.path.clone();
-            let name = format!(
-                "claude-{}",
-                wt.path.file_name().and_then(|n| n.to_str()).unwrap_or("wt")
-            );
+            let name = format!("claude-{}", wt.preferred_prefix());
             let flags = state.claude_flags.clone();
             let command = if flags.is_empty() {
                 "claude".to_string()

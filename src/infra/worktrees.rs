@@ -70,6 +70,8 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
         let stale = check_stale(&path);
         let stale_pods = check_stale_pods(&path);
 
+        let jira_key = crate::infra::jira::extract_jira_key(&branch);
+
         worktrees.push(Worktree {
             id,
             path,
@@ -80,6 +82,7 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
             label: None,
             stale,
             stale_pods,
+            jira_key,
         });
     }
 
