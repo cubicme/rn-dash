@@ -34,6 +34,7 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["s",               "Sync submenu"]),
         Row::new(vec!["g",               "Git submenu"]),
         Row::new(vec!["C",               "Open Claude Code (tmux/zellij)"]),
+        Row::new(vec!["T",               "Open shell tab at worktree"]),
         Row::new(vec!["L",               "Set custom branch label"]),
         Row::new(vec!["f",               "Toggle fullscreen"]),
         Row::new(vec!["!",               "Run shell command in worktree"]),
