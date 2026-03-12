@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-12T09:07:33.462Z"
+stopped_at: Completed 06-02-PLAN.md
+last_updated: "2026-03-12T09:08:52.800Z"
 last_activity: "2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command"
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 37
-  completed_plans: 35
+  completed_plans: 36
   percent: 97
 ---
 
@@ -84,6 +84,7 @@ Progress: [██████████] 97%
 | Phase 05.2 P08 | 2 | 2 tasks | 2 files |
 | Phase 05.2 P10 | 2 | 2 tasks | 4 files |
 | Phase 06-final-ux-polish P01 | 5 | 2 tasks | 3 files |
+| Phase 06-final-ux-polish P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -179,6 +180,8 @@ Recent decisions affecting current work:
 - [Phase 05.2]: jira_key stored on Worktree struct to keep domain pure; preferred_prefix() as single naming source of truth
 - [Phase 06-01]: should_suppress_metro_line() conservative filter: watchman warnings and empty lines only — avoids suppressing legitimate build warnings
 - [Phase 06-01]: U+25B6 play triangle replaces bullet for metro running icon — clearer play-state semantics
+- [Phase 06-final-ux-polish]: OpenShellTab uses $SHELL env var with /bin/zsh fallback for shell tab command
+- [Phase 06-final-ux-polish]: Prefix ordering fixed to {prefix}-type for both claude and shell tab names
 
 ### Pending Todos
 
@@ -197,6 +200,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:07:33.459Z
-Stopped at: Completed 06-01-PLAN.md
+Last session: 2026-03-12T09:08:42.635Z
+Stopped at: Completed 06-02-PLAN.md
 Resume file: None
