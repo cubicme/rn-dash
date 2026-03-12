@@ -78,10 +78,11 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             // Status icons: always show Y (yarn) and /P (pods) with color indicating freshness
             let mut icon_spans: Vec<Span> = Vec::new();
 
-            // Metro indicator (only when running)
+            // Metro indicator: play icon when running, space placeholder when not
             if wt.metro_status == WorktreeMetroStatus::Running {
-                icon_spans.push(Span::styled("\u{25B6}", Style::default().fg(Color::Green)));
-                icon_spans.push(Span::raw(" "));
+                icon_spans.push(Span::styled("\u{25B6} ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+            } else {
+                icon_spans.push(Span::raw("  "));
             }
 
             // Yarn staleness: Y always shown, green=fresh, red=stale
