@@ -8,7 +8,7 @@ use std::path::Path;
 /// Implementors must be Send + Sync + Debug for storage in AppState.
 pub trait Multiplexer: Send + Sync + std::fmt::Debug {
     /// Creates a new window/tab at the given path with the given name, running the given command.
-    /// The window should NOT steal focus from the current window (background creation).
+    /// The window should switch focus to the newly created tab.
     fn new_window(&self, path: &Path, name: &str, command: &str) -> anyhow::Result<()>;
 
     /// Returns true if this multiplexer is available in the current environment.
@@ -22,7 +22,7 @@ impl Multiplexer for TmuxAdapter {
     fn new_window(&self, path: &Path, name: &str, command: &str) -> anyhow::Result<()> {
         let path_str = path.to_str().unwrap_or(".");
         let status = std::process::Command::new("tmux")
-            .args(["new-window", "-d", "-c", path_str, "-n", name, command])
+            .args(["new-window", "-c", path_str, "-n", name, command])
             .status()?;
         if !status.success() {
             anyhow::bail!("tmux new-window failed: exit code {:?}", status.code());
@@ -62,11 +62,6 @@ impl Multiplexer for ZellijAdapter {
         if !write_status.success() {
             tracing::warn!("zellij write-chars failed — tab created but command not started");
         }
-
-        // Switch back to the original tab (Zellij new-tab steals focus unlike tmux -d)
-        let _ = std::process::Command::new("zellij")
-            .args(["action", "go-to-previous-tab"])
-            .status();
 
         Ok(())
     }
