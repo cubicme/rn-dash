@@ -23,7 +23,7 @@ pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
 
     // Icon legend (right-aligned)
     let legend = vec![
-        Span::styled("●", Style::default().fg(Color::Green)),
+        Span::styled("\u{25B6}", Style::default().fg(Color::Green)),
         Span::raw("=metro  "),
         Span::styled("\u{26A0}", Style::default().fg(Color::Yellow)),
         Span::raw("=stale"),
@@ -139,6 +139,10 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             ("x", "clean"),
             ("s", "sync"),
             ("g", "git"),
+            ("L", "label"),
+            ("C", "claude"),
+            ("T", "shell tab"),
+            ("!", "shell"),
             ("Enter", "switch"),
         ],
         FocusedPanel::MetroPane => {

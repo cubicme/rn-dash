@@ -70,7 +70,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
             // Metro indicator (only when running)
             if wt.metro_status == WorktreeMetroStatus::Running {
-                icon_spans.push(Span::styled("●", Style::default().fg(Color::Green)));
+                icon_spans.push(Span::styled("\u{25B6}", Style::default().fg(Color::Green)));
                 icon_spans.push(Span::raw(" "));
             }
 
