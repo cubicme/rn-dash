@@ -15,6 +15,16 @@ use crate::{
     ui::theme,
 };
 
+/// Renders the application title bar with double border.
+/// Only shown in normal (non-fullscreen) layout.
+pub fn render_title_bar(f: &mut Frame, area: Rect, _state: &AppState) {
+    let block = Block::bordered()
+        .border_type(BorderType::Double)
+        .title(" UMP Dashboard ")
+        .title_style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD));
+    f.render_widget(block, area);
+}
+
 /// Truncates a string to max_width, appending "..." if truncated.
 fn truncate(s: &str, max_width: usize) -> String {
     if s.len() <= max_width {

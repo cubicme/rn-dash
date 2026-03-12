@@ -56,16 +56,19 @@ pub fn view(f: &mut Frame, state: &mut AppState) {
         return;
     }
 
-    // Normal layout: top (metro + output) | bottom (worktree table) | footer
+    // Normal layout: title | top (metro + output) | bottom (worktree table) | footer
     let table_height = (state.worktrees.len() as u16 + 3).max(5); // rows + borders + header
-    let [top_area, table_area, footer_area] = Layout::default()
+    let [title_area, top_area, table_area, footer_area] = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(8),              // metro + output (flexible)
+            Constraint::Length(3),            // title bar (2 border lines + 1 content)
+            Constraint::Min(8),               // metro + output (flexible)
             Constraint::Length(table_height), // worktree table (fixed)
             Constraint::Length(1),            // footer
         ])
         .areas(area);
+
+    panels::render_title_bar(f, title_area, state);
 
     // Top section: metro (left) | command output (right)
     // When log panel visible: metro (left-top) | log (left-bottom) | output (right)
