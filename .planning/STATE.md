@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 06-02-PLAN.md
-last_updated: "2026-03-12T09:08:52.800Z"
+stopped_at: Completed 06-03-PLAN.md
+last_updated: "2026-03-12T09:15:18.612Z"
 last_activity: "2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command"
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 37
-  completed_plans: 36
+  completed_plans: 37
   percent: 97
 ---
 
@@ -85,6 +85,7 @@ Progress: [██████████] 97%
 | Phase 05.2 P10 | 2 | 2 tasks | 4 files |
 | Phase 06-final-ux-polish P01 | 5 | 2 tasks | 3 files |
 | Phase 06-final-ux-polish P02 | 3 | 2 tasks | 4 files |
+| Phase 06-final-ux-polish P03 | 1 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -182,6 +183,7 @@ Recent decisions affecting current work:
 - [Phase 06-01]: U+25B6 play triangle replaces bullet for metro running icon — clearer play-state semantics
 - [Phase 06-final-ux-polish]: OpenShellTab uses $SHELL env var with /bin/zsh fallback for shell tab command
 - [Phase 06-final-ux-polish]: Prefix ordering fixed to {prefix}-type for both claude and shell tab names
+- [Phase 06-final-ux-polish]: pending_claude_open stores worktree dir name; TextInput modal sentinel uses YarnLint; title bar uses Constraint::Length(3); fullscreen branch unchanged
 
 ### Pending Todos
 
@@ -200,6 +202,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:08:42.635Z
-Stopped at: Completed 06-02-PLAN.md
+Last session: 2026-03-12T09:15:18.610Z
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
