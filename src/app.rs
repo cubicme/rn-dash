@@ -394,6 +394,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('s') => return Some(Action::EnterSyncPalette),
             Char('g') => return Some(Action::EnterGitPalette),
             Char('C') => return Some(Action::OpenClaudeCode),
+            Char('T') => return Some(Action::OpenShellTab),
             Char('L') => return Some(Action::StartSetLabel),
             Char('f') => return Some(Action::ToggleFullscreen),
             Char('!') => return Some(Action::StartShellCommand),
@@ -1296,7 +1297,7 @@ pub fn update(
                 return;
             };
             let path = wt.path.clone();
-            let name = format!("claude-{}", wt.preferred_prefix());
+            let name = format!("{}-claude", wt.preferred_prefix());
             let flags = state.claude_flags.clone();
             let command = if flags.is_empty() {
                 "claude".to_string()
@@ -1309,6 +1310,33 @@ pub fn update(
                 if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
                     if let Err(e) = mux.new_window(&path, &name, &command) {
                         tracing::warn!("multiplexer new_window failed: {e}");
+                    }
+                }
+            });
+        }
+
+        Action::OpenShellTab => {
+            if state.multiplexer.is_none() {
+                state.error_state = Some(ErrorState {
+                    message: "Cannot open shell tab: not inside a tmux or zellij session".into(),
+                    can_retry: false,
+                });
+                return;
+            }
+            let wt = if !state.worktrees.is_empty() {
+                let idx = state.worktree_table_state.selected().unwrap_or(0)
+                    .min(state.worktrees.len() - 1);
+                state.worktrees[idx].clone()
+            } else {
+                return;
+            };
+            let path = wt.path.clone();
+            let name = format!("{}-shell", wt.preferred_prefix());
+            let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+            tokio::task::spawn_blocking(move || {
+                if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
+                    if let Err(e) = mux.new_window(&path, &name, &shell) {
+                        tracing::warn!("multiplexer new_window (shell) failed: {e}");
                     }
                 }
             });

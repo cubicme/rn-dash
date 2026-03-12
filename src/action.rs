@@ -31,8 +31,9 @@ pub enum Action {
     MetroToggleLog,      // l key — toggles log panel visibility
     MetroScrollUp,       // k when log panel focused
     MetroScrollDown,     // j when log panel focused
-    MetroSendDebugger,   // J (shift-j, when metro pane focused) — sends j\n to metro stdin
-    MetroSendReload,     // R (shift-r, when metro pane focused) — sends r\n to metro stdin
+    MetroSendDebugger,   // J (shift-j, when metro pane focused) — HTTP POST /open-debugger
+    MetroSendReload,     // R (shift-r, when metro pane focused) — HTTP POST /reload
+    MetroLogMessage(String), // internal — push a message to metro log panel
 
     // Metro background events (not user-triggered — sent by background tasks)
     MetroLogLine(String),       // stdout/stderr line from metro streaming task
@@ -80,6 +81,7 @@ pub enum Action {
     // Phase 5: Worktree switching and Claude Code
     WorktreeSwitchToSelected, // Enter on worktree — switch metro to selected worktree
     OpenClaudeCode,           // C on worktree — open claude in new tmux tab
+    OpenShellTab,             // T on worktree — open shell in new tmux/zellij tab
 
     // Phase 5.1: Command queue
     CommandQueuePush(crate::domain::command::CommandSpec), // enqueue without running immediately
