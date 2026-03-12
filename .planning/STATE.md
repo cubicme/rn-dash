@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: completed
-stopped_at: Completed 05.2-10-PLAN.md
-last_updated: "2026-03-11T10:53:47.927Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-12T09:07:33.462Z"
 last_activity: "2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command"
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 34
-  completed_plans: 34
+  total_plans: 37
+  completed_plans: 35
   percent: 97
 ---
 
@@ -83,6 +83,7 @@ Progress: [██████████] 97%
 | Phase 05.2 P09 | 1 | 2 tasks | 2 files |
 | Phase 05.2 P08 | 2 | 2 tasks | 2 files |
 | Phase 05.2 P10 | 2 | 2 tasks | 4 files |
+| Phase 06-final-ux-polish P01 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -176,6 +177,8 @@ Recent decisions affecting current work:
 - [Phase 05.2]: Metro debugger reverted from d to j — React Native CLI uses j for debugger toggle
 - [Phase 05.2]: Metro status derived from MetroManager state in WorktreesLoaded; Y/P letter icons always visible
 - [Phase 05.2]: jira_key stored on Worktree struct to keep domain pure; preferred_prefix() as single naming source of truth
+- [Phase 06-01]: should_suppress_metro_line() conservative filter: watchman warnings and empty lines only — avoids suppressing legitimate build warnings
+- [Phase 06-01]: U+25B6 play triangle replaces bullet for metro running icon — clearer play-state semantics
 
 ### Pending Todos
 
@@ -185,6 +188,7 @@ None.
 
 - Phase 5.1 inserted after Phase 5: milestone-feedback (URGENT)
 - Phase 05.2 inserted after Phase 5: milestone-feedbacks (URGENT)
+- Phase 06 added: Final UX polish — metro log filtering, tmux/zellij tab from worktree, metro running indicator, prefix ordering fix, optional claude tab name, double border on title
 
 ### Blockers/Concerns
 
@@ -193,6 +197,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-11T10:48:49.723Z
-Stopped at: Completed 05.2-10-PLAN.md
+Last session: 2026-03-12T09:07:33.459Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None

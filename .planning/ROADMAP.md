@@ -155,7 +155,7 @@ Plans:
 **Goal:** Final UX polish — metro log filtering, tmux/zellij tab from worktree, metro running indicator, prefix ordering fix, optional claude tab name, double border on title
 **Requirements**: UX-06-01, UX-06-02, UX-06-03, UX-06-04, UX-06-05, UX-06-06
 **Depends on:** Phase 05.2
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 06-01-PLAN.md — Metro log noise suppression + play icon indicator
