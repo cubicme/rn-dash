@@ -593,26 +593,39 @@ pub fn update(
         }
 
         Action::MetroSendDebugger => {
-            match state.metro.send_stdin(b"j\n".to_vec()) {
-                Ok(()) => {
-                    state.metro_logs.push_back("[debugger toggle sent (j)]".into());
-                    if state.metro_logs.len() > MAX_LOG_LINES {
-                        state.metro_logs.pop_front();
-                    }
+            if state.metro.is_running() {
+                state.metro_logs.push_back("[opening debugger...]".into());
+                if state.metro_logs.len() > MAX_LOG_LINES {
+                    state.metro_logs.pop_front();
                 }
-                Err(e) => {
-                    tracing::warn!("send debugger failed: {e}");
-                    state.metro_logs.push_back(format!("[debugger send failed: {e}]"));
-                    if state.metro_logs.len() > MAX_LOG_LINES {
-                        state.metro_logs.pop_front();
-                    }
-                }
+                let tx = metro_tx.clone();
+                tokio::spawn(async move {
+                    let result = metro_http_post("http://localhost:8081/open-debugger", "{}").await;
+                    let msg = match result {
+                        Ok(_) => "[debugger opened via HTTP]".to_string(),
+                        Err(e) => format!("[debugger open failed: {e}]"),
+                    };
+                    let _ = tx.send(Action::MetroLogMessage(msg));
+                });
             }
         }
 
         Action::MetroSendReload => {
-            if let Err(e) = state.metro.send_stdin(b"r\n".to_vec()) {
-                tracing::warn!("send reload failed: {e}");
+            if state.metro.is_running() {
+                let tx = metro_tx.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = metro_http_post("http://localhost:8081/reload", "").await {
+                        tracing::warn!("metro reload failed: {e}");
+                        let _ = tx.send(Action::MetroLogMessage(format!("[reload failed: {e}]")));
+                    }
+                });
+            }
+        }
+
+        Action::MetroLogMessage(msg) => {
+            state.metro_logs.push_back(msg);
+            if state.metro_logs.len() > MAX_LOG_LINES {
+                state.metro_logs.pop_front();
             }
         }
 
@@ -1618,13 +1631,20 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
         }
     }
 
-    // Cleanup: kill all child processes before exiting
+    // Cleanup: kill metro process group before exiting.
+    // We kill by PGID directly instead of going through the async metro_process_task,
+    // because aborting stream_task would race with the kill.
     if let Some(mut handle) = state.metro.take_handle() {
+        // Kill the entire process group (yarn + node) so port 8081 is freed.
+        // process_group(0) in spawn sets PGID = child PID, so -PID targets the group.
+        let _ = std::process::Command::new("kill")
+            .args(["-9", &format!("-{}", handle.pid)])
+            .output();
+        handle.stream_task.abort();
+        handle.stdin_task.abort();
         if let Some(kill_tx) = handle.kill_tx.take() {
             let _ = kill_tx.send(());
         }
-        handle.stream_task.abort();
-        handle.stdin_task.abort();
     }
     if let Some(task) = state.command_task.take() {
         task.abort();
@@ -1719,6 +1739,21 @@ async fn metro_process_task(
     }
 }
 
+/// Returns true for metro log lines that should be dropped before display.
+/// Conservative filter: only watchman noise and empty lines are suppressed.
+fn should_suppress_metro_line(line: &str) -> bool {
+    // Watchman warnings — primary noise source
+    if line.contains("watchman warning") || line.contains("watchman:") {
+        return true;
+    }
+    // Empty lines (startup banner decoration and blank separators)
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+    false
+}
+
 /// Reads stdout and stderr lines from the metro process and sends them as `MetroLogLine`.
 async fn stream_metro_logs(
     stdout: tokio::process::ChildStdout,
@@ -1734,13 +1769,21 @@ async fn stream_metro_logs(
         tokio::select! {
             line = stdout_lines.next_line() => {
                 match line {
-                    Ok(Some(l)) => { let _ = tx.send(Action::MetroLogLine(l)); }
+                    Ok(Some(l)) => {
+                        if !should_suppress_metro_line(&l) {
+                            let _ = tx.send(Action::MetroLogLine(l));
+                        }
+                    }
                     _ => break,
                 }
             }
             line = stderr_lines.next_line() => {
                 match line {
-                    Ok(Some(l)) => { let _ = tx.send(Action::MetroLogLine(l)); }
+                    Ok(Some(l)) => {
+                        if !should_suppress_metro_line(&l) {
+                            let _ = tx.send(Action::MetroLogLine(l));
+                        }
+                    }
                     _ => break,
                 }
             }
@@ -1760,4 +1803,22 @@ async fn stdin_writer(
             break;
         }
     }
+}
+
+/// Send an HTTP POST to metro's dev server (e.g. /reload, /open-debugger).
+/// Metro exposes these endpoints on port 8081 — no TTY/stdin needed.
+async fn metro_http_post(url: &str, body: &str) -> anyhow::Result<()> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()?;
+    let resp = client
+        .post(url)
+        .header("Content-Type", "application/json")
+        .body(body.to_string())
+        .send()
+        .await?;
+    if !resp.status().is_success() {
+        anyhow::bail!("HTTP {} from {}", resp.status(), url);
+    }
+    Ok(())
 }
