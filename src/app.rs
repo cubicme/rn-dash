@@ -127,6 +127,9 @@ pub struct AppState {
     // Pending label branch — set by StartSetLabel, consumed by ModalInputSubmit
     pub pending_label_branch: Option<String>,
 
+    // Pending claude open — stores worktree dir name while TextInput modal is open for tab suffix
+    pub pending_claude_open: Option<String>,
+
     // --- Phase 4 fields ---
     pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
@@ -183,6 +186,7 @@ impl Default for AppState {
             palette_mode: None,
             pending_device_command: None,
             pending_label_branch: None,
+            pending_claude_open: None,
             // Phase 5.2
             metro_log_auto_follow: true,
             pending_g: false,
@@ -1017,6 +1021,7 @@ pub fn update(
         Action::ModalCancel => {
             state.modal = None;
             state.palette_mode = None;
+            state.pending_claude_open = None;  // prevent pending state leak on Esc
         }
 
         Action::ModalInputChar(c) => {
@@ -1064,6 +1069,35 @@ pub fn update(
                                 metro_tx,
                                 handle_tx,
                             );
+                        } else if let Some(wt_id) = state.pending_claude_open.take() {
+                            // Claude tab name modal submit
+                            let suffix = if buffer.trim().is_empty() {
+                                "claude".to_string()
+                            } else {
+                                buffer
+                            };
+                            let wt = state.worktrees.iter()
+                                .find(|wt| wt.path.file_name()
+                                    .and_then(|n| n.to_str())
+                                    .unwrap_or("") == wt_id)
+                                .cloned();
+                            if let Some(wt) = wt {
+                                let name = format!("{}-{}", wt.preferred_prefix(), suffix);
+                                let path = wt.path.clone();
+                                let flags = state.claude_flags.clone();
+                                let command = if flags.is_empty() {
+                                    "claude".to_string()
+                                } else {
+                                    format!("claude {}", flags)
+                                };
+                                tokio::task::spawn_blocking(move || {
+                                    if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
+                                        if let Err(e) = mux.new_window(&path, &name, &command) {
+                                            tracing::warn!("multiplexer new_window (claude) failed: {e}");
+                                        }
+                                    }
+                                });
+                            }
                         } else {
                             // Build the real CommandSpec by filling in the text
                             let real_spec = match *pending_template {
@@ -1292,26 +1326,21 @@ pub fn update(
             let wt = if !state.worktrees.is_empty() {
                 let idx = state.worktree_table_state.selected().unwrap_or(0)
                     .min(state.worktrees.len() - 1);
-                state.worktrees[idx].clone()
+                &state.worktrees[idx]
             } else {
                 return;
             };
-            let path = wt.path.clone();
-            let name = format!("{}-claude", wt.preferred_prefix());
-            let flags = state.claude_flags.clone();
-            let command = if flags.is_empty() {
-                "claude".to_string()
-            } else {
-                format!("claude {}", flags)
-            };
-            tokio::task::spawn_blocking(move || {
-                // Re-detect inside spawn — env vars don't change mid-session, and this avoids
-                // the Clone issue with Box<dyn Multiplexer>.
-                if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
-                    if let Err(e) = mux.new_window(&path, &name, &command) {
-                        tracing::warn!("multiplexer new_window failed: {e}");
-                    }
-                }
+            // Store worktree dir name for later use when modal submits
+            state.pending_claude_open = Some(
+                wt.path.file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("")
+                    .to_string()
+            );
+            state.modal = Some(ModalState::TextInput {
+                prompt: "Claude tab suffix:".to_string(),
+                buffer: String::new(),
+                pending_template: Box::new(crate::domain::command::CommandSpec::YarnLint), // sentinel — not used
             });
         }
 
