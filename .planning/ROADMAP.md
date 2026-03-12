@@ -149,3 +149,15 @@ Plans:
 - [ ] 05.1-06-PLAN.md — Clean/sync/shell modals (CleanToggle wiring, sync-before-run prompt, shell command input)
 - [ ] 05.1-07-PLAN.md — Footer + help overlay (icon legend, new command scheme hints, complete help rewrite)
 - [ ] 05.1-08-PLAN.md — Integration wiring (release build queue, fetch-then-reset, sim sort, type-to-filter, queue UI)
+
+### Phase 06: final-ux-polish (INSERTED)
+
+**Goal:** Final UX polish — metro log filtering, tmux/zellij tab from worktree, metro running indicator, prefix ordering fix, optional claude tab name, double border on title
+**Requirements**: UX-06-01, UX-06-02, UX-06-03, UX-06-04, UX-06-05, UX-06-06
+**Depends on:** Phase 05.2
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Metro log noise suppression + play icon indicator
+- [ ] 06-02-PLAN.md — Open shell tab command (T key) + prefix ordering fix
+- [ ] 06-03-PLAN.md — Optional Claude tab name modal + title bar with double border
