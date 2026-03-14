@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 5.2 of 7 (Milestone Feedbacks) — IN PROGRESS
 Plan: 7 of 7 in current phase
 Status: Plan 05.2-07 Complete — UAT behavior fixes (scrollbar, fullscreen tab, debugger)
-Last activity: 2026-03-10 — Executed 05.2-07: scrollbar position fix, Tab-fullscreen cycling, metro debugger command
+Last activity: 2026-03-14 - Completed quick task 1: Auto-refresh stale data with periodic background polling
 
 Progress: [██████████] 97%
 
@@ -199,6 +199,12 @@ None.
 
 - [Phase 4 RESOLVED]: JIRA auth method resolved — DashConfig.auth_mode field supports both "cloud" (basic_auth email:token) and "datacenter" (bearer_auth PAT); user selects via config file
 - [Phase 5]: device selection UI (DevicePicker modal) fully implemented in Phase 3 — adb/xcrun parsers + modal wired and rendered
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Auto-refresh stale data with periodic background polling for branches labels and worktree state | 2026-03-14 | 084f98c | [1-auto-refresh-stale-data-with-periodic-ba](./quick/1-auto-refresh-stale-data-with-periodic-ba/) |
 
 ## Session Continuity
 
