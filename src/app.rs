@@ -726,6 +726,9 @@ pub fn update(
         }
 
         Action::WorktreesLoaded(mut worktrees) => {
+            // Reload labels from disk — picks up external edits made since last load
+            state.labels = crate::infra::labels::load_labels().unwrap_or_default();
+
             // Apply labels from state.labels: set wt.label for each worktree
             for wt in &mut worktrees {
                 wt.label = state.labels.get(&wt.branch).cloned();
@@ -1582,6 +1585,8 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
     let mut state = AppState::default();
     let mut events = EventStream::new();
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(250));
+    let mut refresh_interval = tokio::time::interval(std::time::Duration::from_secs(60));
+    refresh_interval.tick().await; // consume the immediate first tick (startup already loads worktrees)
 
     // Channel for background tasks (log lines, MetroExited, WorktreesLoaded, etc.)
     let (metro_tx, mut metro_rx) = tokio::sync::mpsc::unbounded_channel::<Action>();
@@ -1646,6 +1651,12 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
         tokio::select! {
             _ = tick.tick() => {
                 // Periodic tick: triggers redraw for time-based UI updates
+            }
+            _ = refresh_interval.tick() => {
+                // 60-second periodic refresh: keeps worktrees, staleness, labels, and JIRA titles current
+                if state.running_command.is_none() {
+                    update(&mut state, Action::RefreshWorktrees, &metro_tx, &handle_tx);
+                }
             }
             maybe_event = events.next() => {
                 let Some(Ok(event)) = maybe_event else { break };
