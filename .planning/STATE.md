@@ -206,9 +206,10 @@ None.
 |---|-------------|------|--------|-----------|
 | 1 | Auto-refresh stale data with periodic background polling for branches labels and worktree state | 2026-03-14 | 084f98c | [1-auto-refresh-stale-data-with-periodic-ba](./quick/1-auto-refresh-stale-data-with-periodic-ba/) |
 | 2 | Add g>D command to remove and purge a worktree with confirm modal, main-worktree guard, metro stop, and auto-refresh | 2026-03-21 | 2704df4 | [2-add-command-to-remove-and-purge-a-worktr](./quick/2-add-command-to-remove-and-purge-a-worktr/) |
+| 3 | Remove metro pane from UI layout and move metro control to 'm>' palette (two-panel layout, s/x/r/j/R bindings) | 2026-03-22 | 5d1ee23 | [260322-3nj-remove-metro-pane-and-move-metro-shortcu](./quick/260322-3nj-remove-metro-pane-and-move-metro-shortcu/) |
 
 ## Session Continuity
 
-Last session: 2026-03-21T18:28:00Z
-Stopped at: Completed quick-2
+Last session: 2026-03-22T22:41:25Z
+Stopped at: Completed quick-3 (260322-3nj)
 Resume file: None
