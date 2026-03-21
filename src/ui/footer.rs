@@ -95,6 +95,7 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("b", "checkout"),
                 ("c", "checkout -b"),
                 ("r", "rebase"),
+                ("D", "remove wt"),
                 ("Esc", "cancel"),
             ],
         };
