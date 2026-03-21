@@ -95,19 +95,6 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 
-        // Metro Pane section
-        Row::new(vec!["Metro Pane", ""])
-            .style(section_style),
-        Row::new(vec!["s",               "Start metro"]),
-        Row::new(vec!["x",               "Stop metro"]),
-        Row::new(vec!["r",               "Restart metro"]),
-        Row::new(vec!["l",               "Toggle log panel"]),
-        Row::new(vec!["J",               "Send debugger command (running)"]),
-        Row::new(vec!["R",               "Send reload command (running)"]),
-        Row::new(vec!["X",               "Clear log output"]),
-        Row::new(vec!["f",               "Toggle fullscreen"]),
-        Row::new(vec!["", ""]).style(dim_style),
-
         // Output Pane section
         Row::new(vec!["Output Pane", ""])
             .style(section_style),

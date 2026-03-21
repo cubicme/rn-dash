@@ -28,15 +28,10 @@ pub enum Action {
     MetroStart,
     MetroStop,
     MetroRestart,
-    MetroToggleLog,      // l key — toggles log panel visibility
-    MetroScrollUp,       // k when log panel focused
-    MetroScrollDown,     // j when log panel focused
-    MetroSendDebugger,   // J (shift-j, when metro pane focused) — HTTP POST /open-debugger
-    MetroSendReload,     // R (shift-r, when metro pane focused) — HTTP POST /reload
-    MetroLogMessage(String), // internal — push a message to metro log panel
+    MetroSendDebugger,   // j when metro palette active — HTTP POST /open-debugger
+    MetroSendReload,     // R when metro palette active — HTTP POST /reload
 
     // Metro background events (not user-triggered — sent by background tasks)
-    MetroLogLine(String),       // stdout/stderr line from metro streaming task
     MetroExited,                // metro process has stopped (port confirmed free)
     MetroSpawnFailed(String),   // spawn error message — surfaces to error_state
 
@@ -113,9 +108,6 @@ pub enum Action {
     // Phase 5.1: Sync-before-run
     SyncBeforeRunAccept,    // user said "Yes" to sync prompt
     SyncBeforeRunDecline,   // user said "No" to sync prompt — run without sync
-
-    // Phase 5.1: Log panel clear
-    LogPanelClear,          // 'x' when log panel focused — clears metro_logs
 
     // Phase 5.2: Universal scroll
     ScrollToTop,            // gg (two g presses) — scroll to top of focused scrollable pane

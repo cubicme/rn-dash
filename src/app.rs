@@ -6,9 +6,6 @@ use futures::StreamExt;
 use ratatui::crossterm::event::{EventStream, KeyCode, KeyEventKind};
 use std::path::PathBuf;
 
-/// Maximum number of metro log lines retained in memory.
-const MAX_LOG_LINES: usize = 1000;
-
 /// Maximum number of command output lines retained in memory.
 const MAX_COMMAND_LINES: usize = 1000;
 
@@ -17,23 +14,20 @@ const MAX_COMMAND_LINES: usize = 1000;
 pub enum FocusedPanel {
     #[default]
     WorktreeTable,
-    MetroPane,
     CommandOutput,
 }
 
 impl FocusedPanel {
     pub fn next(self) -> Self {
         match self {
-            Self::WorktreeTable => Self::MetroPane,
-            Self::MetroPane => Self::CommandOutput,
+            Self::WorktreeTable => Self::CommandOutput,
             Self::CommandOutput => Self::WorktreeTable,
         }
     }
     pub fn prev(self) -> Self {
         match self {
             Self::WorktreeTable => Self::CommandOutput,
-            Self::MetroPane => Self::WorktreeTable,
-            Self::CommandOutput => Self::MetroPane,
+            Self::CommandOutput => Self::WorktreeTable,
         }
     }
 }
@@ -73,12 +67,6 @@ pub struct AppState {
 
     // Metro state — single-instance enforced by MetroManager's Option<MetroHandle>
     pub metro: crate::domain::metro::MetroManager,
-
-    // Log panel
-    pub metro_logs: std::collections::VecDeque<String>,
-    pub log_scroll_offset: usize,
-    pub log_panel_visible: bool,
-    pub log_filter_active: bool,
 
     // Active worktree (updated from WorktreesLoaded + WorktreeSelectNext/Prev)
     pub active_worktree_path: Option<std::path::PathBuf>,
@@ -135,9 +123,6 @@ pub struct AppState {
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
 
     // --- Phase 5.2 fields ---
-    /// When true, metro log pane auto-scrolls to bottom on new content.
-    /// Set false on manual scroll up. Set true on ScrollToBottom (G).
-    pub metro_log_auto_follow: bool,
     /// First 'g' press sets this true; second 'g' triggers ScrollToTop. Cleared on any other action.
     pub pending_g: bool,
 
@@ -163,10 +148,6 @@ impl Default for AppState {
             error_state: None,
             should_quit: false,
             metro: crate::domain::metro::MetroManager::new(),
-            metro_logs: std::collections::VecDeque::new(),
-            log_scroll_offset: 0,
-            log_panel_visible: false,
-            log_filter_active: true,
             active_worktree_path: None,
             pending_restart: false,
             pending_switch_path: None,
@@ -191,7 +172,6 @@ impl Default for AppState {
             pending_label_branch: None,
             pending_claude_open: None,
             // Phase 5.2
-            metro_log_auto_follow: true,
             pending_g: false,
             // Phase 4
             jira_title_cache: std::collections::HashMap::new(),
@@ -364,32 +344,6 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     if state.fullscreen_panel.is_some() {
         if key.code == Tab {
             return Some(Action::ToggleFullscreen);
-        }
-    }
-
-    // --- METRO PANE SPECIFIC ---
-    if state.focused_panel == FocusedPanel::MetroPane {
-        match key.code {
-            Char('s') => return Some(Action::MetroStart),
-            Char('x') => return Some(Action::MetroStop),
-            Char('r') => return Some(Action::MetroRestart),
-            Char('l') => return Some(Action::MetroToggleLog),
-            Char('j') => return Some(Action::MetroScrollDown),
-            Char('k') => return Some(Action::MetroScrollUp),
-            Char('J') => return Some(Action::MetroSendDebugger),
-            Char('R') => return Some(Action::MetroSendReload),
-            Char('f') => return Some(Action::ToggleFullscreen),
-            Char('G') => return Some(Action::ScrollToBottom),
-            Char('g') => {
-                if state.pending_g {
-                    return Some(Action::ScrollToTop);
-                } else {
-                    return Some(Action::SetPendingG);
-                }
-            }
-            // Shift-X clears log panel (avoids collision with 'x' which stops metro)
-            Char('X') => return Some(Action::LogPanelClear),
-            _ => {} // fall through to normal navigation
         }
     }
 
@@ -605,61 +559,23 @@ pub fn update(
 
         Action::MetroSendDebugger => {
             if state.metro.is_running() {
-                state.metro_logs.push_back("[opening debugger...]".into());
-                if state.metro_logs.len() > MAX_LOG_LINES {
-                    state.metro_logs.pop_front();
-                }
-                let tx = metro_tx.clone();
                 tokio::spawn(async move {
                     let result = metro_http_post("http://localhost:8081/open-debugger", "{}").await;
-                    let msg = match result {
-                        Ok(_) => "[debugger opened via HTTP]".to_string(),
-                        Err(e) => format!("[debugger open failed: {e}]"),
-                    };
-                    let _ = tx.send(Action::MetroLogMessage(msg));
+                    match result {
+                        Ok(_) => tracing::info!("debugger opened via HTTP"),
+                        Err(e) => tracing::warn!("debugger open failed: {e}"),
+                    }
                 });
             }
         }
 
         Action::MetroSendReload => {
             if state.metro.is_running() {
-                let tx = metro_tx.clone();
                 tokio::spawn(async move {
                     if let Err(e) = metro_http_post("http://localhost:8081/reload", "").await {
                         tracing::warn!("metro reload failed: {e}");
-                        let _ = tx.send(Action::MetroLogMessage(format!("[reload failed: {e}]")));
                     }
                 });
-            }
-        }
-
-        Action::MetroLogMessage(msg) => {
-            state.metro_logs.push_back(msg);
-            if state.metro_logs.len() > MAX_LOG_LINES {
-                state.metro_logs.pop_front();
-            }
-        }
-
-        Action::MetroToggleLog => {
-            state.log_panel_visible = !state.log_panel_visible;
-        }
-
-        Action::MetroScrollUp => {
-            state.metro_log_auto_follow = false;
-            state.log_scroll_offset = state.log_scroll_offset.saturating_sub(1);
-        }
-
-        Action::MetroScrollDown => {
-            let max = state.metro_logs.len();
-            if state.log_scroll_offset < max {
-                state.log_scroll_offset += 1;
-            }
-        }
-
-        Action::MetroLogLine(line) => {
-            state.metro_logs.push_back(line);
-            if state.metro_logs.len() > MAX_LOG_LINES {
-                state.metro_logs.pop_front();
             }
         }
 
@@ -1035,6 +951,20 @@ pub fn update(
                 // Clean up per-worktree dashboard state
                 state.command_output_by_worktree.remove(&wt_id);
                 state.command_output_scroll_by_worktree.remove(&wt_id);
+
+                // Immediately remove from worktree list for instant visual feedback
+                state.worktrees.retain(|wt| wt.id != wt_id);
+                if state.worktrees.is_empty() {
+                    state.worktree_table_state.select(None);
+                    state.selected_worktree_id = None;
+                    state.active_worktree_path = None;
+                } else {
+                    let idx = state.worktree_table_state.selected().unwrap_or(0)
+                        .min(state.worktrees.len() - 1);
+                    state.worktree_table_state.select(Some(idx));
+                    state.selected_worktree_id = Some(state.worktrees[idx].id.clone());
+                    state.active_worktree_path = Some(state.worktrees[idx].path.clone());
+                }
 
                 // Spawn async removal task
                 let repo_root = state.repo_root.clone();
@@ -1508,9 +1438,9 @@ pub fn update(
                 state.fullscreen_panel = None;
                 state.focused_panel = state.focused_panel.next();
             } else {
-                // Only MetroPane and CommandOutput can be fullscreened
+                // Only CommandOutput can be fullscreened
                 match state.focused_panel {
-                    FocusedPanel::MetroPane | FocusedPanel::CommandOutput => {
+                    FocusedPanel::CommandOutput => {
                         state.fullscreen_panel = Some(state.focused_panel);
                     }
                     _ => {} // no-op for WorktreeTable
@@ -1551,20 +1481,10 @@ pub fn update(
                 dispatch_command(state, *run_command, metro_tx);
             }
         }
-        Action::LogPanelClear => {
-            state.metro_logs.clear();
-            state.log_scroll_offset = 0;
-            state.metro_log_auto_follow = true;
-        }
-
         // --- Phase 5.2: Universal scroll ---
 
         Action::ScrollToTop => {
             match state.focused_panel {
-                FocusedPanel::MetroPane => {
-                    state.log_scroll_offset = 0;
-                    state.metro_log_auto_follow = false;
-                }
                 FocusedPanel::CommandOutput => {
                     if let Some(id) = active_worktree_id(state) {
                         state.command_output_scroll_by_worktree.insert(id, 0);
@@ -1576,12 +1496,6 @@ pub fn update(
 
         Action::ScrollToBottom => {
             match state.focused_panel {
-                FocusedPanel::MetroPane => {
-                    // Set offset to max so rendering shows the bottom
-                    let max = state.metro_logs.len();
-                    state.log_scroll_offset = max;
-                    state.metro_log_auto_follow = true;
-                }
                 FocusedPanel::CommandOutput => {
                     if let Some(id) = active_worktree_id(state) {
                         let max = state.command_output_by_worktree
@@ -1888,12 +1802,11 @@ async fn metro_process_task(
     kill_rx: tokio::sync::oneshot::Receiver<()>,
     tx: tokio::sync::mpsc::UnboundedSender<Action>,
 ) {
-    let log_tx = tx.clone();
-    let log_task = tokio::spawn(stream_metro_logs(stdout, stderr, log_tx));
+    let drain_task = tokio::spawn(drain_metro_output(stdout, stderr));
 
     tokio::select! {
         _ = kill_rx => {
-            log_task.abort();
+            drain_task.abort();
             if let Err(e) = child.kill().await {
                 tracing::error!("metro kill failed: {e}");
             }
@@ -1906,61 +1819,41 @@ async fn metro_process_task(
             let _ = tx.send(Action::MetroExited);
         }
         _ = child.wait() => {
-            log_task.abort();
+            drain_task.abort();
             let _ = tx.send(Action::MetroExited);
         }
     }
 }
 
-/// Returns true for metro log lines that should be dropped before display.
-/// Conservative filter: only watchman noise and empty lines are suppressed.
-fn should_suppress_metro_line(line: &str) -> bool {
-    // Watchman warnings — primary noise source
-    if line.contains("watchman warning") || line.contains("watchman:") {
-        return true;
-    }
-    // Empty lines (startup banner decoration and blank separators)
-    let trimmed = line.trim();
-    if trimmed.is_empty() {
-        return true;
-    }
-    false
-}
-
-/// Reads stdout and stderr lines from the metro process and sends them as `MetroLogLine`.
-async fn stream_metro_logs(
+/// Drains stdout and stderr from the metro process to prevent pipe buffer blocking.
+/// Lines are discarded — metro log display has been removed in favour of the 'm' palette.
+async fn drain_metro_output(
     stdout: tokio::process::ChildStdout,
     stderr: tokio::process::ChildStderr,
-    tx: tokio::sync::mpsc::UnboundedSender<Action>,
 ) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
     let mut stdout_lines = BufReader::new(stdout).lines();
     let mut stderr_lines = BufReader::new(stderr).lines();
+    let mut stdout_done = false;
+    let mut stderr_done = false;
 
     loop {
         tokio::select! {
-            line = stdout_lines.next_line() => {
+            line = stdout_lines.next_line(), if !stdout_done => {
                 match line {
-                    Ok(Some(l)) => {
-                        if !should_suppress_metro_line(&l) {
-                            let _ = tx.send(Action::MetroLogLine(l));
-                        }
-                    }
-                    _ => break,
+                    Ok(Some(_)) => {}
+                    _ => { stdout_done = true; }
                 }
             }
-            line = stderr_lines.next_line() => {
+            line = stderr_lines.next_line(), if !stderr_done => {
                 match line {
-                    Ok(Some(l)) => {
-                        if !should_suppress_metro_line(&l) {
-                            let _ = tx.send(Action::MetroLogLine(l));
-                        }
-                    }
-                    _ => break,
+                    Ok(Some(_)) => {}
+                    _ => { stderr_done = true; }
                 }
             }
         }
+        if stdout_done && stderr_done { break; }
     }
 }
 

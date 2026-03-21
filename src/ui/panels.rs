@@ -11,7 +11,7 @@ use ratatui::{
 };
 use crate::{
     app::{AppState, FocusedPanel},
-    domain::{metro::MetroStatus, worktree::WorktreeMetroStatus},
+    domain::worktree::WorktreeMetroStatus,
     ui::theme,
 };
 
@@ -153,144 +153,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     f.render_stateful_widget(table, area, &mut state.worktree_table_state);
 }
 
-/// Renders the metro control pane (top-left) with status line and scrolling log output.
-pub fn render_metro_pane(f: &mut Frame, area: Rect, state: &AppState) {
-    let border_style = if state.focused_panel == FocusedPanel::MetroPane {
-        theme::style_focused_border()
-    } else {
-        theme::style_inactive_border()
-    };
-
-    // Dynamic title based on metro status
-    let title = match &state.metro.status {
-        MetroStatus::Running {
-            pid: _,
-            worktree_id,
-        } => {
-            // Look up the actual worktree to get the preferred display name
-            let wt_display = state
-                .worktrees
-                .iter()
-                .find(|wt| {
-                    wt.path
-                        .file_name()
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("")
-                        == worktree_id
-                })
-                .map(|wt| wt.preferred_prefix())
-                .unwrap_or_else(|| worktree_id.clone());
-
-            let wt_display = if wt_display.len() > 30 {
-                format!("{}...", &wt_display[..27])
-            } else {
-                wt_display
-            };
-            format!(" Metro -- running ({}) ", wt_display)
-        }
-        MetroStatus::Stopped => " Metro -- stopped ".to_string(),
-        MetroStatus::Starting => " Metro -- starting... ".to_string(),
-        MetroStatus::Stopping => " Metro -- stopping... ".to_string(),
-    };
-
-    let block = Block::bordered()
-        .border_type(BorderType::Double)
-        .title(title)
-        .title_style(Style::default().fg(Color::White))
-        .border_style(border_style);
-
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
-    if inner.height == 0 {
-        return;
-    }
-
-    // Metro log output fills entire inner area (status moved to title)
-    let lines: Vec<Line> = state
-        .metro_logs
-        .iter()
-        .map(|l| Line::from(l.as_str()))
-        .collect();
-
-    let visible_height = inner.height as usize;
-
-    // Auto-scroll to bottom when auto_follow is enabled
-    let scroll = if state.metro_log_auto_follow && !lines.is_empty() {
-        lines.len().saturating_sub(visible_height)
-    } else {
-        state.log_scroll_offset
-    };
-
-    let paragraph = Paragraph::new(Text::from(lines.clone())).scroll((scroll as u16, 0));
-
-    f.render_widget(paragraph, inner);
-
-    // Scrollbar when content exceeds visible area
-    if lines.len() > visible_height {
-        let max_scroll = lines.len() - visible_height;
-        let mut scrollbar_state = ScrollbarState::new(max_scroll).position(scroll.min(max_scroll));
-
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight),
-            inner,
-            &mut scrollbar_state,
-        );
-    }
-}
-
-/// Renders the scrollable metro log panel. Visible when state.log_panel_visible is true.
-pub fn render_log_panel(f: &mut Frame, area: Rect, state: &AppState) {
-    let border_style = if state.focused_panel == FocusedPanel::MetroPane {
-        theme::style_focused_border()
-    } else {
-        theme::style_inactive_border()
-    };
-
-    let lines: Vec<Line> = state
-        .metro_logs
-        .iter()
-        .map(|l| Line::from(l.as_str()))
-        .collect();
-
-    let visible_height = area.height.saturating_sub(2) as usize; // subtract borders
-
-    // Auto-scroll to bottom when auto_follow is enabled
-    let scroll = if state.metro_log_auto_follow && !lines.is_empty() {
-        lines.len().saturating_sub(visible_height)
-    } else {
-        state.log_scroll_offset
-    };
-
-    let paragraph = Paragraph::new(Text::from(lines.clone()))
-        .block(
-            Block::bordered()
-                .border_type(BorderType::Double)
-                .title(" Metro Log ")
-                .title_style(Style::default().fg(Color::White))
-                .border_style(border_style),
-        )
-        .scroll((scroll as u16, 0));
-
-    f.render_widget(paragraph, area);
-
-    // Scrollbar — only rendered when content exceeds visible area
-    if lines.len() > visible_height {
-        let max_scroll = lines.len() - visible_height;
-        let mut scrollbar_state = ScrollbarState::new(max_scroll).position(scroll.min(max_scroll));
-
-        f.render_stateful_widget(
-            Scrollbar::new(ScrollbarOrientation::VerticalRight),
-            area.inner(Margin {
-                vertical: 1,
-                horizontal: 0,
-            }),
-            &mut scrollbar_state,
-        );
-    }
-}
-
-/// Renders the command output pane (top-right) with real streaming output.
+/// Renders the command output pane (full top area) with real streaming output.
 pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
     let border_style = if state.focused_panel == FocusedPanel::CommandOutput {
         theme::style_focused_border()
