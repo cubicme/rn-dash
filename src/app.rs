@@ -52,6 +52,8 @@ pub enum PaletteMode {
     Sync,
     /// 'g' — Git submenu
     Git,
+    /// 'm' — Metro submenu
+    Metro,
 }
 
 /// Application state — the single source of truth. All mutations happen in update().
@@ -321,6 +323,15 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
+            PaletteMode::Metro => match key.code {
+                Char('s') => Some(Action::MetroStart),
+                Char('x') => Some(Action::MetroStop),
+                Char('r') => Some(Action::MetroRestart),
+                Char('j') => Some(Action::MetroSendDebugger),
+                Char('R') => Some(Action::MetroSendReload),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
         };
     }
 
@@ -357,6 +368,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('x') => return Some(Action::EnterCleanPalette),
             Char('s') => return Some(Action::EnterSyncPalette),
             Char('g') => return Some(Action::EnterGitPalette),
+            Char('m') => return Some(Action::EnterMetroPalette),
             Char('C') => return Some(Action::OpenClaudeCode),
             Char('T') => return Some(Action::OpenShellTab),
             Char('L') => return Some(Action::StartSetLabel),
@@ -1263,6 +1275,10 @@ pub fn update(
             // EnterRnPalette kept for backward compat — Phase 05.1 will remap 'c' key
             // to new submenu scheme. For now we just cancel palette mode.
             state.palette_mode = None;
+        }
+
+        Action::EnterMetroPalette => {
+            state.palette_mode = Some(PaletteMode::Metro);
         }
 
         // --- Phase 5: Worktree switching and Claude Code ---

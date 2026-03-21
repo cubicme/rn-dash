@@ -33,6 +33,7 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["x",               "Clean submenu"]),
         Row::new(vec!["s",               "Sync submenu"]),
         Row::new(vec!["g",               "Git submenu"]),
+        Row::new(vec!["m",               "Metro submenu"]),
         Row::new(vec!["C",               "Open Claude Code (tmux/zellij)"]),
         Row::new(vec!["T",               "Open shell tab at worktree"]),
         Row::new(vec!["L",               "Set custom branch label"]),
@@ -92,6 +93,17 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["c",               "git checkout -b <branch>"]),
         Row::new(vec!["r",               "git rebase <target>"]),
         Row::new(vec!["D",               "Remove worktree (purge)"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Metro palette section
+        Row::new(vec!["Metro  (m>)", ""])
+            .style(section_style),
+        Row::new(vec!["s",               "Start metro"]),
+        Row::new(vec!["x",               "Stop metro"]),
+        Row::new(vec!["r",               "Restart metro"]),
+        Row::new(vec!["j",               "Send debugger command"]),
+        Row::new(vec!["R",               "Send reload command"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 

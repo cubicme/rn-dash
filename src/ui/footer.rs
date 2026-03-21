@@ -98,6 +98,14 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("D", "remove wt"),
                 ("Esc", "cancel"),
             ],
+            PaletteMode::Metro => vec![
+                ("s", "start"),
+                ("x", "stop"),
+                ("r", "restart"),
+                ("j", "debugger"),
+                ("R", "reload"),
+                ("Esc", "cancel"),
+            ],
         };
     }
 

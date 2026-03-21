@@ -89,6 +89,9 @@ pub enum Action {
     EnterSyncPalette,       // 's' when WorktreeTable focused
     // EnterGitPalette already exists
 
+    // Quick-3nj: Metro palette
+    EnterMetroPalette,      // 'm' when WorktreeTable focused
+
     // Phase 5.1: Clean toggle actions
     CleanToggleNodeModules,
     CleanTogglePods,
