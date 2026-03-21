@@ -148,6 +148,9 @@ pub struct AppState {
     pub claude_flags: String,
     /// Loaded dashboard config — kept for runtime access to claude_flags and other settings.
     pub config: Option<crate::infra::config::DashConfig>,
+
+    // Quick-2: Worktree removal — set when g>D is pressed, consumed by ModalConfirm
+    pub pending_worktree_removal: Option<(crate::domain::worktree::WorktreeId, std::path::PathBuf, String)>,
 }
 
 impl Default for AppState {
@@ -197,6 +200,8 @@ impl Default for AppState {
             multiplexer: None,  // set properly in run()
             claude_flags: "--dangerously-skip-permissions".to_string(),
             config: None,
+            // Quick-2
+            pending_worktree_removal: None,
         }
     }
 }
@@ -332,6 +337,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout { branch: String::new() })),
                 Char('c') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew { branch: String::new() })),
                 Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase { target: String::new() })),
+                Char('D') => Some(Action::WorktreeRemove),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -1015,6 +1021,38 @@ pub fn update(
         }
 
         Action::ModalConfirm => {
+            // Check for pending worktree removal BEFORE falling through to normal confirm
+            if let Some((wt_id, wt_path, _branch)) = state.pending_worktree_removal.take() {
+                state.modal = None;
+
+                // Stop metro if it's running on the worktree being removed
+                if state.metro.is_running() {
+                    if state.active_worktree_path.as_ref() == Some(&wt_path) {
+                        update(state, Action::MetroStop, metro_tx, handle_tx);
+                    }
+                }
+
+                // Clean up per-worktree dashboard state
+                state.command_output_by_worktree.remove(&wt_id);
+                state.command_output_scroll_by_worktree.remove(&wt_id);
+
+                // Spawn async removal task
+                let repo_root = state.repo_root.clone();
+                let tx = metro_tx.clone();
+                let path_str = wt_path.to_string_lossy().to_string();
+                tokio::spawn(async move {
+                    match crate::infra::worktrees::remove_worktree(&repo_root, &wt_path).await {
+                        Ok(()) => {
+                            let _ = tx.send(Action::WorktreeRemoved(path_str));
+                        }
+                        Err(e) => {
+                            let _ = tx.send(Action::WorktreeRemoveFailed(e.to_string()));
+                        }
+                    }
+                });
+                return;
+            }
+
             if let Some(ModalState::Confirm { pending_command, .. }) = state.modal.take() {
                 // Dispatch directly — skip pre-processing (already confirmed)
                 dispatch_command(state, pending_command, metro_tx);
@@ -1024,7 +1062,8 @@ pub fn update(
         Action::ModalCancel => {
             state.modal = None;
             state.palette_mode = None;
-            state.pending_claude_open = None;  // prevent pending state leak on Esc
+            state.pending_claude_open = None;       // prevent pending state leak on Esc
+            state.pending_worktree_removal = None;  // discard any pending removal on cancel
         }
 
         Action::ModalInputChar(c) => {
@@ -1575,6 +1614,72 @@ pub fn update(
                     *scroll += 1;
                 }
             }
+        }
+
+        // --- Quick-2: Worktree removal ---
+
+        Action::WorktreeRemove => {
+            if state.worktrees.is_empty() {
+                return;
+            }
+            let idx = state.worktree_table_state.selected().unwrap_or(0)
+                .min(state.worktrees.len() - 1);
+            let wt = state.worktrees[idx].clone();
+
+            // Guard: cannot remove the main worktree (its path equals repo_root)
+            if wt.path == state.repo_root {
+                state.error_state = Some(ErrorState {
+                    message: "Cannot remove the main worktree".into(),
+                    can_retry: false,
+                });
+                state.palette_mode = None;
+                return;
+            }
+
+            // Store removal target so ModalConfirm knows what to do
+            state.pending_worktree_removal = Some((wt.id.clone(), wt.path.clone(), wt.branch.clone()));
+
+            // Build confirm prompt — mention metro if it will be stopped
+            let metro_note = if state.metro.is_running()
+                && state.active_worktree_path.as_ref() == Some(&wt.path)
+            {
+                " (metro will be stopped)"
+            } else {
+                ""
+            };
+            let prompt = format!("Remove worktree '{}' and delete directory?{}", wt.branch, metro_note);
+
+            // Use a sentinel CommandSpec for the confirm modal — the actual removal
+            // logic is in ModalConfirm when pending_worktree_removal is Some.
+            state.modal = Some(ModalState::Confirm {
+                prompt,
+                pending_command: crate::domain::command::CommandSpec::GitPull, // sentinel
+            });
+            state.palette_mode = None;
+        }
+
+        Action::WorktreeRemoved(path_str) => {
+            tracing::info!("worktree removed: {}", path_str);
+            // Refresh the worktree list to reflect the removal
+            let repo_root = state.repo_root.clone();
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                    Ok(wts) => {
+                        let _ = tx.send(Action::WorktreesLoaded(wts));
+                    }
+                    Err(e) => {
+                        tracing::warn!("worktree refresh after removal failed: {e}");
+                    }
+                }
+            });
+        }
+
+        Action::WorktreeRemoveFailed(err) => {
+            state.error_state = Some(ErrorState {
+                message: format!("Failed to remove worktree: {}", err),
+                can_retry: false,
+            });
         }
     }
 }

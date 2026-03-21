@@ -165,21 +165,71 @@ pub fn check_stale(worktree_path: &Path) -> bool {
     stale
 }
 
-/// Returns true when `ios/Pods` directory is missing or older than `ios/Podfile.lock`.
-/// Used by sync-before-run to determine if pod-install is needed before iOS runs.
+/// Returns true when pods are out of sync — same check CocoaPods' build phase uses:
+/// compare `ios/Podfile.lock` contents against `ios/Pods/Manifest.lock`.
+/// If they differ (or Manifest.lock is missing), pods need `pod install`.
 pub fn check_stale_pods(worktree_path: &Path) -> bool {
-    let pods_dir = worktree_path.join("ios").join("Pods");
     let podfile_lock = worktree_path.join("ios").join("Podfile.lock");
+    let manifest_lock = worktree_path.join("ios").join("Pods").join("Manifest.lock");
 
-    let pods_mtime = match std::fs::metadata(&pods_dir).and_then(|m| m.modified()) {
-        Ok(t) => t,
-        Err(_) => return true, // Pods/ absent → stale
+    let lock_bytes = match std::fs::read(&podfile_lock) {
+        Ok(b) => b,
+        Err(_) => return false, // no Podfile.lock → pods not expected
     };
 
-    match std::fs::metadata(&podfile_lock).and_then(|m| m.modified()) {
-        Ok(lock_mtime) => pods_mtime < lock_mtime,
-        Err(_) => false, // no Podfile.lock → can't determine staleness
+    let manifest_bytes = match std::fs::read(&manifest_lock) {
+        Ok(b) => b,
+        Err(_) => return true, // Manifest.lock missing → needs pod install
+    };
+
+    lock_bytes != manifest_bytes
+}
+
+/// Removes a worktree from git and deletes its directory.
+///
+/// Runs `git worktree remove --force <worktree_path>` followed by
+/// `git worktree prune` to clean up stale git metadata.
+///
+/// The `--force` flag is required when the worktree has local modifications or an
+/// untracked branch; it makes removal unconditional (analogous to `rm -rf` for the
+/// git side). After the remove command the directory is gone; prune cleans any
+/// leftover `.git/worktrees/<name>` entries.
+pub async fn remove_worktree(repo_root: &Path, worktree_path: &Path) -> anyhow::Result<()> {
+    let path_str = worktree_path.to_string_lossy().to_string();
+
+    let output = tokio::process::Command::new("git")
+        .args(["worktree", "remove", "--force", &path_str])
+        .current_dir(repo_root)
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git worktree remove --force failed: {}", stderr.trim());
     }
+
+    // Prune stale git metadata regardless of whether the directory is still present
+    let prune_output = tokio::process::Command::new("git")
+        .args(["worktree", "prune"])
+        .current_dir(repo_root)
+        .output()
+        .await?;
+
+    if !prune_output.status.success() {
+        // Non-fatal — log the warning but don't fail the overall removal
+        let stderr = String::from_utf8_lossy(&prune_output.stderr);
+        tracing::warn!("git worktree prune failed after removal: {}", stderr.trim());
+    }
+
+    // Safety check: directory should be gone after --force remove
+    if worktree_path.exists() {
+        tracing::warn!(
+            path = %worktree_path.display(),
+            "remove_worktree: directory still exists after git worktree remove --force"
+        );
+    }
+
+    Ok(())
 }
 
 /// Runs `git worktree list --porcelain` in `repo_root` and parses the output.

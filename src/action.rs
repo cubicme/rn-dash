@@ -128,4 +128,9 @@ pub enum Action {
     ExternalMetroDetected(crate::infra::port::ExternalMetroInfo), // port 8081 occupied by external process
     KillExternalMetro(u32),        // user chose "Kill it" with PID to kill
     MetroStartConfirmed,           // detection passed — proceed with actual metro spawn
+
+    // Quick-2: Worktree removal
+    WorktreeRemove,                   // user-triggered via g>D — shows confirm modal
+    WorktreeRemoved(String),          // background: removal succeeded (carries path string)
+    WorktreeRemoveFailed(String),     // background: removal failed (carries error message)
 }
