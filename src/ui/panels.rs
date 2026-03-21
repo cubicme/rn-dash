@@ -95,7 +95,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
             let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
                 Style::default()
-                    .fg(Color::Green)
+                    .bg(Color::Rgb(0, 60, 0))
                     .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
@@ -118,19 +118,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         })
         .collect();
 
-    let header = Row::new(vec![
-        Cell::from(""),
-        Cell::from("LABEL"),
-        Cell::from("BRANCH"),
-        Cell::from("TICKET"),
-        Cell::from("DIR"),
-    ])
-    .style(
-        Style::default()
-            .fg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD),
-    );
-
     let table = Table::new(
         rows,
         [
@@ -141,7 +128,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             Constraint::Length(16), // Dir
         ],
     )
-    .header(header)
     .block(block)
     .row_highlight_style(
         Style::default()
