@@ -205,9 +205,10 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Auto-refresh stale data with periodic background polling for branches labels and worktree state | 2026-03-14 | 084f98c | [1-auto-refresh-stale-data-with-periodic-ba](./quick/1-auto-refresh-stale-data-with-periodic-ba/) |
+| 2 | Add g>D command to remove and purge a worktree with confirm modal, main-worktree guard, metro stop, and auto-refresh | 2026-03-21 | 2704df4 | [2-add-command-to-remove-and-purge-a-worktr](./quick/2-add-command-to-remove-and-purge-a-worktr/) |
 
 ## Session Continuity
 
-Last session: 2026-03-12T09:15:18.610Z
-Stopped at: Completed 06-03-PLAN.md
+Last session: 2026-03-21T18:28:00Z
+Stopped at: Completed quick-2
 Resume file: None
