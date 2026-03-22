@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 5.2 of 7 (Milestone Feedbacks) — IN PROGRESS
 Plan: 7 of 7 in current phase
 Status: Plan 05.2-07 Complete — UAT behavior fixes (scrollbar, fullscreen tab, debugger)
-Last activity: 2026-03-22 - Completed quick task 260322-7pi: Skip iOS device picker, auto-select first device
+Last activity: 2026-03-22 - Completed quick task 260322-niz: Metro palette resets after command dispatch
 
 Progress: [██████████] 97%
 
@@ -208,6 +208,7 @@ None.
 | 2 | Add g>D command to remove and purge a worktree with confirm modal, main-worktree guard, metro stop, and auto-refresh | 2026-03-21 | 2704df4 | [2-add-command-to-remove-and-purge-a-worktr](./quick/2-add-command-to-remove-and-purge-a-worktr/) |
 | 3 | Remove metro pane from UI layout and move metro control to 'm>' palette (two-panel layout, s/x/r/j/R bindings) | 2026-03-22 | 5d1ee23 | [260322-3nj-remove-metro-pane-and-move-metro-shortcu](./quick/260322-3nj-remove-metro-pane-and-move-metro-shortcu/) |
 | 260322-7pi | Skip iOS device picker — i>d auto-selects first physical device via --device flag | 2026-03-22 | 0138701 | [260322-7pi-when-running-on-ios-device-don-t-show-th](./quick/260322-7pi-when-running-on-ios-device-don-t-show-th/) |
+| 260322-niz | Metro palette resets to root after dispatching any command (s/x/r/j/R) | 2026-03-22 | e797b5b | [260322-niz-metro-palette-should-reset-to-root-after](./quick/260322-niz-metro-palette-should-reset-to-root-after/) |
 
 ## Session Continuity
 
