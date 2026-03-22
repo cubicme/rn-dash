@@ -54,8 +54,8 @@ pub fn render_help(f: &mut Frame) {
         // iOS submenu section
         Row::new(vec!["iOS  (i>)", ""])
             .style(section_style),
-        Row::new(vec!["d",               "run-ios (device select)"]),
-        Row::new(vec!["e",               "Simulator (xcrun)"]),
+        Row::new(vec!["d",               "run-ios --device (auto-select)"]),
+        Row::new(vec!["e",               "Simulator list (xcrun)"]),
         Row::new(vec!["p",               "pod-install"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),

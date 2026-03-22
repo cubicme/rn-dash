@@ -66,8 +66,8 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("Esc", "cancel"),
             ],
             PaletteMode::Ios => vec![
-                ("d", "device"),
-                ("e", "simulator"),
+                ("d", "run-ios --device"),
+                ("e", "simulator list"),
                 ("p", "pod-install"),
                 ("Esc", "cancel"),
             ],
