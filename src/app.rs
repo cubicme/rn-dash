@@ -289,7 +289,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 _ => Some(Action::ModalCancel),
             },
             PaletteMode::Ios => match key.code {
-                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunIos { device_id: String::new() })),
+                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunIosDevice)),
                 Char('e') => Some(Action::CommandRun(CommandSpec::RnRunIos { device_id: String::new() })),
                 Char('p') => Some(Action::CommandRun(CommandSpec::YarnPodInstall)),
                 Esc => Some(Action::ModalCancel),
@@ -601,6 +601,8 @@ pub fn update(
                 }
                 update(state, Action::MetroStart, metro_tx, handle_tx);
             }
+            // Refresh worktree list so metro status (green bg) updates immediately
+            update(state, Action::RefreshWorktrees, metro_tx, handle_tx);
         }
 
         Action::MetroSpawnFailed(msg) => {
@@ -689,16 +691,6 @@ pub fn update(
                 }
             }
 
-            // Pin metro-active worktree to top of the list
-            if let Some(metro_idx) = worktrees.iter().position(|wt| {
-                wt.metro_status == crate::domain::worktree::WorktreeMetroStatus::Running
-            }) {
-                if metro_idx != 0 {
-                    let metro_wt = worktrees.remove(metro_idx);
-                    worktrees.insert(0, metro_wt);
-                }
-            }
-
             state.worktrees = worktrees;
 
             if !state.worktrees.is_empty() {
@@ -773,8 +765,8 @@ pub fn update(
             // Sync-before-run: stale worktree + run command triggers prompt
             if let Some((_, stale)) = &wt_branch {
                 if *stale {
-                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnReleaseBuild) {
-                        let needs_pods = matches!(spec, CommandSpec::RnRunIos { .. });
+                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
+                        let needs_pods = matches!(spec, CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice);
                         // Also check pods staleness for iOS
                         let needs_pods = if needs_pods {
                             let idx = state.worktree_table_state.selected().unwrap_or(0);
@@ -1711,6 +1703,7 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
             }
             Some(handle) = handle_rx.recv() => {
                 state.metro.register(handle);
+                update(&mut state, Action::RefreshWorktrees, &metro_tx, &handle_tx);
             }
         }
 

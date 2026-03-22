@@ -24,9 +24,10 @@ pub enum CommandSpec {
     YarnInstall,
     YarnPodInstall,
 
-    // RN run commands (2 variants)
+    // RN run commands (3 variants)
     RnRunAndroid { device_id: String },
     RnRunIos { device_id: String },
+    RnRunIosDevice,                     // i>d: run-ios --device (auto-selects first physical device)
 
     // Test/quality commands (4 variants)
     YarnUnitTests,
@@ -66,6 +67,9 @@ impl CommandSpec {
             }
             CommandSpec::RnRunIos { device_id } => {
                 vec!["yarn".into(), "react-native".into(), "run-ios".into(), "--udid".into(), device_id.clone()]
+            }
+            CommandSpec::RnRunIosDevice => {
+                vec!["yarn".into(), "react-native".into(), "run-ios".into(), "--device".into()]
             }
 
             CommandSpec::YarnUnitTests => vec!["yarn".into(), "unit-tests".into()],
@@ -136,6 +140,7 @@ impl CommandSpec {
             CommandSpec::YarnPodInstall => "yarn pod-install",
             CommandSpec::RnRunAndroid { .. } => "Run on Android device",
             CommandSpec::RnRunIos { .. } => "Run on iOS device",
+            CommandSpec::RnRunIosDevice => "Run on iOS device (auto)",
             CommandSpec::YarnUnitTests => "yarn unit-tests",
             CommandSpec::YarnJest { .. } => "yarn jest <filter>",
             CommandSpec::YarnLint => "yarn lint --quiet --fix",
