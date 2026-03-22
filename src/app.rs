@@ -523,6 +523,7 @@ pub fn update(
         // --- Metro control actions ---
 
         Action::MetroStart => {
+            state.palette_mode = None;
             if state.metro.is_running() {
                 state.pending_restart = true;
                 update(state, Action::MetroStop, metro_tx, handle_tx);
@@ -551,6 +552,7 @@ pub fn update(
         }
 
         Action::MetroStop => {
+            state.palette_mode = None;
             if let Some(mut handle) = state.metro.take_handle() {
                 state.metro.set_stopping();
                 if let Some(kill_tx) = handle.kill_tx.take() {
@@ -561,6 +563,7 @@ pub fn update(
         }
 
         Action::MetroRestart => {
+            state.palette_mode = None;
             if state.metro.is_running() {
                 state.pending_restart = true;
                 update(state, Action::MetroStop, metro_tx, handle_tx);
@@ -570,6 +573,7 @@ pub fn update(
         }
 
         Action::MetroSendDebugger => {
+            state.palette_mode = None;
             if state.metro.is_running() {
                 tokio::spawn(async move {
                     let result = metro_http_post("http://localhost:8081/open-debugger", "{}").await;
@@ -582,6 +586,7 @@ pub fn update(
         }
 
         Action::MetroSendReload => {
+            state.palette_mode = None;
             if state.metro.is_running() {
                 tokio::spawn(async move {
                     if let Err(e) = metro_http_post("http://localhost:8081/reload", "").await {
