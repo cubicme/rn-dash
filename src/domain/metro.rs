@@ -12,6 +12,29 @@
 // data — they carry no behavior until the infra layer acts on them. Domain/mod.rs does
 // NOT import infra, so ARCH-01 is maintained.
 
+/// Real-time activity state parsed from metro bundler stdout.
+#[derive(Debug, Clone, PartialEq)]
+pub enum MetroActivity {
+    Starting,
+    Ready,
+    Bundling { percent: Option<u8> },
+    DeviceConnected,
+    Error(String),
+}
+
+impl std::fmt::Display for MetroActivity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Starting => write!(f, "Starting..."),
+            Self::Ready => write!(f, "Ready"),
+            Self::Bundling { percent: Some(p) } => write!(f, "Bundling {}%", p),
+            Self::Bundling { percent: None } => write!(f, "Bundling..."),
+            Self::DeviceConnected => write!(f, "Device connected"),
+            Self::Error(msg) => write!(f, "Error: {}", msg),
+        }
+    }
+}
+
 /// Current observable state of the metro process as seen by the domain layer.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MetroStatus {
@@ -64,6 +87,8 @@ pub struct MetroManager {
     handle: Option<MetroHandle>,
     /// Public read-only status for UI rendering.
     pub status: MetroStatus,
+    /// Most recent activity parsed from metro stdout. None when metro is not running.
+    pub activity: Option<MetroActivity>,
 }
 
 impl MetroManager {
@@ -72,6 +97,7 @@ impl MetroManager {
         Self {
             handle: None,
             status: MetroStatus::Stopped,
+            activity: None,
         }
     }
 
@@ -97,10 +123,11 @@ impl MetroManager {
     }
 
     /// Clear the handle after the process has been killed and reaped.
-    /// Transitions status to Stopped.
+    /// Transitions status to Stopped and clears activity state.
     pub fn clear(&mut self) {
         self.handle = None;
         self.status = MetroStatus::Stopped;
+        self.activity = None;
     }
 
     /// Send a raw byte sequence to metro's stdin via the background stdin-writer task.
@@ -118,6 +145,7 @@ impl MetroManager {
     /// Transition to Starting state (spawn is in flight).
     pub fn set_starting(&mut self) {
         self.status = MetroStatus::Starting;
+        self.activity = Some(MetroActivity::Starting);
     }
 
     /// Transition to Stopping state (kill + port-free wait is in flight).

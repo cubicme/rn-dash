@@ -620,6 +620,10 @@ pub fn update(
             });
         }
 
+        Action::MetroActivityUpdate(activity) => {
+            state.metro.activity = Some(activity);
+        }
+
         Action::ExternalMetroDetected(info) => {
             state.modal = Some(ModalState::ExternalMetroConflict {
                 pid: info.pid,
@@ -1816,7 +1820,7 @@ async fn metro_process_task(
     kill_rx: tokio::sync::oneshot::Receiver<()>,
     tx: tokio::sync::mpsc::UnboundedSender<Action>,
 ) {
-    let drain_task = tokio::spawn(drain_metro_output(stdout, stderr));
+    let drain_task = tokio::spawn(drain_metro_output(stdout, stderr, tx.clone()));
 
     tokio::select! {
         _ = kill_rx => {
@@ -1839,11 +1843,71 @@ async fn metro_process_task(
     }
 }
 
-/// Drains stdout and stderr from the metro process to prevent pipe buffer blocking.
-/// Lines are discarded — metro log display has been removed in favour of the 'm' palette.
+/// Parses a single metro stdout/stderr line into a MetroActivity, if recognizable.
+///
+/// Uses simple string matching — no regex crate required.
+fn parse_metro_line(line: &str) -> Option<crate::domain::metro::MetroActivity> {
+    use crate::domain::metro::MetroActivity;
+
+    let lower = line.to_lowercase();
+
+    // Server ready signal
+    if line.contains("Welcome to Metro") || line.contains("Fast - Scalable - Integrated") {
+        return Some(MetroActivity::Ready);
+    }
+
+    // Device connection
+    if lower.contains("client connected") {
+        return Some(MetroActivity::DeviceConnected);
+    }
+
+    // Bundling progress — look for "BUNDLE" with optional percentage
+    if line.contains("BUNDLE") {
+        // Try to extract percentage: find digits followed by '%'
+        let percent = extract_percent(line);
+        return Some(MetroActivity::Bundling { percent });
+    }
+
+    // Error lines — skip source-map and deprecated noise
+    if lower.contains("error")
+        && !lower.contains("source-map")
+        && !lower.contains("deprecated")
+    {
+        let truncated = if line.len() > 80 { line[..80].to_string() } else { line.to_string() };
+        return Some(MetroActivity::Error(truncated));
+    }
+
+    None
+}
+
+/// Extracts the first percentage value (e.g. "75") from a string like "BUNDLE 75%".
+/// Returns None if no percentage pattern is found.
+fn extract_percent(s: &str) -> Option<u8> {
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i].is_ascii_digit() {
+            let start = i;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+            if i < bytes.len() && bytes[i] == b'%' {
+                let num_str = &s[start..i];
+                if let Ok(n) = num_str.parse::<u8>() {
+                    return Some(n);
+                }
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+/// Drains stdout and stderr from the metro process, parsing lines for activity updates.
 async fn drain_metro_output(
     stdout: tokio::process::ChildStdout,
     stderr: tokio::process::ChildStderr,
+    action_tx: tokio::sync::mpsc::UnboundedSender<Action>,
 ) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -1856,13 +1920,21 @@ async fn drain_metro_output(
         tokio::select! {
             line = stdout_lines.next_line(), if !stdout_done => {
                 match line {
-                    Ok(Some(_)) => {}
+                    Ok(Some(line)) => {
+                        if let Some(activity) = parse_metro_line(&line) {
+                            let _ = action_tx.send(Action::MetroActivityUpdate(activity));
+                        }
+                    }
                     _ => { stdout_done = true; }
                 }
             }
             line = stderr_lines.next_line(), if !stderr_done => {
                 match line {
-                    Ok(Some(_)) => {}
+                    Ok(Some(line)) => {
+                        if let Some(activity) = parse_metro_line(&line) {
+                            let _ = action_tx.send(Action::MetroActivityUpdate(activity));
+                        }
+                    }
                     _ => { stderr_done = true; }
                 }
             }

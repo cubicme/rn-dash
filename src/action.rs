@@ -34,6 +34,7 @@ pub enum Action {
     // Metro background events (not user-triggered — sent by background tasks)
     MetroExited,                // metro process has stopped (port confirmed free)
     MetroSpawnFailed(String),   // spawn error message — surfaces to error_state
+    MetroActivityUpdate(crate::domain::metro::MetroActivity), // parsed stdout activity
 
     // Phase 3: Worktree navigation
     WorktreeSelectNext,   // j/Down in WorktreeList panel
