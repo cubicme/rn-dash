@@ -209,9 +209,10 @@ None.
 | 3 | Remove metro pane from UI layout and move metro control to 'm>' palette (two-panel layout, s/x/r/j/R bindings) | 2026-03-22 | 5d1ee23 | [260322-3nj-remove-metro-pane-and-move-metro-shortcu](./quick/260322-3nj-remove-metro-pane-and-move-metro-shortcu/) |
 | 260322-7pi | Skip iOS device picker — i>d auto-selects first physical device via --device flag | 2026-03-22 | 0138701 | [260322-7pi-when-running-on-ios-device-don-t-show-th](./quick/260322-7pi-when-running-on-ios-device-don-t-show-th/) |
 | 260322-niz | Metro palette resets to root after dispatching any command (s/x/r/j/R) | 2026-03-22 | e797b5b | [260322-niz-metro-palette-should-reset-to-root-after](./quick/260322-niz-metro-palette-should-reset-to-root-after/) |
+| 260326-i4g | Parse metro stdout to detect activity (Ready/Bundling/Device connected) and display as inline detail row in worktree table | 2026-03-27 | dde2715 | [260326-i4g-parse-metro-output-to-detect-device-conn](./quick/260326-i4g-parse-metro-output-to-detect-device-conn/) |
 
 ## Session Continuity
 
-Last session: 2026-03-22T22:41:25Z
-Stopped at: Completed quick-3 (260322-3nj)
+Last session: 2026-03-27T10:55:13Z
+Stopped at: Completed quick 260326-i4g (parse metro output to detect device connection)
 Resume file: None
