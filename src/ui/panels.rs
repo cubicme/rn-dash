@@ -56,67 +56,102 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         return;
     }
 
-    let rows: Vec<Row> = state
-        .worktrees
-        .iter()
-        .map(|wt| {
-            let label = wt.label.as_deref().unwrap_or("");
-            let branch = &wt.branch;
+    let mut rows: Vec<Row> = Vec::new();
+    // Track visual row indices that are detail rows (not selectable worktree rows).
+    let mut detail_row_indices: Vec<usize> = Vec::new();
 
-            // Extract ticket number from branch if possible
-            let ticket_num = crate::infra::jira::extract_jira_key(branch).unwrap_or_default();
-            let title = wt.jira_title.as_deref().unwrap_or("");
+    for wt in state.worktrees.iter() {
+        let label = wt.label.as_deref().unwrap_or("");
+        let branch = &wt.branch;
 
-            // Merged ticket display: "UMP-1234 Title text" or just one or the other
-            let ticket_display = match (ticket_num.is_empty(), title.is_empty()) {
-                (false, false) => format!("{} {}", ticket_num, title),
-                (false, true) => ticket_num,
-                (true, false) => title.to_string(),
-                (true, true) => String::new(),
-            };
+        // Extract ticket number from branch if possible
+        let ticket_num = crate::infra::jira::extract_jira_key(branch).unwrap_or_default();
+        let title = wt.jira_title.as_deref().unwrap_or("");
 
-            // Status icons: always show Y (yarn) and /P (pods) with color indicating freshness
-            let mut icon_spans: Vec<Span> = Vec::new();
+        // Merged ticket display: "UMP-1234 Title text" or just one or the other
+        let ticket_display = match (ticket_num.is_empty(), title.is_empty()) {
+            (false, false) => format!("{} {}", ticket_num, title),
+            (false, true) => ticket_num,
+            (true, false) => title.to_string(),
+            (true, true) => String::new(),
+        };
 
-            // Metro indicator: play icon when running, space placeholder when not
-            if wt.metro_status == WorktreeMetroStatus::Running {
-                icon_spans.push(Span::styled("\u{25B6} ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
-            } else {
-                icon_spans.push(Span::raw("  "));
+        // Status icons: always show Y (yarn) and /P (pods) with color indicating freshness
+        let mut icon_spans: Vec<Span> = Vec::new();
+
+        // Metro indicator: play icon when running, space placeholder when not
+        if wt.metro_status == WorktreeMetroStatus::Running {
+            icon_spans.push(Span::styled("\u{25B6} ", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)));
+        } else {
+            icon_spans.push(Span::raw("  "));
+        }
+
+        // Yarn staleness: Y always shown, green=fresh, red=stale
+        let yarn_color = if wt.stale { Color::Red } else { Color::Green };
+        icon_spans.push(Span::styled("Y", Style::default().fg(yarn_color)));
+
+        // Pods staleness: /P always shown, green=fresh, red=stale
+        let pods_color = if wt.stale_pods { Color::Red } else { Color::Green };
+        icon_spans.push(Span::styled("/P", Style::default().fg(pods_color)));
+
+        let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
+            Style::default()
+                .bg(Color::Rgb(0, 60, 0))
+                .add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        // Extract dir name from path
+        let dir_name = wt.path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
+
+        rows.push(Row::new(vec![
+            Cell::from(Line::from(icon_spans)),
+            Cell::from(truncate(label, 12)),
+            Cell::from(truncate(branch, 18)),
+            Cell::from(ticket_display),
+            Cell::from(dir_name),
+        ])
+        .style(row_style));
+
+        // If this worktree is running metro and we have activity info, add a detail row
+        if wt.metro_status == WorktreeMetroStatus::Running {
+            if let Some(ref activity) = state.metro.activity {
+                let detail_row = Row::new(vec![
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(""),
+                    Cell::from(Span::styled(
+                        format!("\u{2502} {}", activity),
+                        Style::default().fg(Color::Cyan),
+                    )),
+                    Cell::from(""),
+                ])
+                .style(Style::default().bg(Color::Rgb(0, 60, 0)));
+                detail_row_indices.push(rows.len());
+                rows.push(detail_row);
             }
+        }
+    }
 
-            // Yarn staleness: Y always shown, green=fresh, red=stale
-            let yarn_color = if wt.stale { Color::Red } else { Color::Green };
-            icon_spans.push(Span::styled("Y", Style::default().fg(yarn_color)));
+    // Use green highlight when the selected row is metro-active, gray otherwise
+    let selected_idx = state.worktree_table_state.selected().unwrap_or(0);
+    let selected_is_metro = state.worktrees.get(selected_idx)
+        .map(|wt| wt.metro_status == WorktreeMetroStatus::Running)
+        .unwrap_or(false);
 
-            // Pods staleness: /P always shown, green=fresh, red=stale
-            let pods_color = if wt.stale_pods { Color::Red } else { Color::Green };
-            icon_spans.push(Span::styled("/P", Style::default().fg(pods_color)));
-
-            let row_style = if wt.metro_status == WorktreeMetroStatus::Running {
-                Style::default()
-                    .bg(Color::Rgb(0, 60, 0))
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default()
-            };
-
-            // Extract dir name from path
-            let dir_name = wt.path.file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("")
-                .to_string();
-
-            Row::new(vec![
-                Cell::from(Line::from(icon_spans)),
-                Cell::from(truncate(label, 12)),
-                Cell::from(truncate(branch, 18)),
-                Cell::from(ticket_display),
-                Cell::from(dir_name),
-            ])
-            .style(row_style)
-        })
-        .collect();
+    let highlight_style = if selected_is_metro {
+        Style::default()
+            .bg(Color::Rgb(0, 80, 0))
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default()
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD)
+    };
 
     let table = Table::new(
         rows,
@@ -129,14 +164,36 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         ],
     )
     .block(block)
-    .row_highlight_style(
-        Style::default()
-            .bg(Color::DarkGray)
-            .add_modifier(Modifier::BOLD),
-    )
+    .row_highlight_style(highlight_style)
     .highlight_symbol("> ");
 
+    // Map logical selection index to visual index (offset by any detail rows inserted before it)
+    if let Some(logical) = state.worktree_table_state.selected() {
+        let mut visual = logical;
+        for &detail_idx in &detail_row_indices {
+            if detail_idx <= visual {
+                visual += 1;
+            }
+        }
+        if visual != logical {
+            state.worktree_table_state.select(Some(visual));
+        }
+    }
+
     f.render_stateful_widget(table, area, &mut state.worktree_table_state);
+
+    // Restore logical index after render so app state stays consistent
+    if let Some(visual) = state.worktree_table_state.selected() {
+        let mut logical = visual;
+        for &detail_idx in detail_row_indices.iter().rev() {
+            if detail_idx <= logical && logical > 0 {
+                logical -= 1;
+            }
+        }
+        if logical != visual {
+            state.worktree_table_state.select(Some(logical));
+        }
+    }
 }
 
 /// Renders the command output pane (full top area) with real streaming output.
