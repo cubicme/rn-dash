@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 5.2 of 7 (Milestone Feedbacks) — IN PROGRESS
 Plan: 7 of 7 in current phase
 Status: Plan 05.2-07 Complete — UAT behavior fixes (scrollbar, fullscreen tab, debugger)
-Last activity: 2026-03-27 - Completed quick task 260326-i4g: parse metro output to detect device connection and build status
+Last activity: 2026-03-31 - Completed quick task 260331-cw5: fix android device listing, add --mode debugOptimized
 
 Progress: [██████████] 97%
 
@@ -210,9 +210,10 @@ None.
 | 260322-7pi | Skip iOS device picker — i>d auto-selects first physical device via --device flag | 2026-03-22 | 0138701 | [260322-7pi-when-running-on-ios-device-don-t-show-th](./quick/260322-7pi-when-running-on-ios-device-don-t-show-th/) |
 | 260322-niz | Metro palette resets to root after dispatching any command (s/x/r/j/R) | 2026-03-22 | e797b5b | [260322-niz-metro-palette-should-reset-to-root-after](./quick/260322-niz-metro-palette-should-reset-to-root-after/) |
 | 260326-i4g | Parse metro stdout to detect activity (Ready/Bundling/Device connected) and display as inline detail row in worktree table | 2026-03-27 | dde2715 | [260326-i4g-parse-metro-output-to-detect-device-conn](./quick/260326-i4g-parse-metro-output-to-detect-device-conn/) |
+| 260331-cw5 | Fix android device listing (model names via adb -l), add --mode debugOptimized, persist mode | 2026-03-31 | 3ec5df5 | [260331-cw5-fix-android-device-listing-add-mode-debu](./quick/260331-cw5-fix-android-device-listing-add-mode-debu/) |
 
 ## Session Continuity
 
-Last session: 2026-03-27T10:55:13Z
-Stopped at: Completed quick 260326-i4g (parse metro output to detect device connection)
+Last session: 2026-03-31T05:30:00Z
+Stopped at: Completed quick 260331-cw5 (android device listing + mode)
 Resume file: None
