@@ -14,18 +14,21 @@ use crate::domain::command::DeviceInfo;
 // Parsers (pure functions)
 // ---------------------------------------------------------------------------
 
-/// Parses `adb devices` output into a list of connected Android devices.
+/// Parses `adb devices -l` output into a list of connected Android devices.
 ///
-/// Sample output:
+/// Sample output (`adb devices -l`):
 /// ```text
 /// List of devices attached
-/// emulator-5554\tdevice
-/// R58MA1XR0XE\tdevice
-/// R58MB2YS1YF\toffline
+/// emulator-5552  device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:3
+/// R58MA1XR0XE    device product:a52sxq model:SM_A525F device:a52sxq transport_id:1
+/// R58MB2YS1YF    offline
 /// ```
+///
+/// Also handles the old `adb devices` format (no key:value pairs after state).
 ///
 /// Only entries with state == "device" are included. "offline", "unauthorized",
 /// "no permissions" entries are silently skipped.
+/// The `model:` field (if present) is used as the display name with underscores replaced by spaces.
 pub fn parse_adb_devices(output: &str) -> Vec<DeviceInfo> {
     output
         .lines()
@@ -33,22 +36,33 @@ pub fn parse_adb_devices(output: &str) -> Vec<DeviceInfo> {
         .filter(|line| !line.is_empty())
         .filter_map(|line| {
             // Fields are tab-separated: "<serial>\t<state>[extra]"
+            // With -l flag, extra is space-separated key:value pairs like "model:sdk_gphone64_arm64"
             let mut parts = line.splitn(2, '\t');
             let serial = parts.next()?.trim();
-            let state = parts.next()?.trim();
+            let rest = parts.next()?.trim();
 
-            // Some adb versions add extra info after the state (e.g. "device usb:...")
-            // Split on whitespace and take only the first token as the state.
-            let state_token = state.split_whitespace().next().unwrap_or("");
+            // Split on whitespace and take the first token as the state.
+            let mut tokens = rest.split_whitespace();
+            let state_token = tokens.next().unwrap_or("");
 
-            if state_token == "device" {
-                Some(DeviceInfo {
-                    id: serial.to_string(),
-                    name: serial.to_string(), // adb doesn't return a model name in list output
-                })
-            } else {
-                None
+            if state_token != "device" {
+                return None;
             }
+
+            // Try to extract model name from key:value pairs (adb devices -l format)
+            let model_name = tokens
+                .find(|t| t.starts_with("model:"))
+                .map(|t| {
+                    // Strip "model:" prefix and replace underscores with spaces
+                    t["model:".len()..].replace('_', " ")
+                });
+
+            let name = model_name.unwrap_or_else(|| serial.to_string());
+
+            Some(DeviceInfo {
+                id: serial.to_string(),
+                name,
+            })
         })
         .collect()
 }
@@ -169,10 +183,10 @@ pub fn parse_xctrace_devices(output: &str) -> Vec<DeviceInfo> {
 // Async runners
 // ---------------------------------------------------------------------------
 
-/// Runs `adb devices` and returns a list of connected Android devices.
+/// Runs `adb devices -l` and returns a list of connected Android devices with model names.
 pub async fn list_android_devices() -> anyhow::Result<Vec<DeviceInfo>> {
     let output = tokio::process::Command::new("adb")
-        .arg("devices")
+        .args(["devices", "-l"])
         .output()
         .await?;
 

@@ -13,3 +13,4 @@ pub mod jira_cache;
 pub mod tmux;
 pub mod multiplexer;
 pub mod sim_history;
+pub mod android_prefs;
