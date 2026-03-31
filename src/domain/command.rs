@@ -25,7 +25,7 @@ pub enum CommandSpec {
     YarnPodInstall,
 
     // RN run commands (3 variants)
-    RnRunAndroid { device_id: String },
+    RnRunAndroid { device_id: String, mode: Option<String> },
     RnRunIos { device_id: String },
     RnRunIosDevice,                     // i>d: run-ios --device (auto-selects first physical device)
 
@@ -62,8 +62,15 @@ impl CommandSpec {
             CommandSpec::YarnInstall => vec!["yarn".into(), "install".into()],
             CommandSpec::YarnPodInstall => vec!["yarn".into(), "pod-install".into()],
 
-            CommandSpec::RnRunAndroid { device_id } => {
-                vec!["npx".into(), "react-native".into(), "run-android".into(), "--deviceId".into(), device_id.clone()]
+            CommandSpec::RnRunAndroid { device_id, mode } => {
+                let mut argv = vec!["npx".into(), "react-native".into(), "run-android".into()];
+                if let Some(m) = mode {
+                    argv.push("--mode".into());
+                    argv.push(m.clone());
+                }
+                argv.push("--deviceId".into());
+                argv.push(device_id.clone());
+                argv
             }
             CommandSpec::RnRunIos { device_id } => {
                 vec!["yarn".into(), "react-native".into(), "run-ios".into(), "--udid".into(), device_id.clone()]

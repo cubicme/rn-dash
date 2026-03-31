@@ -138,6 +138,9 @@ pub struct AppState {
 
     // Quick-2: Worktree removal — set when g>D is pressed, consumed by ModalConfirm
     pub pending_worktree_removal: Option<(crate::domain::worktree::WorktreeId, std::path::PathBuf, String)>,
+
+    // Quick-260331-cw5: Android run mode — persisted preference (e.g. "debugOptimized")
+    pub android_mode: Option<String>,
 }
 
 impl Default for AppState {
@@ -184,6 +187,9 @@ impl Default for AppState {
             config: None,
             // Quick-2
             pending_worktree_removal: None,
+            // Quick-260331-cw5: load saved mode; default to "debugOptimized" on first run
+            android_mode: crate::infra::android_prefs::load_android_mode()
+                .or_else(|| Some("debugOptimized".to_string())),
         }
     }
 }
@@ -282,8 +288,8 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     if let Some(ref mode) = state.palette_mode {
         return match mode {
             PaletteMode::Android => match key.code {
-                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new() })),
-                Char('e') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new() })),
+                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new(), mode: state.android_mode.clone() })),
+                Char('e') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new(), mode: state.android_mode.clone() })),
                 Char('r') => Some(Action::CommandRun(CommandSpec::RnReleaseBuild)),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
@@ -1173,14 +1179,19 @@ pub fn update(
                     let device_id = device.id.clone();
                     let is_ios = matches!(pending_template.as_ref(), CommandSpec::RnRunIos { .. });
                     let real_spec = match *pending_template {
-                        CommandSpec::RnRunAndroid { .. } => CommandSpec::RnRunAndroid {
+                        CommandSpec::RnRunAndroid { mode, .. } => CommandSpec::RnRunAndroid {
                             device_id: device_id.clone(),
+                            mode,
                         },
                         CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
                             device_id: device_id.clone(),
                         },
                         other => other,
                     };
+                    // Persist Android mode if present
+                    if let CommandSpec::RnRunAndroid { mode: Some(ref m), .. } = real_spec {
+                        let _ = crate::infra::android_prefs::save_android_mode(m);
+                    }
                     // Record iOS simulator usage for sort-by-recent
                     if is_ios {
                         let _ = metro_tx.send(Action::SimulatorUsed(device_id));
@@ -1204,14 +1215,19 @@ pub fn update(
                     1 => {
                         // Only one device — skip picker
                         let real_spec = match spec {
-                            CommandSpec::RnRunAndroid { .. } => CommandSpec::RnRunAndroid {
+                            CommandSpec::RnRunAndroid { mode, .. } => CommandSpec::RnRunAndroid {
                                 device_id: devices[0].id.clone(),
+                                mode,
                             },
                             CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
                                 device_id: devices[0].id.clone(),
                             },
                             other => other,
                         };
+                        // Persist Android mode if present
+                        if let CommandSpec::RnRunAndroid { mode: Some(ref m), .. } = real_spec {
+                            let _ = crate::infra::android_prefs::save_android_mode(m);
+                        }
                         dispatch_command(state, real_spec, metro_tx);
                     }
                     _ => {
