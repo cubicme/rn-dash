@@ -95,7 +95,7 @@ Each task was committed atomically:
 1. **Task 1: Initialize Cargo project with correct dependency manifest** - `166c968` (chore)
 2. **Task 2: Create layered module stubs with correct isolation boundaries** - `87d2766` (feat)
 
-**Plan metadata:** (to be recorded in final commit)
+**Plan metadata:** `3aced0d` (docs: complete scaffold and module structure plan)
 
 ## Files Created/Modified
 

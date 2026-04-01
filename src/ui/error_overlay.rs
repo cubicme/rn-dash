@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Flex, Layout, Rect},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, Borders, Clear, Paragraph, Wrap},
     Frame,
 };
 use crate::{app::ErrorState, ui::theme};
@@ -38,7 +38,7 @@ pub fn render_error(f: &mut Frame, error: &ErrorState) {
 
     // Clear MUST come before the paragraph — erases background panels
     f.render_widget(Clear, area);
-    f.render_widget(Paragraph::new(lines).block(block), area);
+    f.render_widget(Paragraph::new(lines).block(block).wrap(Wrap { trim: true }), area);
 }
 
 /// Computes a centered Rect. Separate copy from help_overlay to avoid cross-widget coupling.

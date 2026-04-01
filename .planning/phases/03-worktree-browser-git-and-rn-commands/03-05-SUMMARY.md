@@ -119,6 +119,13 @@ None - no external service configuration required.
 - Phase 3 gap closed: truth #22 in 03-VERIFICATION.md is now satisfied
 - Phase 4 (JIRA integration) can proceed — JIRA auth method confirmation still required before implementation
 
+## Self-Check: PASSED
+
+- FOUND: src/domain/command.rs
+- FOUND: 03-05-SUMMARY.md
+- FOUND: task commit 68476f7 (fix(03-05): correct 6 CommandSpec to_argv() deviations)
+- FOUND: metadata commit 6c5fce8 (docs(03-05): complete gap closure plan)
+
 ---
 *Phase: 03-worktree-browser-git-and-rn-commands*
 *Completed: 2026-03-02*

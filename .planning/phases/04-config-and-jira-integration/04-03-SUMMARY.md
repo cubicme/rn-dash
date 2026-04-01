@@ -119,6 +119,14 @@ None - no external service configuration required.
 - display_name() available in domain layer for Phase 5 modal/status contexts
 - Phase 5 (worktree switching) can build on the clean list rendering foundation
 
+## Self-Check: PASSED
+
+- FOUND: src/ui/panels.rs
+- FOUND: src/domain/worktree.rs
+- FOUND: .planning/phases/04-config-and-jira-integration/04-03-SUMMARY.md
+- FOUND commit 1294a6b: feat(04-03): reorder worktree list rendering
+- FOUND commit b84f30f: docs(04-03): complete worktree list display fix plan
+
 ---
 *Phase: 04-config-and-jira-integration*
 *Completed: 2026-03-02*
