@@ -60,9 +60,10 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     if let Some(ref mode) = state.palette_mode {
         return match mode {
             PaletteMode::Android => vec![
-                ("d", "run-android (debug)"),
+                ("d", "run-android"),
                 ("e", "device list"),
                 ("r", "release build"),
+                ("m", "set mode"),
                 ("Esc", "cancel"),
             ],
             PaletteMode::Ios => vec![

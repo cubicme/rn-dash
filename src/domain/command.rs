@@ -68,8 +68,10 @@ impl CommandSpec {
                     argv.push("--mode".into());
                     argv.push(m.clone());
                 }
-                argv.push("--deviceId".into());
-                argv.push(device_id.clone());
+                if !device_id.is_empty() {
+                    argv.push("--device".into());
+                    argv.push(device_id.clone());
+                }
                 argv
             }
             CommandSpec::RnRunIos { device_id } => {
@@ -116,19 +118,23 @@ impl CommandSpec {
 
     /// Returns true for commands that need a user-supplied text string before running.
     pub fn needs_text_input(&self) -> bool {
-        matches!(
-            self,
+        match self {
             CommandSpec::GitRebase { .. }
-                | CommandSpec::GitCheckout { .. }
-                | CommandSpec::GitCheckoutNew { .. }
-                | CommandSpec::YarnJest { .. }
-                | CommandSpec::ShellCommand { .. }
-        )
+            | CommandSpec::GitCheckout { .. }
+            | CommandSpec::GitCheckoutNew { .. }
+            | CommandSpec::YarnJest { .. } => true,
+            CommandSpec::ShellCommand { command } => command.is_empty(),
+            _ => false,
+        }
     }
 
     /// Returns true for commands that require the user to pick a connected device first.
+    /// Only triggers when device_id is empty (not yet selected).
     pub fn needs_device_selection(&self) -> bool {
-        matches!(self, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. })
+        matches!(self,
+            CommandSpec::RnRunAndroid { device_id, .. } | CommandSpec::RnRunIos { device_id, .. }
+            if device_id.is_empty()
+        )
     }
 
     /// Human-readable label shown in the command palette and confirmation dialogs.

@@ -120,6 +120,9 @@ pub struct AppState {
     // Pending claude open — stores worktree dir name while TextInput modal is open for tab suffix
     pub pending_claude_open: Option<String>,
 
+    // Pending android mode change — set by StartSetAndroidMode, consumed by ModalInputSubmit
+    pub pending_android_mode: bool,
+
     // --- Phase 4 fields ---
     pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
@@ -176,6 +179,7 @@ impl Default for AppState {
             pending_device_command: None,
             pending_label_branch: None,
             pending_claude_open: None,
+            pending_android_mode: false,
             // Phase 5.2
             pending_g: false,
             // Phase 4
@@ -288,9 +292,15 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     if let Some(ref mode) = state.palette_mode {
         return match mode {
             PaletteMode::Android => match key.code {
-                Char('d') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new(), mode: state.android_mode.clone() })),
+                Char('d') => {
+                    let mode_flag = state.android_mode.as_ref().map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                    Some(Action::CommandRun(CommandSpec::ShellCommand {
+                        command: format!("npx react-native run-android{}", mode_flag),
+                    }))
+                },
                 Char('e') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new(), mode: state.android_mode.clone() })),
                 Char('r') => Some(Action::CommandRun(CommandSpec::RnReleaseBuild)),
+                Char('m') => Some(Action::StartSetAndroidMode),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -1012,6 +1022,7 @@ pub fn update(
             state.modal = None;
             state.palette_mode = None;
             state.pending_claude_open = None;       // prevent pending state leak on Esc
+            state.pending_android_mode = false;
             state.pending_worktree_removal = None;  // discard any pending removal on cancel
         }
 
@@ -1060,6 +1071,13 @@ pub fn update(
                                 metro_tx,
                                 handle_tx,
                             );
+                        } else if state.pending_android_mode {
+                            state.pending_android_mode = false;
+                            let mode = if buffer.trim().is_empty() { None } else { Some(buffer.trim().to_string()) };
+                            state.android_mode = mode.clone();
+                            if let Some(ref m) = mode {
+                                let _ = crate::infra::android_prefs::save_android_mode(m);
+                            }
                         } else if let Some(wt_id) = state.pending_claude_open.take() {
                             // Claude tab name modal submit
                             let suffix = if buffer.trim().is_empty() {
@@ -1177,7 +1195,26 @@ pub fn update(
                 };
                 if let Some(device) = filtered.get(selected) {
                     let device_id = device.id.clone();
+                    let device_name = device.name.clone();
                     let is_ios = matches!(pending_template.as_ref(), CommandSpec::RnRunIos { .. });
+                    let is_available_emulator = device_name.ends_with("(available)");
+
+                    // Available emulator: boot it, then run via shell command
+                    if is_available_emulator {
+                        if let CommandSpec::RnRunAndroid { mode, .. } = *pending_template {
+                            if let Some(ref m) = mode {
+                                let _ = crate::infra::android_prefs::save_android_mode(m);
+                            }
+                            let mode_flag = mode.map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                            let cmd = format!(
+                                "emulator -avd {} > /dev/null 2>&1 & adb wait-for-device && npx react-native run-android{}",
+                                device_id, mode_flag
+                            );
+                            dispatch_command(state, CommandSpec::ShellCommand { command: cmd }, metro_tx);
+                        }
+                        return;
+                    }
+
                     let real_spec = match *pending_template {
                         CommandSpec::RnRunAndroid { mode, .. } => CommandSpec::RnRunAndroid {
                             device_id: device_id.clone(),
@@ -1214,21 +1251,37 @@ pub fn update(
                     }
                     1 => {
                         // Only one device — skip picker
-                        let real_spec = match spec {
-                            CommandSpec::RnRunAndroid { mode, .. } => CommandSpec::RnRunAndroid {
-                                device_id: devices[0].id.clone(),
-                                mode,
-                            },
-                            CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
-                                device_id: devices[0].id.clone(),
-                            },
-                            other => other,
-                        };
-                        // Persist Android mode if present
-                        if let CommandSpec::RnRunAndroid { mode: Some(ref m), .. } = real_spec {
-                            let _ = crate::infra::android_prefs::save_android_mode(m);
+                        let is_available_emulator = devices[0].name.ends_with("(available)");
+
+                        // Available emulator: boot it, then run via shell command
+                        if is_available_emulator {
+                            if let CommandSpec::RnRunAndroid { mode, .. } = spec {
+                                if let Some(ref m) = mode {
+                                    let _ = crate::infra::android_prefs::save_android_mode(m);
+                                }
+                                let mode_flag = mode.map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                                let cmd = format!(
+                                    "emulator -avd {} > /dev/null 2>&1 & adb wait-for-device && npx react-native run-android{}",
+                                    devices[0].id, mode_flag
+                                );
+                                dispatch_command(state, CommandSpec::ShellCommand { command: cmd }, metro_tx);
+                            }
+                        } else {
+                            let real_spec = match spec {
+                                CommandSpec::RnRunAndroid { mode, .. } => CommandSpec::RnRunAndroid {
+                                    device_id: devices[0].id.clone(),
+                                    mode,
+                                },
+                                CommandSpec::RnRunIos { .. } => CommandSpec::RnRunIos {
+                                    device_id: devices[0].id.clone(),
+                                },
+                                other => other,
+                            };
+                            if let CommandSpec::RnRunAndroid { mode: Some(ref m), .. } = real_spec {
+                                let _ = crate::infra::android_prefs::save_android_mode(m);
+                            }
+                            dispatch_command(state, real_spec, metro_tx);
                         }
-                        dispatch_command(state, real_spec, metro_tx);
                     }
                     _ => {
                         // Multiple devices — show picker
@@ -1485,6 +1538,15 @@ pub fn update(
                 prompt: "Shell command:".to_string(),
                 buffer: String::new(),
                 pending_template: Box::new(CommandSpec::ShellCommand { command: String::new() }),
+            });
+        }
+        Action::StartSetAndroidMode => {
+            state.palette_mode = None;
+            state.pending_android_mode = true;
+            state.modal = Some(ModalState::TextInput {
+                prompt: "Android build mode:".to_string(),
+                buffer: state.android_mode.clone().unwrap_or_default(),
+                pending_template: Box::new(CommandSpec::YarnLint), // sentinel — not actually used
             });
         }
         Action::SimulatorUsed(udid) => {
@@ -1973,8 +2035,6 @@ async fn stdin_writer(
     }
 }
 
-/// Send an HTTP POST to metro's dev server (e.g. /reload, /open-debugger).
-/// Metro exposes these endpoints on port 8081 — no TTY/stdin needed.
 async fn metro_http_post(url: &str, body: &str) -> anyhow::Result<()> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))

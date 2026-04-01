@@ -183,15 +183,60 @@ pub fn parse_xctrace_devices(output: &str) -> Vec<DeviceInfo> {
 // Async runners
 // ---------------------------------------------------------------------------
 
-/// Runs `adb devices -l` and returns a list of connected Android devices with model names.
-pub async fn list_android_devices() -> anyhow::Result<Vec<DeviceInfo>> {
-    let output = tokio::process::Command::new("adb")
-        .args(["devices", "-l"])
-        .output()
-        .await?;
+/// Parses `emulator -list-avds` output into available (not necessarily running) emulator names.
+///
+/// Output is one AVD name per line, e.g.:
+/// ```text
+/// Pixel_7a
+/// Pixel_8a
+/// ```
+pub fn parse_avd_list(output: &str) -> Vec<DeviceInfo> {
+    output
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty())
+        .map(|name| DeviceInfo {
+            id: name.to_string(),
+            name: name.replace('_', " "),
+        })
+        .collect()
+}
 
-    let text = String::from_utf8_lossy(&output.stdout).to_string();
-    Ok(parse_adb_devices(&text))
+/// Runs `adb devices -l` + `emulator -list-avds` and returns the merged list.
+/// Running devices appear first; available (not running) emulators are appended
+/// with an "(available)" suffix so the user can distinguish them in the picker.
+pub async fn list_android_devices() -> anyhow::Result<Vec<DeviceInfo>> {
+    let (adb_output, avd_output) = tokio::join!(
+        tokio::process::Command::new("adb")
+            .args(["devices", "-l"])
+            .output(),
+        tokio::process::Command::new("emulator")
+            .arg("-list-avds")
+            .output(),
+    );
+
+    let mut devices = {
+        let text = String::from_utf8_lossy(&adb_output?.stdout).to_string();
+        parse_adb_devices(&text)
+    };
+
+    // Merge available AVDs that aren't already running
+    if let Ok(output) = avd_output {
+        let text = String::from_utf8_lossy(&output.stdout).to_string();
+        let avds = parse_avd_list(&text);
+        let running_ids: std::collections::HashSet<String> =
+            devices.iter().map(|d| d.id.clone()).collect();
+        for avd in avds {
+            if !running_ids.contains(&avd.id) {
+                devices.push(DeviceInfo {
+                    name: format!("{} (available)", avd.name),
+                    ..avd
+                });
+            }
+        }
+    }
+
+    Ok(devices)
 }
 
 /// Runs `xcrun simctl list devices available --json` and returns available iOS simulators.

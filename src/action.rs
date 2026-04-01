@@ -106,6 +106,9 @@ pub enum Action {
     // Phase 5.1: Shell command
     StartShellCommand,      // '!' key — opens text input modal for shell command
 
+    // Android mode
+    StartSetAndroidMode,    // a>m — opens text input modal for android build mode
+
     // Phase 5.1: Simulator history
     SimulatorUsed(String),  // record UDID after successful iOS run start
 

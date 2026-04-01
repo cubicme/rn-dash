@@ -21,7 +21,7 @@ pub trait ProcessClient: Send + Sync {
     /// The caller is responsible for taking those handles before any kill call
     /// (see research pitfall 5).
     ///
-    /// Always sets `DEBUG=Metro:*` so metro output streams to stdout.
+    /// Pipes stdout/stderr/stdin for capture by drain_metro_output.
     async fn spawn_metro(&self, worktree_path: PathBuf) -> anyhow::Result<Child>;
 }
 
@@ -45,9 +45,6 @@ impl ProcessClient for TokioProcessClient {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .stdin(std::process::Stdio::piped());
-
-        // Always set DEBUG=Metro:* so metro output streams to stdout.
-        cmd.env("DEBUG", "Metro:*");
 
         Ok(cmd.spawn()?)
     }
