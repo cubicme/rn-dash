@@ -132,4 +132,9 @@ pub enum Action {
     WorktreeRemove,                   // user-triggered via g>D — shows confirm modal
     WorktreeRemoved(String),          // background: removal succeeded (carries path string)
     WorktreeRemoveFailed(String),     // background: removal failed (carries error message)
+
+    // Quick: Worktree creation
+    WorktreeAdd,                      // user-triggered via g>W — shows TextInput modal for branch name
+    WorktreeAdded(String),            // background: creation succeeded (carries path string)
+    WorktreeAddFailed(String),        // background: creation failed (carries error message)
 }
