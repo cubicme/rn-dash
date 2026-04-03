@@ -211,9 +211,10 @@ None.
 | 260322-niz | Metro palette resets to root after dispatching any command (s/x/r/j/R) | 2026-03-22 | e797b5b | [260322-niz-metro-palette-should-reset-to-root-after](./quick/260322-niz-metro-palette-should-reset-to-root-after/) |
 | 260326-i4g | Parse metro stdout to detect activity (Ready/Bundling/Device connected) and display as inline detail row in worktree table | 2026-03-27 | dde2715 | [260326-i4g-parse-metro-output-to-detect-device-conn](./quick/260326-i4g-parse-metro-output-to-detect-device-conn/) |
 | 260331-cw5 | Fix android device listing (model names via adb -l), add --mode debugOptimized, persist mode | 2026-03-31 | 3ec5df5 | [260331-cw5-fix-android-device-listing-add-mode-debu](./quick/260331-cw5-fix-android-device-listing-add-mode-debu/) |
+| 260403-dmz | Add g>W command to create a new worktree via TextInput modal, async git worktree add, list refresh | 2026-04-03 | 87a1d21 | [260403-dmz-add-command-to-create-worktree-like-the-](./quick/260403-dmz-add-command-to-create-worktree-like-the-/) |
 
 ## Session Continuity
 
-Last session: 2026-03-31T05:30:00Z
-Stopped at: Completed quick 260331-cw5 (android device listing + mode)
+Last session: 2026-04-03T00:00:00Z
+Stopped at: Completed quick 260403-dmz (add worktree creation command g>W)
 Resume file: None
