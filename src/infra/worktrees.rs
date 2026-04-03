@@ -232,6 +232,54 @@ pub async fn remove_worktree(repo_root: &Path, worktree_path: &Path) -> anyhow::
     Ok(())
 }
 
+/// Creates a new worktree as a sibling directory of repo_root.
+///
+/// Computes the worktree path as `repo_root.parent().unwrap().join(branch_name)`.
+/// Runs `git worktree add -b <branch_name> <path>` to create a new branch, or
+/// retries with `git worktree add <path> <branch_name>` if the branch already exists.
+/// Returns the created worktree path on success.
+pub async fn add_worktree(repo_root: &Path, branch_name: &str) -> anyhow::Result<std::path::PathBuf> {
+    let parent = repo_root.parent().ok_or_else(|| anyhow::anyhow!("repo_root has no parent directory"))?;
+    let worktree_path = parent.join(branch_name);
+
+    if worktree_path.exists() {
+        anyhow::bail!("Directory already exists: {}", worktree_path.display());
+    }
+
+    let path_str = worktree_path.to_string_lossy().to_string();
+
+    // First try: create with new branch (-b flag)
+    let output = tokio::process::Command::new("git")
+        .args(["worktree", "add", &path_str, "-b", branch_name])
+        .current_dir(repo_root)
+        .output()
+        .await?;
+
+    if output.status.success() {
+        return Ok(worktree_path);
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // If branch already exists, retry without -b to checkout existing branch
+    if stderr.contains("already exists") || stderr.contains("branch") {
+        let retry_output = tokio::process::Command::new("git")
+            .args(["worktree", "add", &path_str, branch_name])
+            .current_dir(repo_root)
+            .output()
+            .await?;
+
+        if retry_output.status.success() {
+            return Ok(worktree_path);
+        }
+
+        let retry_stderr = String::from_utf8_lossy(&retry_output.stderr);
+        anyhow::bail!("git worktree add failed: {}", retry_stderr.trim());
+    }
+
+    anyhow::bail!("git worktree add -b failed: {}", stderr.trim());
+}
+
 /// Runs `git worktree list --porcelain` in `repo_root` and parses the output.
 pub async fn list_worktrees(repo_root: &Path) -> anyhow::Result<Vec<Worktree>> {
     let output = tokio::process::Command::new("git")

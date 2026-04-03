@@ -144,6 +144,9 @@ pub struct AppState {
 
     // Quick-260331-cw5: Android run mode — persisted preference (e.g. "debugOptimized")
     pub android_mode: Option<String>,
+
+    // Quick-260403-dmz: Worktree creation — set when g>W is pressed, consumed by ModalInputSubmit
+    pub pending_worktree_add: bool,
 }
 
 impl Default for AppState {
@@ -194,6 +197,8 @@ impl Default for AppState {
             // Quick-260331-cw5: load saved mode; default to "debugOptimized" on first run
             android_mode: crate::infra::android_prefs::load_android_mode()
                 .or_else(|| Some("debugOptimized".to_string())),
+            // Quick-260403-dmz
+            pending_worktree_add: false,
         }
     }
 }
@@ -335,6 +340,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout { branch: String::new() })),
                 Char('c') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew { branch: String::new() })),
                 Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase { target: String::new() })),
+                Char('W') => Some(Action::WorktreeAdd),
                 Char('D') => Some(Action::WorktreeRemove),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
@@ -1024,6 +1030,7 @@ pub fn update(
             state.pending_claude_open = None;       // prevent pending state leak on Esc
             state.pending_android_mode = false;
             state.pending_worktree_removal = None;  // discard any pending removal on cancel
+            state.pending_worktree_add = false;     // discard any pending add on cancel
         }
 
         Action::ModalInputChar(c) => {
@@ -1078,6 +1085,24 @@ pub fn update(
                             if let Some(ref m) = mode {
                                 let _ = crate::infra::android_prefs::save_android_mode(m);
                             }
+                        } else if state.pending_worktree_add {
+                            state.pending_worktree_add = false;
+                            let branch_name = buffer.trim().to_string();
+                            if branch_name.is_empty() {
+                                return;
+                            }
+                            let repo_root = state.repo_root.clone();
+                            let tx = metro_tx.clone();
+                            tokio::spawn(async move {
+                                match crate::infra::worktrees::add_worktree(&repo_root, &branch_name).await {
+                                    Ok(path) => {
+                                        let _ = tx.send(Action::WorktreeAdded(path.to_string_lossy().to_string()));
+                                    }
+                                    Err(e) => {
+                                        let _ = tx.send(Action::WorktreeAddFailed(e.to_string()));
+                                    }
+                                }
+                            });
                         } else if let Some(wt_id) = state.pending_claude_open.take() {
                             // Claude tab name modal submit
                             let suffix = if buffer.trim().is_empty() {
@@ -1687,6 +1712,42 @@ pub fn update(
         Action::WorktreeRemoveFailed(err) => {
             state.error_state = Some(ErrorState {
                 message: format!("Failed to remove worktree: {}", err),
+                can_retry: false,
+            });
+        }
+
+        // --- Quick-260403-dmz: Worktree creation ---
+
+        Action::WorktreeAdd => {
+            state.palette_mode = None;
+            state.pending_worktree_add = true;
+            state.modal = Some(ModalState::TextInput {
+                prompt: "New worktree branch name:".to_string(),
+                buffer: String::new(),
+                pending_template: Box::new(crate::domain::command::CommandSpec::GitPull), // sentinel — not used
+            });
+        }
+
+        Action::WorktreeAdded(path_str) => {
+            tracing::info!("worktree added: {}", path_str);
+            // Refresh the worktree list to show the new worktree
+            let repo_root = state.repo_root.clone();
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                    Ok(wts) => {
+                        let _ = tx.send(Action::WorktreesLoaded(wts));
+                    }
+                    Err(e) => {
+                        tracing::warn!("worktree refresh after add failed: {e}");
+                    }
+                }
+            });
+        }
+
+        Action::WorktreeAddFailed(err) => {
+            state.error_state = Some(ErrorState {
+                message: format!("Failed to create worktree: {}", err),
                 can_retry: false,
             });
         }
