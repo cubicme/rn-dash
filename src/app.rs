@@ -454,7 +454,7 @@ fn dispatch_command(
     // Append a separator line to per-worktree output — output persists, not cleared on new command
     let wt_id = wt.id.clone();
     let output = state.command_output_by_worktree.entry(wt_id.clone()).or_default();
-    output.push_back(format!("--- {} ---", spec.label()));
+    output.push_back(format!("$ {}", spec.to_argv().join(" ")));
     // Cap per-worktree output at MAX_COMMAND_LINES
     while output.len() > MAX_COMMAND_LINES {
         output.pop_front();
