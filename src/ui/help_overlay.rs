@@ -92,6 +92,7 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["b",               "git checkout <branch>"]),
         Row::new(vec!["c",               "git checkout -b <branch>"]),
         Row::new(vec!["r",               "git rebase <target>"]),
+        Row::new(vec!["W",               "Add new worktree"]),
         Row::new(vec!["D",               "Remove worktree (purge)"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
