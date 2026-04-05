@@ -279,6 +279,57 @@ pub async fn add_worktree(repo_root: &Path, branch_name: &str) -> anyhow::Result
     anyhow::bail!("git worktree add -b failed: {}", stderr.trim());
 }
 
+/// Lists remote branch names by running `git branch -r` in repo_root.
+/// Returns branch names with "origin/" prefix stripped, excluding HEAD pointers.
+/// Results are sorted alphabetically.
+pub async fn list_remote_branches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
+    let output = tokio::process::Command::new("git")
+        .args(["branch", "-r", "--no-color"])
+        .current_dir(repo_root)
+        .output()
+        .await?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git branch -r failed: {}", stderr);
+    }
+    let text = String::from_utf8(output.stdout)?;
+    let mut branches: Vec<String> = text.lines()
+        .map(|l| l.trim())
+        .filter(|l| !l.is_empty() && !l.contains("->"))  // skip HEAD -> origin/main
+        .map(|l| l.strip_prefix("origin/").unwrap_or(l).to_string())
+        .collect();
+    branches.sort();
+    branches.dedup();
+    Ok(branches)
+}
+
+/// Creates a worktree with a new branch based on a given base branch.
+/// Runs `git worktree add -b <new_branch> <path> origin/<base_branch>`.
+/// Returns the created worktree path on success.
+pub async fn add_worktree_new_branch(
+    repo_root: &Path,
+    new_branch: &str,
+    base_branch: &str,
+) -> anyhow::Result<std::path::PathBuf> {
+    let parent = repo_root.parent()
+        .ok_or_else(|| anyhow::anyhow!("repo_root has no parent directory"))?;
+    let worktree_path = parent.join(new_branch);
+    if worktree_path.exists() {
+        anyhow::bail!("Directory already exists: {}", worktree_path.display());
+    }
+    let path_str = worktree_path.to_string_lossy().to_string();
+    let output = tokio::process::Command::new("git")
+        .args(["worktree", "add", "-b", new_branch, &path_str, &format!("origin/{}", base_branch)])
+        .current_dir(repo_root)
+        .output()
+        .await?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("git worktree add -b failed: {}", stderr.trim());
+    }
+    Ok(worktree_path)
+}
+
 /// Runs `git worktree list --porcelain` in `repo_root` and parses the output.
 pub async fn list_worktrees(repo_root: &Path) -> anyhow::Result<Vec<Worktree>> {
     let output = tokio::process::Command::new("git")
