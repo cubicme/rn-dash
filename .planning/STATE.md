@@ -215,6 +215,7 @@ None.
 | 260331-cw5 | Fix android device listing (model names via adb -l), add --mode debugOptimized, persist mode | 2026-03-31 | 3ec5df5 | [260331-cw5-fix-android-device-listing-add-mode-debu](./quick/260331-cw5-fix-android-device-listing-add-mode-debu/) |
 | 260403-dmz | Add g>W command to create a new worktree via TextInput modal, async git worktree add, list refresh | 2026-04-03 | 87a1d21 | [260403-dmz-add-command-to-create-worktree-like-the-](./quick/260403-dmz-add-command-to-create-worktree-like-the-/) |
 | 260405-ijq | Make metro a prerequisite for running ios and android, starting before the build | 2026-04-05 | 900f79a | [260405-ijq-make-metro-a-prerequisite-for-running-io](./quick/260405-ijq-make-metro-a-prerequisite-for-running-io/) |
+| 260405-jqb | Fix prompt rendering in small terminal heights | 2026-04-05 | 4f85b4c | [260405-jqb-fix-prompt-rendering-in-small-terminal-h](./quick/260405-jqb-fix-prompt-rendering-in-small-terminal-h/) |
 
 ## Session Continuity
 
