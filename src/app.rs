@@ -178,7 +178,7 @@ impl Default for AppState {
             running_command: None,
             command_task: None,
             modal: None,
-            repo_root: PathBuf::new(),
+            repo_root: std::env::current_dir().unwrap_or_default(),
             palette_mode: None,
             pending_device_command: None,
             pending_claude_open: None,
