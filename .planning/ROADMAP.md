@@ -58,11 +58,13 @@ Plans:
   4. Metro R (reload) and J (debugger) keys appear in hints only when metro is running
   5. User can press ESC to stop metro when metro is running; no separate restart key exists
   6. Hint line reflects only currently available actions (no stale or inapplicable hints shown)
-**Plans**: 3 plans
+**Plans**: 5 plans
 Plans:
 - [x] 08-01-PLAN.md — Restructure palettes: rename Sync to Yarn, extract Worktree from Git, update hints and help
 - [ ] 08-02-PLAN.md — New-branch worktree creation with interactive base branch picker
 - [x] 08-03-PLAN.md — Context-sensitive metro keys, dynamic footer hints, remove stale legend
+- [ ] 08-04-PLAN.md — Gap closure: lowercase worktree palette keys, remove metro palette, fix metro conflict detection
+- [ ] 08-05-PLAN.md — Gap closure: switch config to TOML, remove README screenshot section
 **UI hint**: yes
 
 ### Phase 09: Generalization and GitHub Prep
@@ -104,6 +106,6 @@ Plans:
 | 05.2 Milestone Feedbacks | v1.0 | 10/10 | Complete | — |
 | 06. Final UX Polish | v1.0 | 3/3 | Complete | — |
 | 07. Labels Removal | v1.1 | 0/1 | Planned | - |
-| 08. Palette and Keybinding Rework | v1.1 | 0/3 | Planned | - |
-| 09. Generalization and GitHub Prep | v1.1 | 0/2 | Planned    |  |
+| 08. Palette and Keybinding Rework | v1.1 | 2/5 | In Progress | - |
+| 09. Generalization and GitHub Prep | v1.1 | 1/2 | In Progress |  |
 | 10. CI and Release | v1.1 | 0/1 | Planned | - |
