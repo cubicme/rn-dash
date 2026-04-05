@@ -14,10 +14,6 @@ Built with [Ratatui](https://ratatui.rs) in Rust.
 - Open Claude Code in tmux/zellij splits
 - Context-sensitive keybindings with dynamic hints
 
-## Screenshot
-
-<!-- TODO: Add screenshot -->
-
 ## Installation / Build
 
 **Prerequisites:** Rust toolchain — install from [rustup.rs](https://rustup.rs)
@@ -37,12 +33,12 @@ cp target/release/rn-dash ~/.local/bin/
 
 ## Configuration
 
-Config file location: `~/.config/rn-dash/config.json`
+Config file location: `~/.config/rn-dash/config.toml`
 
 Copy the example and fill in your values:
 
 ```bash
-cp config.example.json ~/.config/rn-dash/config.json
+cp config.example.toml ~/.config/rn-dash/config.toml
 ```
 
 The file is stored with `0600` permissions because it contains JIRA credentials.
@@ -60,7 +56,7 @@ The file is stored with `0600` permissions because it contains JIRA credentials.
 | `app_title` | string | `"RN Dash"` | Title shown in the dashboard header. |
 | `claude_flags` | string | `"--dangerously-skip-permissions"` | Flags passed when launching Claude Code. |
 
-See `config.example.json` for an annotated template.
+See `config.example.toml` for an annotated template.
 
 ## Usage
 

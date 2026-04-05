@@ -1,7 +1,7 @@
 // src/infra/config.rs
 //
 // Dashboard configuration persistence.
-// Config is stored at ~/.config/rn-dash/config.json with 0600 permissions
+// Config is stored at ~/.config/rn-dash/config.toml with 0600 permissions
 // because it contains JIRA credentials (token/email).
 
 #![allow(dead_code)]
@@ -30,7 +30,7 @@ fn default_app_title() -> String {
     "RN Dash".to_string()
 }
 
-/// Application configuration stored in ~/.config/rn-dash/config.json.
+/// Application configuration stored in ~/.config/rn-dash/config.toml.
 ///
 /// Security note: this file is written with 0600 permissions on Unix because
 /// `jira_token` is a credential. Never log or display the token value.
@@ -92,10 +92,10 @@ impl DashConfig {
 /// treat this as "not configured" and either prompt the user or skip JIRA
 /// integration silently. All other I/O errors are propagated.
 pub fn load_config() -> anyhow::Result<Option<DashConfig>> {
-    let path = config_dir().join("config.json");
+    let path = config_dir().join("config.toml");
     match std::fs::read_to_string(&path) {
         Ok(contents) => {
-            let config: DashConfig = serde_json::from_str(&contents)?;
+            let config: DashConfig = toml::from_str(&contents)?;
             Ok(Some(config))
         }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -103,7 +103,7 @@ pub fn load_config() -> anyhow::Result<Option<DashConfig>> {
     }
 }
 
-/// Saves the dashboard configuration to disk as pretty-printed JSON.
+/// Saves the dashboard configuration to disk as TOML.
 ///
 /// Creates the config directory if it does not already exist.
 /// On Unix systems the file is immediately chmod'd to 0600 so that the JIRA
@@ -111,9 +111,9 @@ pub fn load_config() -> anyhow::Result<Option<DashConfig>> {
 pub fn save_config(config: &DashConfig) -> anyhow::Result<()> {
     let dir = config_dir();
     std::fs::create_dir_all(&dir)?;
-    let path = dir.join("config.json");
-    let json = serde_json::to_string_pretty(config)?;
-    std::fs::write(&path, json)?;
+    let path = dir.join("config.toml");
+    let toml_str = toml::to_string_pretty(config)?;
+    std::fs::write(&path, toml_str)?;
 
     #[cfg(unix)]
     {
