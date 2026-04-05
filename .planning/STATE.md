@@ -212,9 +212,10 @@ None.
 | 260326-i4g | Parse metro stdout to detect activity (Ready/Bundling/Device connected) and display as inline detail row in worktree table | 2026-03-27 | dde2715 | [260326-i4g-parse-metro-output-to-detect-device-conn](./quick/260326-i4g-parse-metro-output-to-detect-device-conn/) |
 | 260331-cw5 | Fix android device listing (model names via adb -l), add --mode debugOptimized, persist mode | 2026-03-31 | 3ec5df5 | [260331-cw5-fix-android-device-listing-add-mode-debu](./quick/260331-cw5-fix-android-device-listing-add-mode-debu/) |
 | 260403-dmz | Add g>W command to create a new worktree via TextInput modal, async git worktree add, list refresh | 2026-04-03 | 87a1d21 | [260403-dmz-add-command-to-create-worktree-like-the-](./quick/260403-dmz-add-command-to-create-worktree-like-the-/) |
+| 260405-ijq | Make metro a prerequisite for running ios and android, starting before the build | 2026-04-05 | 900f79a | [260405-ijq-make-metro-a-prerequisite-for-running-io](./quick/260405-ijq-make-metro-a-prerequisite-for-running-io/) |
 
 ## Session Continuity
 
-Last session: 2026-04-03T00:00:00Z
-Stopped at: Completed quick 260403-dmz (add worktree creation command g>W)
+Last session: 2026-04-05T00:00:00Z
+Stopped at: Completed quick 260405-ijq (make metro prerequisite for RN run commands)
 Resume file: None
