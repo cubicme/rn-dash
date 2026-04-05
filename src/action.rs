@@ -82,8 +82,8 @@ pub enum Action {
     // Phase 5.1: Submenu activation
     EnterAndroidPalette,    // 'a' when WorktreeTable focused
     EnterIosPalette,        // 'i' when WorktreeTable focused
-    EnterCleanPalette,      // 'x' when WorktreeTable focused — opens CleanToggle modal
-    EnterSyncPalette,       // 's' when WorktreeTable focused
+    EnterYarnPalette,       // 'y' when WorktreeTable focused
+    EnterWorktreePalette,   // 'w' when WorktreeTable focused
     // EnterGitPalette already exists
 
     // Quick-3nj: Metro palette
@@ -130,7 +130,10 @@ pub enum Action {
     WorktreeRemoveFailed(String),     // background: removal failed (carries error message)
 
     // Quick: Worktree creation
-    WorktreeAdd,                      // user-triggered via g>W — shows TextInput modal for branch name
+    WorktreeAdd,                      // user-triggered via w>W — shows TextInput modal for branch name
     WorktreeAdded(String),            // background: creation succeeded (carries path string)
     WorktreeAddFailed(String),        // background: creation failed (carries error message)
+
+    // Phase 08: Worktree palette
+    WorktreeAddNewBranch,             // w>B — create worktree with new branch from base (wired in Phase 08 Plan 02)
 }

@@ -46,14 +46,14 @@ pub enum PaletteMode {
     Android,
     /// 'i' — iOS submenu
     Ios,
-    /// 'x' — Clean submenu (only sets palette mode before CleanToggle modal opens)
-    Clean,
-    /// 's' — Sync submenu
-    Sync,
+    /// 'y' — Yarn palette (install, clean, test, lint)
+    Yarn,
     /// 'g' — Git submenu
     Git,
     /// 'm' — Metro submenu
     Metro,
+    /// 'w' — Worktree palette (create, remove, create-with-new-branch)
+    Worktree,
 }
 
 /// Application state — the single source of truth. All mutations happen in update().
@@ -313,19 +313,16 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
-            PaletteMode::Clean => match key.code {
-                // Clean palette opens the CleanToggle modal immediately.
-                // If we're here, user is in CleanToggle modal — keys handled by modal interception above.
-                // This arm should not normally be reached; fallback to cancel.
-                Esc => Some(Action::ModalCancel),
-                _ => Some(Action::ModalCancel),
-            },
-            PaletteMode::Sync => match key.code {
+            PaletteMode::Yarn => match key.code {
                 Char('i') => Some(Action::CommandRun(CommandSpec::YarnInstall)),
+                Char('p') => Some(Action::CommandRun(CommandSpec::YarnPodInstall)),
                 Char('u') => Some(Action::CommandRun(CommandSpec::YarnUnitTests)),
                 Char('t') => Some(Action::CommandRun(CommandSpec::YarnCheckTypes)),
                 Char('j') => Some(Action::CommandRun(CommandSpec::YarnJest { filter: String::new() })),
                 Char('l') => Some(Action::CommandRun(CommandSpec::YarnLint)),
+                Char('a') => Some(Action::CommandRun(CommandSpec::RnCleanAndroid)),
+                Char('c') => Some(Action::CommandRun(CommandSpec::RnCleanCocoapods)),
+                Char('n') => Some(Action::CommandRun(CommandSpec::RmNodeModules)),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -337,8 +334,13 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('b') => Some(Action::CommandRun(CommandSpec::GitCheckout { branch: String::new() })),
                 Char('c') => Some(Action::CommandRun(CommandSpec::GitCheckoutNew { branch: String::new() })),
                 Char('r') => Some(Action::CommandRun(CommandSpec::GitRebase { target: String::new() })),
+                Esc => Some(Action::ModalCancel),
+                _ => Some(Action::ModalCancel),
+            },
+            PaletteMode::Worktree => match key.code {
                 Char('W') => Some(Action::WorktreeAdd),
                 Char('D') => Some(Action::WorktreeRemove),
+                Char('B') => Some(Action::WorktreeAddNewBranch), // placeholder — wired in Plan 02
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -384,8 +386,8 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('k') | Up => return Some(Action::WorktreeSelectPrev),
             Char('a') => return Some(Action::EnterAndroidPalette),
             Char('i') => return Some(Action::EnterIosPalette),
-            Char('x') => return Some(Action::EnterCleanPalette),
-            Char('s') => return Some(Action::EnterSyncPalette),
+            Char('y') => return Some(Action::EnterYarnPalette),
+            Char('w') => return Some(Action::EnterWorktreePalette),
             Char('g') => return Some(Action::EnterGitPalette),
             Char('m') => return Some(Action::EnterMetroPalette),
             Char('C') => return Some(Action::OpenClaudeCode),
@@ -1448,14 +1450,11 @@ pub fn update(
         Action::EnterIosPalette => {
             state.palette_mode = Some(PaletteMode::Ios);
         }
-        Action::EnterCleanPalette => {
-            state.palette_mode = Some(PaletteMode::Clean);
-            state.modal = Some(crate::domain::command::ModalState::CleanToggle {
-                options: crate::domain::command::CleanOptions::default(),
-            });
+        Action::EnterYarnPalette => {
+            state.palette_mode = Some(PaletteMode::Yarn);
         }
-        Action::EnterSyncPalette => {
-            state.palette_mode = Some(PaletteMode::Sync);
+        Action::EnterWorktreePalette => {
+            state.palette_mode = Some(PaletteMode::Worktree);
         }
         Action::CleanToggleNodeModules => {
             if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
@@ -1715,6 +1714,12 @@ pub fn update(
                 message: format!("Failed to create worktree: {}", err),
                 can_retry: false,
             });
+        }
+
+        // Phase 08 Plan 02: WorktreeAddNewBranch — wired in next plan
+        Action::WorktreeAddNewBranch => {
+            // Placeholder: create worktree with new branch from base. Implemented in Phase 08 Plan 02.
+            state.palette_mode = None;
         }
     }
 }
