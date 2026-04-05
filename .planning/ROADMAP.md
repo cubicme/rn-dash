@@ -103,5 +103,5 @@ Plans:
 | 06. Final UX Polish | v1.0 | 3/3 | Complete | — |
 | 07. Labels Removal | v1.1 | 0/1 | Planned | - |
 | 08. Palette and Keybinding Rework | v1.1 | 0/3 | Planned | - |
-| 09. Generalization and GitHub Prep | v1.1 | 0/2 | Planned | - |
+| 09. Generalization and GitHub Prep | v1.1 | 0/2 | Planned    |  |
 | 10. CI and Release | v1.1 | 0/? | Not started | - |

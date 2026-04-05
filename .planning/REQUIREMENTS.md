@@ -21,8 +21,8 @@
 
 ### Generalization
 
-- [ ] **GEN-01**: All hardcoded AJ/UMP/system-specific values extracted to config (repo paths, JIRA project prefix, branch patterns)
-- [ ] **GEN-02**: Config example file documenting all available settings with comments
+- [x] **GEN-01**: All hardcoded AJ/UMP/system-specific values extracted to config (repo paths, JIRA project prefix, branch patterns)
+- [x] **GEN-02**: Config example file documenting all available settings with comments
 
 ### GitHub Release
 
@@ -63,8 +63,8 @@
 | KEY-05 | Phase 08 | Complete |
 | KEY-06 | Phase 08 | Complete |
 | KEY-07 | Phase 08 | Complete |
-| GEN-01 | Phase 09 | Pending |
-| GEN-02 | Phase 09 | Pending |
+| GEN-01 | Phase 09 | Complete |
+| GEN-02 | Phase 09 | Complete |
 | GH-01 | Phase 09 | Pending |
 | GH-02 | Phase 09 | Pending |
 | GH-03 | Phase 09 | Pending |
