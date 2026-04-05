@@ -225,6 +225,12 @@ pub enum ModalState {
         pid: u32,
         working_dir: String,
     },
+    /// Branch picker for "create worktree with new branch" flow.
+    BranchPicker {
+        branches: Vec<String>,
+        selected: usize,
+        filter: String,
+    },
 }
 
 /// Represents one connected device returned by `adb devices` or `xcrun simctl list`.

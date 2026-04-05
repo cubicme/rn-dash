@@ -142,6 +142,12 @@ pub struct AppState {
     // Quick-260403-dmz: Worktree creation — set when g>W is pressed, consumed by ModalInputSubmit
     pub pending_worktree_add: bool,
 
+    // Phase 08-02: New-branch worktree creation flow
+    /// Selected base branch for the new-branch worktree flow (set by BranchPickerConfirm, consumed by ModalInputSubmit).
+    pub pending_new_branch_base: Option<String>,
+    /// True when the pending TextInput modal is for a new-branch worktree (not a regular worktree add).
+    pub pending_new_branch_worktree: bool,
+
     // Quick-260405-ijq: RN run command waiting for metro to become Ready before dispatch.
     pub pending_metro_run: Option<crate::domain::command::CommandSpec>,
 }
@@ -196,6 +202,9 @@ impl Default for AppState {
             pending_worktree_add: false,
             // Quick-260405-ijq
             pending_metro_run: None,
+            // Phase 08-02
+            pending_new_branch_base: None,
+            pending_new_branch_worktree: false,
         }
     }
 }
@@ -285,6 +294,15 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             ModalState::ExternalMetroConflict { pid, .. } => match key.code {
                 Char('y') | Char('Y') | Enter => Some(Action::KillExternalMetro(*pid)),
                 Char('n') | Char('N') | Esc => Some(Action::ModalCancel),
+                _ => None,
+            },
+            ModalState::BranchPicker { .. } => match key.code {
+                Enter => Some(Action::BranchPickerConfirm),
+                Esc => Some(Action::ModalCancel),
+                Down => Some(Action::BranchPickerNext),
+                Up => Some(Action::BranchPickerPrev),
+                Backspace => Some(Action::BranchPickerBackspace),
+                Char(c) => Some(Action::BranchPickerFilter(*c)),
                 _ => None,
             },
         };
@@ -1039,6 +1057,8 @@ pub fn update(
             state.pending_android_mode = false;
             state.pending_worktree_removal = None;  // discard any pending removal on cancel
             state.pending_worktree_add = false;     // discard any pending add on cancel
+            state.pending_new_branch_base = None;   // discard new-branch base on cancel
+            state.pending_new_branch_worktree = false;
         }
 
         Action::ModalInputChar(c) => {
@@ -1082,6 +1102,29 @@ pub fn update(
                             if let Some(ref m) = mode {
                                 let _ = crate::infra::android_prefs::save_android_mode(m);
                             }
+                        } else if state.pending_new_branch_worktree {
+                            state.pending_new_branch_worktree = false;
+                            let new_branch_name = buffer.trim().to_string();
+                            let base_branch = state.pending_new_branch_base.take();
+                            if new_branch_name.is_empty() {
+                                return;
+                            }
+                            let base_branch = match base_branch {
+                                Some(b) => b,
+                                None => return,
+                            };
+                            let repo_root = state.repo_root.clone();
+                            let tx = metro_tx.clone();
+                            tokio::spawn(async move {
+                                match crate::infra::worktrees::add_worktree_new_branch(&repo_root, &new_branch_name, &base_branch).await {
+                                    Ok(path) => {
+                                        let _ = tx.send(Action::WorktreeNewBranchCreated(path.to_string_lossy().to_string()));
+                                    }
+                                    Err(e) => {
+                                        let _ = tx.send(Action::WorktreeNewBranchFailed(e.to_string()));
+                                    }
+                                }
+                            });
                         } else if state.pending_worktree_add {
                             state.pending_worktree_add = false;
                             let branch_name = buffer.trim().to_string();
@@ -1716,10 +1759,141 @@ pub fn update(
             });
         }
 
-        // Phase 08 Plan 02: WorktreeAddNewBranch — wired in next plan
+        // Phase 08-02: New-branch worktree creation flow
+
         Action::WorktreeAddNewBranch => {
-            // Placeholder: create worktree with new branch from base. Implemented in Phase 08 Plan 02.
             state.palette_mode = None;
+            let repo_root = state.repo_root.clone();
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                match crate::infra::worktrees::list_remote_branches(&repo_root).await {
+                    Ok(branches) => {
+                        let _ = tx.send(Action::BranchesLoaded(branches));
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Action::WorktreeNewBranchFailed(e.to_string()));
+                    }
+                }
+            });
+        }
+
+        Action::BranchesLoaded(branches) => {
+            state.modal = Some(ModalState::BranchPicker {
+                branches,
+                selected: 0,
+                filter: String::new(),
+            });
+        }
+
+        Action::BranchPickerNext => {
+            if let Some(ModalState::BranchPicker {
+                ref branches,
+                ref mut selected,
+                ref filter,
+            }) = state.modal
+            {
+                let count = if filter.is_empty() {
+                    branches.len()
+                } else {
+                    let lower = filter.to_lowercase();
+                    branches.iter().filter(|b| b.to_lowercase().contains(&lower)).count()
+                };
+                if count > 0 {
+                    *selected = if *selected >= count - 1 { 0 } else { *selected + 1 };
+                }
+            }
+        }
+
+        Action::BranchPickerPrev => {
+            if let Some(ModalState::BranchPicker {
+                ref branches,
+                ref mut selected,
+                ref filter,
+            }) = state.modal
+            {
+                let count = if filter.is_empty() {
+                    branches.len()
+                } else {
+                    let lower = filter.to_lowercase();
+                    branches.iter().filter(|b| b.to_lowercase().contains(&lower)).count()
+                };
+                if count > 0 {
+                    *selected = if *selected == 0 { count - 1 } else { *selected - 1 };
+                }
+            }
+        }
+
+        Action::BranchPickerFilter(c) => {
+            if let Some(ModalState::BranchPicker {
+                ref mut filter,
+                ref mut selected,
+                ..
+            }) = state.modal
+            {
+                filter.push(c);
+                *selected = 0;
+            }
+        }
+
+        Action::BranchPickerBackspace => {
+            if let Some(ModalState::BranchPicker {
+                ref mut filter,
+                ref mut selected,
+                ..
+            }) = state.modal
+            {
+                filter.pop();
+                *selected = 0;
+            }
+        }
+
+        Action::BranchPickerConfirm => {
+            if let Some(ModalState::BranchPicker {
+                branches,
+                selected,
+                filter,
+            }) = state.modal.take()
+            {
+                // Apply filter to get visible list
+                let filtered: Vec<&String> = if filter.is_empty() {
+                    branches.iter().collect()
+                } else {
+                    let lower = filter.to_lowercase();
+                    branches.iter().filter(|b| b.to_lowercase().contains(&lower)).collect()
+                };
+                if let Some(base_branch) = filtered.get(selected) {
+                    state.pending_new_branch_base = Some((*base_branch).clone());
+                    state.pending_new_branch_worktree = true;
+                    state.modal = Some(ModalState::TextInput {
+                        prompt: "New branch name:".to_string(),
+                        buffer: String::new(),
+                        pending_template: Box::new(CommandSpec::GitPull), // sentinel — not used
+                    });
+                }
+            }
+        }
+
+        Action::WorktreeNewBranchCreated(path_str) => {
+            tracing::info!("worktree with new branch created: {}", path_str);
+            let repo_root = state.repo_root.clone();
+            let tx = metro_tx.clone();
+            tokio::spawn(async move {
+                match crate::infra::worktrees::list_worktrees(&repo_root).await {
+                    Ok(wts) => {
+                        let _ = tx.send(Action::WorktreesLoaded(wts));
+                    }
+                    Err(e) => {
+                        tracing::warn!("worktree refresh after new-branch add failed: {e}");
+                    }
+                }
+            });
+        }
+
+        Action::WorktreeNewBranchFailed(err) => {
+            state.error_state = Some(ErrorState {
+                message: format!("Failed to create worktree with new branch: {}", err),
+                can_retry: false,
+            });
         }
     }
 }

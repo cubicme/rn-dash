@@ -136,6 +136,12 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("Y", "kill it"),
                 ("N/Esc", "cancel"),
             ],
+            ModalState::BranchPicker { .. } => vec![
+                ("Enter", "select"),
+                ("Up/Down", "navigate"),
+                ("type", "filter"),
+                ("Esc", "cancel"),
+            ],
         };
     }
 

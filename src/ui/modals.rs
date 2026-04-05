@@ -25,6 +25,9 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
         ModalState::ExternalMetroConflict { pid, working_dir } => {
             render_external_metro_modal(f, *pid, working_dir)
         }
+        ModalState::BranchPicker { branches, selected, filter } => {
+            render_branch_picker_modal(f, branches, *selected, filter)
+        }
     }
 }
 
@@ -248,6 +251,83 @@ fn render_external_metro_modal(f: &mut Frame, pid: u32, working_dir: &str) {
         .title(" External Metro ");
 
     f.render_widget(Paragraph::new(text).block(block), area);
+}
+
+/// Renders a branch picker modal with filterable list. Used by w>B new-branch worktree flow.
+fn render_branch_picker_modal(
+    f: &mut Frame,
+    branches: &[String],
+    selected: usize,
+    filter: &str,
+) {
+    let area = centered_rect(f.area(), 60, 60, 40, 7);
+
+    // Apply filter (case-insensitive substring match)
+    let filtered: Vec<&String> = if filter.is_empty() {
+        branches.iter().collect()
+    } else {
+        let lower = filter.to_lowercase();
+        branches.iter().filter(|b| b.to_lowercase().contains(&lower)).collect()
+    };
+
+    // Title shows filter text when active
+    let title = if filter.is_empty() {
+        " Select Base Branch ".to_string()
+    } else {
+        format!(" Select Base Branch — filter: {} ", filter)
+    };
+
+    let block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Cyan));
+
+    if filtered.is_empty() {
+        let msg = if branches.is_empty() {
+            "No remote branches found."
+        } else {
+            "No branches match filter."
+        };
+        let para = Paragraph::new(vec![
+            Line::from(msg),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("[Esc]", Style::default().fg(Color::Red)),
+                Span::raw(" cancel    "),
+                Span::styled("[Backspace]", Style::default().fg(Color::Yellow)),
+                Span::raw(" clear filter"),
+            ]),
+        ])
+        .block(block);
+
+        f.render_widget(Clear, area);
+        f.render_widget(para, area);
+        return;
+    }
+
+    // Clamp selected index to filtered list length
+    let clamped_selected = selected.min(filtered.len() - 1);
+
+    let items: Vec<ListItem> = filtered
+        .iter()
+        .map(|b| ListItem::new(Line::from(b.as_str())))
+        .collect();
+
+    let list = List::new(items)
+        .block(block)
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
+        .highlight_symbol("> ")
+        .highlight_spacing(ratatui::widgets::HighlightSpacing::Always);
+
+    let mut ls = ListState::default();
+    ls.select(Some(clamped_selected));
+
+    f.render_widget(Clear, area);
+    f.render_stateful_widget(list, area, &mut ls);
 }
 
 /// Computes a centered Rect within `area`, using percentage sizing with minimum dimensions.

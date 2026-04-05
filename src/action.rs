@@ -135,5 +135,15 @@ pub enum Action {
     WorktreeAddFailed(String),        // background: creation failed (carries error message)
 
     // Phase 08: Worktree palette
-    WorktreeAddNewBranch,             // w>B — create worktree with new branch from base (wired in Phase 08 Plan 02)
+    WorktreeAddNewBranch,             // w>B — create worktree with new branch from base
+
+    // Phase 08-02: New-branch worktree creation flow
+    BranchesLoaded(Vec<String>),           // background: remote branches fetched
+    BranchPickerConfirm,                   // user selected a base branch from picker
+    WorktreeNewBranchCreated(String),      // background: creation succeeded (carries path string)
+    WorktreeNewBranchFailed(String),       // background: creation failed (carries error message)
+    BranchPickerNext,                      // Down in branch picker
+    BranchPickerPrev,                      // Up in branch picker
+    BranchPickerFilter(char),              // type-to-filter character
+    BranchPickerBackspace,                 // backspace in filter
 }
