@@ -1,2 +1,22 @@
+# Build artifacts
 /target
+
+# Planning docs (not shipped)
+.planning/
+
+# Claude Code worktrees
 .claude/worktrees/
+
+# Credentials and config (never commit real config with tokens)
+config.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

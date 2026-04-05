@@ -2,6 +2,12 @@
 name = "rn-dash"
 version = "0.1.0"
 edition = "2024"
+description = "Terminal dashboard for managing React Native worktrees, metro, and git"
+license = "MIT"
+repository = "https://github.com/AliMonemian/rn-dash"
+homepage = "https://github.com/AliMonemian/rn-dash"
+keywords = ["ratatui", "react-native", "terminal", "dashboard", "worktree"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 # TUI core — crossterm accessed via ratatui::crossterm, NOT as a direct dep
