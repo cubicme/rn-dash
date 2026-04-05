@@ -1,6 +1,5 @@
 use ratatui::{
     layout::Rect,
-    style::{Color, Style},
     text::{Line, Span},
     widgets::Paragraph,
     Frame,
@@ -8,12 +7,12 @@ use ratatui::{
 use crate::{app::{AppState, FocusedPanel, PaletteMode}, domain::command::ModalState, ui::theme};
 
 /// Renders the footer key hint bar. Always 1 line tall at the bottom of the layout.
-/// Hints change based on which panel is focused — satisfies SHELL-02.
-/// Icon legend (●=metro ⚠=stale) is rendered right-aligned.
+/// Hints change based on which panel is focused and current app state — satisfies SHELL-02.
+/// Dynamic: metro hints (R/J/Esc) only shown when metro is running. No static legend.
 pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
     let hints = key_hints_for(state);
 
-    // Build hint spans (left-aligned)
+    // Build hint spans (full-width, no legend)
     let hint_spans: Vec<Span> = hints.iter().flat_map(|(key, desc)| {
         vec![
             Span::styled(*key, theme::style_key_hint()),
@@ -21,29 +20,8 @@ pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
         ]
     }).collect();
 
-    // Icon legend (right-aligned)
-    let legend = vec![
-        Span::styled("\u{25B6}", Style::default().fg(Color::Green)),
-        Span::raw("=metro  "),
-        Span::styled("\u{26A0}", Style::default().fg(Color::Yellow)),
-        Span::raw("=stale"),
-    ];
-
-    // Use horizontal layout: hints on left (flexible), legend on right (fixed)
-    let [hint_area, legend_area] = ratatui::layout::Layout::default()
-        .direction(ratatui::layout::Direction::Horizontal)
-        .constraints([
-            ratatui::layout::Constraint::Min(0),
-            ratatui::layout::Constraint::Length(20),
-        ])
-        .areas(area);
-
     let hint_line = Paragraph::new(Line::from(hint_spans));
-    let legend_line = Paragraph::new(Line::from(legend))
-        .alignment(ratatui::layout::Alignment::Right);
-
-    f.render_widget(hint_line, hint_area);
-    f.render_widget(legend_line, legend_area);
+    f.render_widget(hint_line, area);
 }
 
 /// Returns context-sensitive key hints for the current app state.
@@ -103,7 +81,6 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             PaletteMode::Metro => vec![
                 ("s", "start"),
                 ("x", "stop"),
-                ("r", "restart"),
                 ("j", "debugger"),
                 ("R", "reload"),
                 ("Esc", "cancel"),
@@ -149,19 +126,28 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     let common: Vec<(&str, &str)> = vec![("?/F1", "help"), ("q", "quit"), ("Tab", "panel")];
 
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
-        FocusedPanel::WorktreeTable => vec![
-            ("j/k", "navigate"),
-            ("a", "android"),
-            ("i", "ios"),
-            ("y", "yarn"),
-            ("w", "worktree"),
-            ("g", "git"),
-            ("m", "metro"),
-            ("C", "claude"),
-            ("T", "shell tab"),
-            ("!", "shell"),
-            ("Enter", "switch"),
-        ],
+        FocusedPanel::WorktreeTable => {
+            let mut hints: Vec<(&'static str, &'static str)> = vec![
+                ("j/k", "navigate"),
+                ("a", "android"),
+                ("i", "ios"),
+                ("y", "yarn"),
+                ("w", "worktree"),
+                ("g", "git"),
+                ("m", "metro"),
+            ];
+            // Context-sensitive metro keys — only shown when metro is running (KEY-04)
+            if state.metro.is_running() {
+                hints.push(("R", "reload"));
+                hints.push(("J", "debugger"));
+                hints.push(("Esc", "stop metro"));
+            }
+            hints.push(("C", "claude"));
+            hints.push(("T", "shell tab"));
+            hints.push(("!", "shell"));
+            hints.push(("Enter", "switch"));
+            hints
+        },
         FocusedPanel::CommandOutput => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![
                 ("j/k", "scroll"),
