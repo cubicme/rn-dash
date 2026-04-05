@@ -1,0 +1,34 @@
+# rn-dash configuration
+# Copy to ~/.config/rn-dash/config.toml and fill in your values.
+# File permissions are set to 0600 (contains credentials).
+
+# Absolute path to your React Native monorepo root (supports ~/).
+# Required.
+repo_root = "~/code/my-rn-app"
+
+# Base URL for your JIRA instance.
+# Required for JIRA integration.
+jira_base_url = "https://your-org.atlassian.net"
+
+# JIRA account email.
+# Required for Cloud auth mode, unused for Data Center.
+jira_email = "you@example.com"
+
+# JIRA API token (Cloud) or Personal Access Token (Data Center).
+jira_token = "your-api-token-here"
+
+# Authentication mode: "cloud" (Basic Auth) or "datacenter" (Bearer PAT).
+# Default: "cloud"
+# auth_mode = "cloud"
+
+# JIRA project key prefix used in branch names (e.g., "PROJ" for PROJ-1234).
+# Default: "UMP"
+# jira_project_prefix = "UMP"
+
+# Title shown in the dashboard header.
+# Default: "RN Dash"
+# app_title = "RN Dash"
+
+# Flags passed when launching Claude Code.
+# Default: "--dangerously-skip-permissions"
+# claude_flags = "--dangerously-skip-permissions"
