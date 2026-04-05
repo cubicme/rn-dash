@@ -38,7 +38,9 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["T",               "Open shell tab at worktree"]),
         Row::new(vec!["f",               "Toggle fullscreen"]),
         Row::new(vec!["!",               "Run shell command in worktree"]),
-        Row::new(vec!["R",               "Refresh worktree list"]),
+        Row::new(vec!["R",               "Reload metro (when running) / Refresh list"]),
+        Row::new(vec!["J",               "Metro debugger (when running)"]),
+        Row::new(vec!["Esc",             "Stop metro (when running)"]),
         Row::new(vec!["", ""]).style(dim_style),
 
         // Android submenu section
@@ -101,7 +103,6 @@ pub fn render_help(f: &mut Frame) {
             .style(section_style),
         Row::new(vec!["s",               "Start metro"]),
         Row::new(vec!["x",               "Stop metro"]),
-        Row::new(vec!["r",               "Restart metro"]),
         Row::new(vec!["j",               "Send debugger command"]),
         Row::new(vec!["R",               "Send reload command"]),
         Row::new(vec!["Esc",             "Cancel"]),

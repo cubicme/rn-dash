@@ -73,7 +73,7 @@ pub struct AppState {
     // Active worktree (updated from WorktreesLoaded + WorktreeSelectNext/Prev)
     pub active_worktree_path: Option<std::path::PathBuf>,
 
-    // Set to true when MetroRestart or MetroStart-while-running triggers a stop-first-then-start.
+    // Set to true when worktree-switch triggers a stop-first-then-start sequence.
     // When MetroExited fires and this is true, a new MetroStart is auto-dispatched.
     pub pending_restart: bool,
 
@@ -302,7 +302,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Down => Some(Action::BranchPickerNext),
                 Up => Some(Action::BranchPickerPrev),
                 Backspace => Some(Action::BranchPickerBackspace),
-                Char(c) => Some(Action::BranchPickerFilter(*c)),
+                Char(c) => Some(Action::BranchPickerFilter(c)),
                 _ => None,
             },
         };
@@ -365,7 +365,6 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             PaletteMode::Metro => match key.code {
                 Char('s') => Some(Action::MetroStart),
                 Char('x') => Some(Action::MetroStop),
-                Char('r') => Some(Action::MetroRestart),
                 Char('j') => Some(Action::MetroSendDebugger),
                 Char('R') => Some(Action::MetroSendReload),
                 Esc => Some(Action::ModalCancel),
@@ -412,7 +411,25 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('T') => return Some(Action::OpenShellTab),
             Char('f') => return Some(Action::ToggleFullscreen),
             Char('!') => return Some(Action::StartShellCommand),
-            Char('R') => return Some(Action::RefreshWorktrees),
+            Char('R') => {
+                if state.metro.is_running() {
+                    return Some(Action::MetroSendReload);
+                } else {
+                    return Some(Action::RefreshWorktrees);
+                }
+            }
+            Char('J') => {
+                if state.metro.is_running() {
+                    return Some(Action::MetroSendDebugger);
+                }
+                // J does nothing when metro is not running
+            }
+            Esc => {
+                if state.metro.is_running() {
+                    return Some(Action::MetroStop);
+                }
+                // ESC does nothing on worktree table when metro is not running
+            }
             Enter => return Some(Action::WorktreeSwitchToSelected),
             _ => {}
         }
@@ -597,16 +614,6 @@ pub fn update(
                     let _ = kill_tx.send(());
                 }
                 handle.stdin_task.abort();
-            }
-        }
-
-        Action::MetroRestart => {
-            state.palette_mode = None;
-            if state.metro.is_running() {
-                state.pending_restart = true;
-                update(state, Action::MetroStop, metro_tx, handle_tx);
-            } else {
-                update(state, Action::MetroStart, metro_tx, handle_tx);
             }
         }
 

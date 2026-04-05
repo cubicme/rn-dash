@@ -27,9 +27,8 @@ pub enum Action {
     // Metro control (user-triggered)
     MetroStart,
     MetroStop,
-    MetroRestart,
-    MetroSendDebugger,   // j when metro palette active — HTTP POST /open-debugger
-    MetroSendReload,     // R when metro palette active — HTTP POST /reload
+    MetroSendDebugger,   // J when worktree table focused (metro running) or j in metro palette — HTTP POST /open-debugger
+    MetroSendReload,     // R when worktree table focused (metro running) or R in metro palette — HTTP POST /reload
 
     // Metro background events (not user-triggered — sent by background tasks)
     MetroExited,                // metro process has stopped (port confirmed free)
