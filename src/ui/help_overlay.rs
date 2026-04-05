@@ -30,8 +30,8 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["Enter",            "Switch metro to worktree"]),
         Row::new(vec!["a",               "Android submenu"]),
         Row::new(vec!["i",               "iOS submenu"]),
-        Row::new(vec!["x",               "Clean submenu"]),
-        Row::new(vec!["s",               "Sync submenu"]),
+        Row::new(vec!["y",               "Yarn submenu"]),
+        Row::new(vec!["w",               "Worktree submenu"]),
         Row::new(vec!["g",               "Git submenu"]),
         Row::new(vec!["m",               "Metro submenu"]),
         Row::new(vec!["C",               "Open Claude Code (tmux/zellij)"]),
@@ -59,25 +59,18 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 
-        // Clean submenu section
-        Row::new(vec!["Clean  (x>)", ""])
-            .style(section_style),
-        Row::new(vec!["n",               "Toggle node_modules"]),
-        Row::new(vec!["p",               "Toggle pods"]),
-        Row::new(vec!["a",               "Toggle android"]),
-        Row::new(vec!["i",               "Toggle sync after"]),
-        Row::new(vec!["x / Enter",       "Confirm and run"]),
-        Row::new(vec!["Esc",             "Cancel"]),
-        Row::new(vec!["", ""]).style(dim_style),
-
-        // Sync submenu section
-        Row::new(vec!["Sync  (s>)", ""])
+        // Yarn submenu section
+        Row::new(vec!["Yarn  (y>)", ""])
             .style(section_style),
         Row::new(vec!["i",               "yarn install"]),
+        Row::new(vec!["p",               "yarn pod-install"]),
         Row::new(vec!["u",               "yarn unit-tests"]),
         Row::new(vec!["t",               "yarn check-types --incremental"]),
         Row::new(vec!["j",               "yarn jest <filter>"]),
         Row::new(vec!["l",               "yarn lint --quiet --fix"]),
+        Row::new(vec!["a",               "Clean Android (react-native clean)"]),
+        Row::new(vec!["c",               "Clean CocoaPods (react-native clean)"]),
+        Row::new(vec!["n",               "Remove node_modules"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 
@@ -91,8 +84,15 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["b",               "git checkout <branch>"]),
         Row::new(vec!["c",               "git checkout -b <branch>"]),
         Row::new(vec!["r",               "git rebase <target>"]),
+        Row::new(vec!["Esc",             "Cancel"]),
+        Row::new(vec!["", ""]).style(dim_style),
+
+        // Worktree submenu section
+        Row::new(vec!["Worktree  (w>)", ""])
+            .style(section_style),
         Row::new(vec!["W",               "Add new worktree"]),
         Row::new(vec!["D",               "Remove worktree (purge)"]),
+        Row::new(vec!["B",               "New branch + worktree"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 
