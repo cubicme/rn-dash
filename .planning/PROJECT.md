@@ -12,25 +12,29 @@ One place to see and control everything about UMP worktrees — which one is run
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Running instance zone with metro status, log toggle, debugger/reload/restart controls — v1.0
+- ✓ Worktree browser showing all worktrees with branch name, JIRA ticket title, and optional custom labels — v1.0
+- ✓ JIRA integration via API token to auto-fetch ticket titles from branch names (UMP-XXXX pattern) — v1.0
+- ✓ Git operations per worktree: reset --hard origin, pull, push, rebase, checkout, checkout -b — v1.0
+- ✓ RN commands: clean (android/cocoapods), rm node_modules, yarn install, yarn start --reset-cache, yarn pod-install — v1.0
+- ✓ RN run commands: run-android (with device list), run-ios (device/simulator selection) — v1.0
+- ✓ Metro interaction: open debugger (j), reload (r), kill and restart with --reset-cache — v1.0
+- ✓ Testing/quality commands: yarn unit-tests, yarn jest [filter], yarn lint --quiet --fix, yarn check-types — v1.0
+- ✓ Dependency staleness detection with hints, sync-before-run prompting — v1.0
+- ✓ Worktree switching: kill metro in current worktree, auto-start in new one — v1.0
+- ✓ Launch Claude Code in new tmux tab at a selected worktree — v1.0
+- ✓ Custom labels per worktree/branch that override or accompany JIRA title — v1.0
+- ✓ Vim-style keybindings with on-screen key hints — v1.0
+- ✓ Only one metro instance running at a time across all worktrees — v1.0
+- ✓ Command queue system with per-worktree output persistence — v1.0
+- ✓ Multiplexer abstraction (tmux + zellij) — v1.0
+- ✓ External metro conflict detection and resolution — v1.0
+- ✓ Worktree creation and removal commands — v1.0
+- ✓ Metro auto-prerequisite for RN run commands — v1.0
 
 ### Active
 
-- [ ] Running instance zone with metro status, log toggle, debugger/reload/restart controls
-- [ ] Worktree browser showing all worktrees with branch name, JIRA ticket title, and optional custom labels
-- [ ] JIRA integration via API token to auto-fetch ticket titles from branch names (UMP-XXXX pattern)
-- [ ] Git operations per worktree: reset --hard origin, pull, push, rebase, checkout, checkout -b
-- [ ] RN commands: clean (android/cocoapods), rm node_modules, yarn install, yarn start --reset-cache, yarn pod-install
-- [ ] RN run commands: run-android (with device list), run-ios (device/simulator selection)
-- [ ] Metro interaction: open debugger (j), reload (r), kill and restart with --reset-cache
-- [ ] Testing/quality commands: yarn unit-tests, yarn jest [filter], yarn lint --quiet --fix, yarn check-types
-- [ ] Dependency staleness detection with hints, lazy auto-install before app launch
-- [ ] Worktree switching: kill metro in current worktree, auto-start in new one
-- [ ] Launch Claude Code in new tmux tab at a selected worktree
-- [ ] Custom labels per worktree/branch that override or accompany JIRA title
-- [ ] Vim-style keybindings with on-screen key hints
-- [ ] Only one metro instance running at a time across all worktrees
-- [ ] Command options/flags visible and configurable when executing commands
+(Fresh for next milestone)
 
 ### Out of Scope
 
@@ -41,13 +45,17 @@ One place to see and control everything about UMP worktrees — which one is run
 
 ## Context
 
+Shipped v1.0 with 5,491 LOC Rust across 207 commits in 34 days.
+Tech stack: Rust + Ratatui 0.30, tokio async runtime, crossterm, reqwest for JIRA.
+Architecture: TEA (The Elm Architecture) with domain/infra/app/ui separation.
+
 - Main repo at ~/aljazeera/ump with multiple git worktrees
-- Worktree paths based on original branch names but can contain any content
-- Only one metro bundler can run at a time across all worktrees
-- User works in tmux, dedicating one window to this dashboard
+- Only one metro bundler can run at a time across all worktrees (enforced)
+- User works in tmux or zellij, dedicating one window to this dashboard
 - Branch naming convention: UMP-XXXX-description (maps to JIRA tickets)
-- Existing workflow involves ad-hoc tmux windows and manual command execution
-- Claude Code agents are run at worktrees for development work
+- 5-palette submenu keybinding scheme (a/i/x/s/g) with vim-style navigation
+- Per-worktree command output persistence, FIFO command queue
+- External metro conflict detection via port 8081 lsof
 
 ## Constraints
 
@@ -60,13 +68,16 @@ One place to see and control everything about UMP worktrees — which one is run
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Rust + Ratatui for TUI | User preference, performance, type safety | — Pending |
-| Domain/UI/system separation | Ousterhout philosophy, testability, clarity | — Pending |
-| Kill + restart on worktree switch | Only one metro allowed, minimize manual steps | — Pending |
-| Lazy dependency install before run | Don't block workflow, but ensure app is ready when needed | — Pending |
-| JIRA API with config token | Auto-fetch ticket titles for branch context | — Pending |
-| ~/.config/ump-dash/ for config | XDG-style, separate from repo | — Pending |
-| Tmux integration for Claude Code | Open agent in new tab at worktree directory | — Pending |
+| Rust + Ratatui for TUI | User preference, performance, type safety | ✓ Good — 5.5k LOC, fast startup, zero runtime crashes |
+| Domain/UI/system separation | Ousterhout philosophy, testability, clarity | ✓ Good — clean module boundaries, deep modules |
+| Kill + restart on worktree switch | Only one metro allowed, minimize manual steps | ✓ Good — seamless one-keystroke switching |
+| Sync-before-run prompting | User-visible prompt replaced lazy auto-install | ✓ Good — more transparent than silent install |
+| JIRA API with config token | Auto-fetch ticket titles for branch context | ✓ Good — Basic/Bearer auth, cached locally |
+| ~/.config/ump-dash/ for config | XDG-style, separate from repo | ✓ Good — 0600 permissions on credentials |
+| Multiplexer abstraction (tmux + zellij) | Support multiple terminal multiplexers | ✓ Good — clean trait boundary |
+| Command queue (VecDeque) | Chain dependent commands, show queue count | ✓ Good — enables fetch-then-reset, release build flows |
+| External metro conflict detection | Detect port 8081 already in use | ✓ Good — lsof-based PID lookup with kill prompt |
+| Metro as prerequisite for RN runs | Auto-start metro before build commands | ✓ Good — prevents RN from spawning unmanaged metro |
 
 ---
-*Last updated: 2026-03-02 after initialization*
+*Last updated: 2026-04-05 after v1.0 milestone*

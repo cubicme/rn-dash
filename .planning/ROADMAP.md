@@ -1,163 +1,36 @@
 # Roadmap: UMP Dashboard
 
-## Overview
+## Milestones
 
-Five phases build the UMP Dashboard from a bare terminal skeleton to a fully orchestrated React Native worktree manager. Phase 1 establishes the terminal lifecycle and event architecture that every later phase inherits. Phase 2 adds the core differentiating feature — metro process control with the single-instance invariant. Phase 3 delivers the full worktree browser, git operations, and RN command palette, making the tool usable for day-to-day workflow. Phase 4 adds JIRA context and config storage so branches show ticket titles. Phase 5 wires worktree switching orchestration and Claude Code tmux integration as the final polish layer.
+- ✅ **v1.0 MVP** — Phases 01-06 (shipped 2026-04-05)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>✅ v1.0 MVP (Phases 01-06) — SHIPPED 2026-04-05</summary>
 
-Decimal phases appear between their surrounding integers in numeric order.
+- [x] Phase 01: Scaffold and TUI Shell (3/3 plans) — completed 2026-03-02
+- [x] Phase 02: Metro Process Control (3/3 plans) — completed 2026-03-02
+- [x] Phase 03: Worktree Browser, Git, and RN Commands (5/5 plans) — completed 2026-03-02
+- [x] Phase 04: Config and JIRA Integration (3/3 plans) — completed 2026-03-02
+- [x] Phase 05: Worktree Switching and Claude Code (2/2 plans) — completed 2026-03-03
+- [x] Phase 05.1: Milestone Feedback — UX overhaul (8/8 plans)
+- [x] Phase 05.2: Milestone Feedbacks — Bug fixes and polish (10/10 plans)
+- [x] Phase 06: Final UX Polish (3/3 plans)
 
-- [x] **Phase 1: Scaffold and TUI Shell** - Running ratatui app with correct terminal lifecycle, event loop, and vim-style keybinding layer (completed 2026-03-02)
-- [x] **Phase 2: Metro Process Control** - Metro start/stop/restart/log with the single-instance invariant enforced in domain (completed 2026-03-02)
-- [x] **Phase 3: Worktree Browser, Git, and RN Commands** - Full worktree list, all git operations, and complete RN command palette with output streaming (gap closure in progress) (completed 2026-03-02)
-- [x] **Phase 4: Config and JIRA Integration** - Config store at ~/.config/ump-dash/, JIRA title fetching with caching, and graceful degradation (gap closure in progress) (completed 2026-03-02)
-- [x] **Phase 5: Worktree Switching and Claude Code** - One-keystroke worktree switching orchestration and Claude Code tmux tab launch (completed 2026-03-02)
+See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 
-## Phase Details
-
-### Phase 1: Scaffold and TUI Shell
-**Goal**: A running ratatui application with correct terminal init/restore, panic recovery, async event loop, and the full vim-style keybinding layer — the foundation every later phase inherits
-**Depends on**: Nothing (first phase)
-**Requirements**: ARCH-01, ARCH-02, ARCH-03, ARCH-04, ARCH-05, ARCH-06, SHELL-01, SHELL-02, SHELL-03, SHELL-04, SHELL-05
-**Success Criteria** (what must be TRUE):
-  1. User can launch the dashboard and the terminal is fully restored (raw mode off, cursor visible) on exit, crash, or panic — no broken shell
-  2. User can navigate between panels using hjkl, Tab, and Shift-Tab, and the footer updates to show context-sensitive keybinding hints for whichever panel is focused
-  3. User can open a help overlay (? or F1) that lists all available keybindings, and dismiss it with q or Escape
-  4. User sees a clear error state with retry and dismiss options when any operation fails with a non-zero exit code
-  5. App compiles without warnings, domain logic has no direct dependency on ratatui or process crates (verifiable via cargo tree), and there is exactly one crossterm version in the dependency graph
-**Plans**: 3 plans
-
-Plans:
-- [x] 01-01-PLAN.md — Cargo manifest + layered module stubs (domain/infra/ui isolation boundaries)
-- [x] 01-02-PLAN.md — TEA app loop: AppState, Action enum, handle_key(), update(), async event loop, terminal lifecycle with panic hook
-- [x] 01-03-PLAN.md — UI render layer: three-panel layout, footer keyhints, help overlay, error overlay
-
-### Phase 2: Metro Process Control
-**Goal**: Users can start, stop, restart, and monitor metro with guaranteed single-instance enforcement — the zombie-process and port-binding bugs are addressed before any downstream features depend on this layer
-**Depends on**: Phase 1
-**Requirements**: METRO-01, METRO-02, METRO-03, METRO-04, METRO-05, METRO-06, METRO-07, METRO-08, METRO-09
-**Success Criteria** (what must be TRUE):
-  1. User can see at a glance which worktree (if any) has metro running with a status indicator (running/stopped), and the indicator accurately reflects reality even if metro was killed outside the dashboard
-  2. User can start metro (yarn start --reset-cache) from the focused worktree with one keystroke, and starting metro when another instance is already running automatically kills the existing one first
-  3. User can stop and restart metro with single keystrokes, and after stop the port 8081 is verified free before the UI shows status as stopped
-  4. User can toggle a log panel that shows metro output only when filtered, can scroll through log history, and can send debugger (j) and reload (r) commands to the running metro instance
-**Plans**: 3 plans
-
-Plans:
-- [ ] 02-01-PLAN.md — Domain metro types, infra trait contracts, Action enum + AppState extensions
-- [ ] 02-02-PLAN.md — App runtime: metro spawn/kill/restart, mpsc channels, stdin forwarding, death detection
-- [ ] 02-03-PLAN.md — UI rendering: metro status indicator, scrollable log panel, footer + help updates
-
-### Phase 3: Worktree Browser, Git, and RN Commands
-**Goal**: Users can see all worktrees in a browsable list, run any git operation or RN command on a selected worktree, and watch streaming output — completing the core daily-driver workflow
-**Depends on**: Phase 2
-**Requirements**: WORK-01, WORK-02, WORK-03, WORK-05, WORK-06, GIT-01, GIT-02, GIT-03, GIT-04, GIT-05, GIT-06, RN-01, RN-02, RN-03, RN-04, RN-05, RN-06, RN-07, RN-08, RN-09, RN-10, RN-11, RN-12
-**Success Criteria** (what must be TRUE):
-  1. User sees a list of all worktrees with branch name, metro status badge, JIRA ticket title placeholder (or branch name if not yet fetched), and any custom label — all populated from disk without any network call
-  2. User can set a custom label on a worktree that persists across sessions and follows the branch (not the worktree path)
-  3. User can run any git operation (reset --hard, pull, push, rebase, checkout, checkout -b) on a selected worktree and watch streaming output in a panel; destructive operations (reset --hard) show a confirmation prompt before executing
-  4. User can run any RN command (clean android, clean cocoapods, rm node_modules, yarn install, pod-install, run-android with device selection, run-ios with device/simulator selection, unit-tests, jest with filter, lint, check-types) on a selected worktree with streaming output
-  5. Dashboard shows a staleness hint when node_modules appears outdated relative to package.json or yarn.lock, and lazily installs dependencies before launching the app if the user has not done so manually
-**Plans**: 5 plans
-
-Plans:
-- [x] 03-01-PLAN.md — Domain types: CommandSpec enum, Worktree struct expansion, ModalState, Action enum extensions, serde deps
-- [x] 03-02-PLAN.md — Infra layer: worktree enumeration, command runner, label persistence, device enumeration
-- [x] 03-03-PLAN.md — App wiring: AppState extensions, handle_key modal/palette routing, update() for all Phase 3 actions, worktree loading
-- [x] 03-04-PLAN.md — UI rendering: worktree list widget, command output panel, modals, footer/help updates
-- [ ] 03-05-PLAN.md — Gap closure: fix 6 CommandSpec to_argv() variants to match requirements (RN-01, RN-02, RN-06, RN-07, RN-08, RN-10)
-
-### Phase 4: Config and JIRA Integration
-**Goal**: Users see JIRA ticket titles next to branch names, the JIRA API token is stored securely with correct file permissions, and the dashboard degrades gracefully when JIRA is unreachable
-**Depends on**: Phase 3
-**Requirements**: INTG-01, INTG-02, INTG-03, INTG-05
-**Success Criteria** (what must be TRUE):
-  1. User can place a JIRA API token in ~/.config/ump-dash/ (config file has 0600 permissions on first write) and the dashboard reads it without any other configuration needed
-  2. User sees JIRA ticket titles automatically appear next to branch names for any branch matching the UMP-XXXX pattern — titles load in the background without blocking dashboard startup
-  3. Fetched JIRA titles persist to a local cache so they appear on next launch without a network call; when JIRA is unreachable the branch name is shown in place of the title with no error shown to the user
-  4. Dashboard correctly detects it is running inside tmux and gates tmux-dependent features (tab creation) on that detection
-**Plans**: 3 plans
-
-Plans:
-- [x] 04-01-PLAN.md — Infra modules: reqwest dep, DashConfig, JiraClient trait + HttpJiraClient, jira_cache, tmux detection, extract_jira_key
-- [x] 04-02-PLAN.md — App wiring: JiraTitlesFetched action, AppState Phase 4 fields, startup config/cache load, background fetch trigger, UI title display
-- [ ] 04-03-PLAN.md — Gap closure: fix worktree list display (branch first, JIRA title second, visible color, icon staleness)
-
-### Phase 5: Worktree Switching and Claude Code
-**Goal**: Users can switch the active worktree with one keystroke triggering full metro orchestration, and can open Claude Code in a new tmux tab at any worktree directory
-**Depends on**: Phase 4
-**Requirements**: WORK-04, INTG-04
-**Success Criteria** (what must be TRUE):
-  1. User can switch the "running" worktree with one keystroke and the dashboard automatically kills metro in the current worktree, waits for port 8081 to free, and starts metro in the newly selected worktree — progress is visible during the transition
-  2. User can open Claude Code in a new tmux tab at a selected worktree's directory with one keystroke; the tab opens with claude as the initial shell command (not via send-keys) so there is no race condition on shell initialization
-**Plans**: 2 plans
-
-Plans:
-- [x] 05-01-PLAN.md — Worktree switch orchestration (Enter key) + Claude Code tmux tab launch (C key), with footer/help updates
-- [ ] 05-02-PLAN.md — Gap closure: surface metro spawn errors to user, stream metro output in metro pane
+</details>
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Scaffold and TUI Shell | 3/3 | Complete   | 2026-03-02 |
-| 2. Metro Process Control | 3/3 | Complete   | 2026-03-02 |
-| 3. Worktree Browser, Git, and RN Commands | 5/5 | Complete   | 2026-03-02 |
-| 4. Config and JIRA Integration | 3/3 | Complete   | 2026-03-02 |
-| 5. Worktree Switching and Claude Code | 2/2 | Complete   | 2026-03-03 |
-
-### Phase 05.2: milestone-feedbacks (INSERTED)
-
-**Goal:** Bug fixes and UX polish from real usage — double-line border visual overhaul, dynamic pane titles, table column restructuring, data dependency model (refresh_needed), staleness detection rewrite (.yarn-integrity), universal vim scrolling (hjkl/G/gg), metro auto-follow, external metro conflict detection, and bug fixes (iOS device picker, metro highlight, debugger, fullscreen Tab)
-**Requirements**: FIX-01, FIX-02, FIX-03, FIX-04, FIX-05, FIX-06
-**Depends on:** Phase 5.1
-**Plans:** 10/10 plans complete
-
-Plans:
-- [x] 05.2-01-PLAN.md — Visual polish: double-line borders, dynamic pane titles, table column restructure, metro highlight fix
-- [x] 05.2-02-PLAN.md — Data dependency model (refresh_needed) + staleness detection rewrite (.yarn-integrity)
-- [x] 05.2-03-PLAN.md — Navigation enhancements (universal scroll, auto-follow, fullscreen Tab) + bug fixes (iOS picker, debugger)
-- [x] 05.2-04-PLAN.md — External metro conflict detection (port 8081 check, kill prompt, auto-start)
-- [x] 05.2-05-PLAN.md — Gap closure: pane title color, separate status icons, metro-active row highlight
-- [x] 05.2-06-PLAN.md — Gap closure: staleness detection fix (multi-yarn-version) + post-command refresh
-- [x] 05.2-07-PLAN.md — Gap closure: scrollbar position, Tab-fullscreen-cycle, metro debugger toggle
-- [ ] 05.2-08-PLAN.md — Gap closure: fix metro-active row highlight root cause, Y/P letter icons, Dir column
-- [ ] 05.2-09-PLAN.md — Gap closure: Berry staleness detection (.yarn/install-state.gz), debugger j key
-- [ ] 05.2-10-PLAN.md — Gap closure: preferred_prefix() domain function for consistent display names
-
-### Phase 05.1: milestone-feedback (INSERTED)
-
-**Goal:** UX overhaul based on real usage of the v1 milestone — layout restructure (worktree table at bottom), complete command scheme rework (a/i/x/s/g submenus), command queue system, output persistence per worktree, multiplexer abstraction (tmux + zellij), sync-before-run prompting, simulator sort-by-recent with type-to-filter, and various workflow improvements
-**Requirements**: PHASE-05.1-QUEUE, PHASE-05.1-OUTPUT-PERSIST, PHASE-05.1-MULTIPLEXER, PHASE-05.1-CLAUDE-FLAGS, PHASE-05.1-COMMAND-SCHEME, PHASE-05.1-CLEAN-SUBMENU, PHASE-05.1-SYNC-BEFORE-RUN, PHASE-05.1-SIMULATOR-PICKER, PHASE-05.1-WORKTREE-TABLE, PHASE-05.1-LAYOUT, PHASE-05.1-FULLSCREEN, PHASE-05.1-KEYBINDING-REMAP, PHASE-05.1-CLEAN-MODAL, PHASE-05.1-SYNC-PROMPT, PHASE-05.1-SHELL-CMD, PHASE-05.1-FOOTER, PHASE-05.1-HELP, PHASE-05.1-RELEASE-BUILD, PHASE-05.1-SIM-SORT, PHASE-05.1-QUEUE-UI
-**Depends on:** Phase 5
-**Plans:** 8/8 plans complete
-
-Plans:
-- [ ] 05.1-01-PLAN.md — Command queue + output persistence (VecDeque queue, per-worktree HashMap)
-- [ ] 05.1-02-PLAN.md — Multiplexer abstraction (Tmux + Zellij adapters) + claude_flags config
-- [ ] 05.1-03-PLAN.md — Domain type extensions (CommandSpec variants, CleanOptions, PaletteMode, Action variants, stale-pods, sim history)
-- [ ] 05.1-04-PLAN.md — Worktree table layout (Table widget, layout restructure, fullscreen, metro-active pinning)
-- [ ] 05.1-05-PLAN.md — Keybinding remap (5 palette modes, multiplexer integration, CleanToggle/SyncBeforeRun modal interception)
-- [ ] 05.1-06-PLAN.md — Clean/sync/shell modals (CleanToggle wiring, sync-before-run prompt, shell command input)
-- [ ] 05.1-07-PLAN.md — Footer + help overlay (icon legend, new command scheme hints, complete help rewrite)
-- [ ] 05.1-08-PLAN.md — Integration wiring (release build queue, fetch-then-reset, sim sort, type-to-filter, queue UI)
-
-### Phase 06: final-ux-polish (INSERTED)
-
-**Goal:** Final UX polish — metro log filtering, tmux/zellij tab from worktree, metro running indicator, prefix ordering fix, optional claude tab name, double border on title
-**Requirements**: UX-06-01, UX-06-02, UX-06-03, UX-06-04, UX-06-05, UX-06-06
-**Depends on:** Phase 05.2
-**Plans:** 3/3 plans complete
-
-Plans:
-- [ ] 06-01-PLAN.md — Metro log noise suppression + play icon indicator
-- [ ] 06-02-PLAN.md — Open shell tab command (T key) + prefix ordering fix
-- [ ] 06-03-PLAN.md — Optional Claude tab name modal + title bar with double border
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 01. Scaffold and TUI Shell | v1.0 | 3/3 | Complete | 2026-03-02 |
+| 02. Metro Process Control | v1.0 | 3/3 | Complete | 2026-03-02 |
+| 03. Worktree Browser, Git, RN Commands | v1.0 | 5/5 | Complete | 2026-03-02 |
+| 04. Config and JIRA Integration | v1.0 | 3/3 | Complete | 2026-03-02 |
+| 05. Worktree Switching and Claude Code | v1.0 | 2/2 | Complete | 2026-03-03 |
+| 05.1 Milestone Feedback | v1.0 | 8/8 | Complete | — |
+| 05.2 Milestone Feedbacks | v1.0 | 10/10 | Complete | — |
+| 06. Final UX Polish | v1.0 | 3/3 | Complete | — |

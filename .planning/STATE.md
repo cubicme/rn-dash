@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: Completed quick 260405-jqb (fix prompt rendering in small terminal heights)
-last_updated: "2026-04-05T10:17:00.407Z"
-last_activity: "2026-03-31 - Completed quick task 260331-cw5: fix android device listing, add --mode debugOptimized"
+last_updated: "2026-04-05T11:39:08.603Z"
+last_activity: 2026-04-05
 progress:
   total_phases: 8
   completed_phases: 8
@@ -18,17 +18,16 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-02)
+See: .planning/PROJECT.md (updated 2026-04-05)
 
 **Core value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
-**Current focus:** Phase 5 — Worktree Switching and Claude Code
+**Current focus:** v1.0 complete — planning next milestone
 
 ## Current Position
 
-Phase: 5.2 of 7 (Milestone Feedbacks) — IN PROGRESS
-Plan: 7 of 7 in current phase
-Status: Plan 05.2-07 Complete — UAT behavior fixes (scrollbar, fullscreen tab, debugger)
-Last activity: 2026-03-31 - Completed quick task 260331-cw5: fix android device listing, add --mode debugOptimized
+Milestone: v1.0 MVP — SHIPPED 2026-04-05
+All 8 phases complete (37 plans, 59 tasks)
+Last activity: 2026-04-05 — Milestone v1.0 archived
 
 Progress: [██████████] 97%
 
