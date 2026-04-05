@@ -20,14 +20,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-05)
 
-**Core value:** One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
-**Current focus:** v1.0 complete — planning next milestone
+**Core value:** One place to see and control everything about your React Native worktrees — which one is running, what branch each is on, and execute any command without context-switching.
+**Current focus:** v1.1 Public Release
 
 ## Current Position
 
-Milestone: v1.0 MVP — SHIPPED 2026-04-05
-All 8 phases complete (37 plans, 59 tasks)
-Last activity: 2026-04-05 — Milestone v1.0 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-05 — Milestone v1.1 started
 
 Progress: [██████████] 97%
 

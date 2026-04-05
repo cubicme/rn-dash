@@ -1,12 +1,12 @@
-# UMP Dashboard
+# RN Dash
 
 ## What This Is
 
-A Rust/Ratatui terminal UI dashboard for managing React Native worktrees in the UMP project. It provides a dedicated tmux window with a unified view of the currently running metro instance, all worktrees with their git/JIRA context, and quick access to git operations, RN commands, and Claude Code agents. Built for a Doom Emacs user comfortable with vim bindings — keyboard-driven with on-screen hints.
+A Rust/Ratatui terminal UI dashboard for managing React Native worktrees. It provides a unified view of the currently running metro instance, all worktrees with their git/JIRA context, and quick access to git operations, RN commands, and Claude Code agents. Keyboard-driven with vim bindings and dynamic on-screen hints. Configurable for any React Native monorepo with git worktrees.
 
 ## Core Value
 
-One place to see and control everything about UMP worktrees — which one is running, what branch each is on, and execute any command without context-switching.
+One place to see and control everything about your React Native worktrees — which one is running, what branch each is on, and execute any command without context-switching.
 
 ## Requirements
 
@@ -34,7 +34,17 @@ One place to see and control everything about UMP worktrees — which one is run
 
 ### Active
 
-(Fresh for next milestone)
+- [ ] Remove Labels feature entirely
+- [ ] Rename (s)ync to (y)arn palette, move clean commands into it
+- [ ] Move worktree commands from (g)it to (w)orktree palette
+- [ ] New worktree creation command with base branch selection
+- [ ] Metro keys (R/J) context-sensitive — only when metro running; ESC stops metro; remove restart
+- [ ] Dynamic hint line derived from available actions, not hardcoded
+- [ ] Update footer legend
+- [ ] Extract all hardcoded AJ/UMP/system-specific values to config
+- [ ] License file, README, config example, Cargo.toml metadata
+- [ ] GitHub Actions CI + release workflow with prebuilt binaries
+- [ ] .gitignore audit
 
 ### Out of Scope
 
@@ -49,20 +59,21 @@ Shipped v1.0 with 5,491 LOC Rust across 207 commits in 34 days.
 Tech stack: Rust + Ratatui 0.30, tokio async runtime, crossterm, reqwest for JIRA.
 Architecture: TEA (The Elm Architecture) with domain/infra/app/ui separation.
 
-- Main repo at ~/aljazeera/ump with multiple git worktrees
+- Designed for any React Native monorepo using git worktrees
 - Only one metro bundler can run at a time across all worktrees (enforced)
 - User works in tmux or zellij, dedicating one window to this dashboard
-- Branch naming convention: UMP-XXXX-description (maps to JIRA tickets)
-- 5-palette submenu keybinding scheme (a/i/x/s/g) with vim-style navigation
+- Branch naming convention configurable (default: JIRA-style PROJ-XXXX)
+- Palette submenu keybinding scheme (a/i/x/y/g/w) with vim-style navigation
 - Per-worktree command output persistence, FIFO command queue
 - External metro conflict detection via port 8081 lsof
+- Preparing for public GitHub release in v1.1
 
 ## Constraints
 
 - **Tech stack**: Rust + Ratatui — no exceptions
 - **Architecture**: Domain logic completely separated from UI and system concerns, following "A Philosophy of Software Design" by John Ousterhout
-- **Environment**: macOS, runs inside tmux
-- **Config location**: ~/.config/ump-dash/ for JIRA token, worktree labels, preferences
+- **Environment**: macOS (primary), Linux (CI)
+- **Config location**: Configurable, default ~/.config/rn-dash/ for JIRA token, preferences
 
 ## Key Decisions
 
@@ -79,5 +90,31 @@ Architecture: TEA (The Elm Architecture) with domain/infra/app/ui separation.
 | External metro conflict detection | Detect port 8081 already in use | ✓ Good — lsof-based PID lookup with kill prompt |
 | Metro as prerequisite for RN runs | Auto-start metro before build commands | ✓ Good — prevents RN from spawning unmanaged metro |
 
+## Current Milestone: v1.1 Public Release
+
+**Goal:** Polish keybinding scheme, remove dead features, extract hardcoded values to config, and prepare for public GitHub release with README, license, CI, and prebuilt binaries.
+
+**Target features:**
+- App polish: remove labels, rework palettes (y/w), dynamic hints, metro key context
+- GitHub prep: license, README, config example, CI/CD, .gitignore, Cargo.toml metadata
+- Generalization: extract all AJ/UMP-specific values to config
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-04-05 after v1.0 milestone*
+*Last updated: 2026-04-05 after v1.1 milestone start*
