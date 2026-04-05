@@ -62,7 +62,7 @@ fn render_text_input_modal(f: &mut Frame, prompt: &str, buffer: &str) {
     let lines = vec![
         Line::from(Span::raw(prompt)),
         Line::from(Span::styled(
-            format!("{}_", buffer),
+            format!("{buffer}_"),
             Style::default().fg(Color::Yellow),
         )),
         Line::from(""),
@@ -104,7 +104,7 @@ fn render_device_picker_modal(
     let title = if filter.is_empty() {
         " Select Device ".to_string()
     } else {
-        format!(" Select Device — filter: {} ", filter)
+        format!(" Select Device — filter: {filter} ")
     };
 
     let block = Block::default()
@@ -232,7 +232,7 @@ fn render_external_metro_modal(f: &mut Frame, pid: u32, working_dir: &str) {
             Style::default().add_modifier(Modifier::BOLD),
         )),
         Line::from(""),
-        Line::from(format!("  Another process is using port 8081")),
+        Line::from("  Another process is using port 8081".to_string()),
         Line::from(format!("  PID: {pid}")),
         Line::from(format!("  Directory: {working_dir}")),
         Line::from(""),
@@ -274,7 +274,7 @@ fn render_branch_picker_modal(
     let title = if filter.is_empty() {
         " Select Base Branch ".to_string()
     } else {
-        format!(" Select Base Branch — filter: {} ", filter)
+        format!(" Select Base Branch — filter: {filter} ")
     };
 
     let block = Block::default()
