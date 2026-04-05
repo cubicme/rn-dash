@@ -33,7 +33,6 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["y",               "Yarn submenu"]),
         Row::new(vec!["w",               "Worktree submenu"]),
         Row::new(vec!["g",               "Git submenu"]),
-        Row::new(vec!["m",               "Metro submenu"]),
         Row::new(vec!["C",               "Open Claude Code (tmux/zellij)"]),
         Row::new(vec!["T",               "Open shell tab at worktree"]),
         Row::new(vec!["f",               "Toggle fullscreen"]),
@@ -92,19 +91,9 @@ pub fn render_help(f: &mut Frame) {
         // Worktree submenu section
         Row::new(vec!["Worktree  (w>)", ""])
             .style(section_style),
-        Row::new(vec!["W",               "Add new worktree"]),
-        Row::new(vec!["D",               "Remove worktree (purge)"]),
-        Row::new(vec!["B",               "New branch + worktree"]),
-        Row::new(vec!["Esc",             "Cancel"]),
-        Row::new(vec!["", ""]).style(dim_style),
-
-        // Metro palette section
-        Row::new(vec!["Metro  (m>)", ""])
-            .style(section_style),
-        Row::new(vec!["s",               "Start metro"]),
-        Row::new(vec!["x",               "Stop metro"]),
-        Row::new(vec!["j",               "Send debugger command"]),
-        Row::new(vec!["R",               "Send reload command"]),
+        Row::new(vec!["w",               "Add new worktree"]),
+        Row::new(vec!["d",               "Remove worktree (purge)"]),
+        Row::new(vec!["b",               "New branch + worktree"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 

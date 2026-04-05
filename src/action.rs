@@ -85,9 +85,6 @@ pub enum Action {
     EnterWorktreePalette,   // 'w' when WorktreeTable focused
     // EnterGitPalette already exists
 
-    // Quick-3nj: Metro palette
-    EnterMetroPalette,      // 'm' when WorktreeTable focused
-
     // Phase 5.1: Clean toggle actions
     CleanToggleNodeModules,
     CleanTogglePods,

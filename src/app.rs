@@ -50,8 +50,6 @@ pub enum PaletteMode {
     Yarn,
     /// 'g' — Git submenu
     Git,
-    /// 'm' — Metro submenu
-    Metro,
     /// 'w' — Worktree palette (create, remove, create-with-new-branch)
     Worktree,
 }
@@ -356,17 +354,9 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 _ => Some(Action::ModalCancel),
             },
             PaletteMode::Worktree => match key.code {
-                Char('W') => Some(Action::WorktreeAdd),
-                Char('D') => Some(Action::WorktreeRemove),
-                Char('B') => Some(Action::WorktreeAddNewBranch), // placeholder — wired in Plan 02
-                Esc => Some(Action::ModalCancel),
-                _ => Some(Action::ModalCancel),
-            },
-            PaletteMode::Metro => match key.code {
-                Char('s') => Some(Action::MetroStart),
-                Char('x') => Some(Action::MetroStop),
-                Char('j') => Some(Action::MetroSendDebugger),
-                Char('R') => Some(Action::MetroSendReload),
+                Char('w') => Some(Action::WorktreeAdd),
+                Char('d') => Some(Action::WorktreeRemove),
+                Char('b') => Some(Action::WorktreeAddNewBranch),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -406,7 +396,6 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('y') => return Some(Action::EnterYarnPalette),
             Char('w') => return Some(Action::EnterWorktreePalette),
             Char('g') => return Some(Action::EnterGitPalette),
-            Char('m') => return Some(Action::EnterMetroPalette),
             Char('C') => return Some(Action::OpenClaudeCode),
             Char('T') => return Some(Action::OpenShellTab),
             Char('f') => return Some(Action::ToggleFullscreen),
@@ -1391,9 +1380,7 @@ pub fn update(
             state.palette_mode = None;
         }
 
-        Action::EnterMetroPalette => {
-            state.palette_mode = Some(PaletteMode::Metro);
-        }
+
 
         // --- Phase 5: Worktree switching and Claude Code ---
 

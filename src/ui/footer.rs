@@ -73,16 +73,9 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("Esc", "cancel"),
             ],
             PaletteMode::Worktree => vec![
-                ("W", "add worktree"),
-                ("D", "remove worktree"),
-                ("B", "new branch worktree"),
-                ("Esc", "cancel"),
-            ],
-            PaletteMode::Metro => vec![
-                ("s", "start"),
-                ("x", "stop"),
-                ("j", "debugger"),
-                ("R", "reload"),
+                ("w", "add worktree"),
+                ("d", "remove worktree"),
+                ("b", "new branch worktree"),
                 ("Esc", "cancel"),
             ],
         };
@@ -128,13 +121,11 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
     let panel_hints: Vec<(&str, &str)> = match state.focused_panel {
         FocusedPanel::WorktreeTable => {
             let mut hints: Vec<(&'static str, &'static str)> = vec![
-                ("j/k", "navigate"),
                 ("a", "android"),
                 ("i", "ios"),
                 ("y", "yarn"),
                 ("w", "worktree"),
                 ("g", "git"),
-                ("m", "metro"),
             ];
             // Context-sensitive metro keys — only shown when metro is running (KEY-04)
             if state.metro.is_running() {
