@@ -55,28 +55,28 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KEY-01 | — | Pending |
-| KEY-02 | — | Pending |
-| KEY-03 | — | Pending |
-| KEY-04 | — | Pending |
-| KEY-05 | — | Pending |
-| KEY-06 | — | Pending |
-| KEY-07 | — | Pending |
-| CLN-01 | — | Pending |
-| GEN-01 | — | Pending |
-| GEN-02 | — | Pending |
-| GH-01 | — | Pending |
-| GH-02 | — | Pending |
-| GH-03 | — | Pending |
-| GH-04 | — | Pending |
-| GH-05 | — | Pending |
-| GH-06 | — | Pending |
+| CLN-01 | Phase 07 | Pending |
+| KEY-01 | Phase 08 | Pending |
+| KEY-02 | Phase 08 | Pending |
+| KEY-03 | Phase 08 | Pending |
+| KEY-04 | Phase 08 | Pending |
+| KEY-05 | Phase 08 | Pending |
+| KEY-06 | Phase 08 | Pending |
+| KEY-07 | Phase 08 | Pending |
+| GEN-01 | Phase 09 | Pending |
+| GEN-02 | Phase 09 | Pending |
+| GH-01 | Phase 09 | Pending |
+| GH-02 | Phase 09 | Pending |
+| GH-03 | Phase 09 | Pending |
+| GH-04 | Phase 09 | Pending |
+| GH-05 | Phase 10 | Pending |
+| GH-06 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-05*
-*Last updated: 2026-04-05 after initial definition*
+*Last updated: 2026-04-05 after v1.1 roadmap creation*
