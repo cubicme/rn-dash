@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Public Release
 status: executing
-stopped_at: Completed 08-01-PLAN.md
-last_updated: "2026-04-05T16:22:59.537Z"
+stopped_at: Completed 08-03-PLAN.md
+last_updated: "2026-04-05T16:34:12.341Z"
 last_activity: 2026-04-05 -- Phase 08 planning complete
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 08-palette-and-keybinding-rework P01 | 8 | 2 tasks | 4 files |
+| Phase 08-palette-and-keybinding-rework P03 | 12 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ Recent decisions affecting current work:
 - [Roadmap v1.1]: GH-05/GH-06 (CI/release) isolated to Phase 10 — no app code impact, safe to defer
 - [Phase 08-01]: PaletteMode::Clean removed; clean commands are direct keys in Yarn palette
 - [Phase 08-01]: WorktreeAddNewBranch stub added; wired in Phase 08 Plan 02
+- [Phase 08-03]: MetroRestart action variant removed entirely — no internal dispatch, only user-triggered
+- [Phase 08-03]: Footer renders single full-width hint line — no horizontal split, no static legend
 
 ### Pending Todos
 
@@ -77,6 +80,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T16:22:59.535Z
-Stopped at: Completed 08-01-PLAN.md
+Last session: 2026-04-05T16:34:12.338Z
+Stopped at: Completed 08-03-PLAN.md
 Resume file: None

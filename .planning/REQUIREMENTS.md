@@ -10,10 +10,10 @@
 - [x] **KEY-01**: User sees (y)arn palette (renamed from sync) containing yarn install, pod-install, and all clean commands
 - [x] **KEY-02**: User sees (w)orktree palette (extracted from git) containing worktree create, remove, and create-with-new-branch
 - [ ] **KEY-03**: User can create a worktree with a new branch, selecting the base branch interactively
-- [ ] **KEY-04**: User sees metro R (reload) and J (debugger) keys only when metro is running
-- [ ] **KEY-05**: User can stop metro with ESC when metro is running; metro restart key removed (RET handles it)
-- [ ] **KEY-06**: User sees dynamically derived hint line based on currently available actions, not hardcoded strings
-- [ ] **KEY-07**: Footer legend updated — no stale ▶/⚠ indicators
+- [x] **KEY-04**: User sees metro R (reload) and J (debugger) keys only when metro is running
+- [x] **KEY-05**: User can stop metro with ESC when metro is running; metro restart key removed (RET handles it)
+- [x] **KEY-06**: User sees dynamically derived hint line based on currently available actions, not hardcoded strings
+- [x] **KEY-07**: Footer legend updated — no stale ▶/⚠ indicators
 
 ### Cleanup
 
@@ -59,10 +59,10 @@
 | KEY-01 | Phase 08 | Complete |
 | KEY-02 | Phase 08 | Complete |
 | KEY-03 | Phase 08 | Pending |
-| KEY-04 | Phase 08 | Pending |
-| KEY-05 | Phase 08 | Pending |
-| KEY-06 | Phase 08 | Pending |
-| KEY-07 | Phase 08 | Pending |
+| KEY-04 | Phase 08 | Complete |
+| KEY-05 | Phase 08 | Complete |
+| KEY-06 | Phase 08 | Complete |
+| KEY-07 | Phase 08 | Complete |
 | GEN-01 | Phase 09 | Pending |
 | GEN-02 | Phase 09 | Pending |
 | GH-01 | Phase 09 | Pending |

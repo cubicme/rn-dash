@@ -62,7 +62,7 @@ Plans:
 Plans:
 - [x] 08-01-PLAN.md — Restructure palettes: rename Sync to Yarn, extract Worktree from Git, update hints and help
 - [ ] 08-02-PLAN.md — New-branch worktree creation with interactive base branch picker
-- [ ] 08-03-PLAN.md — Context-sensitive metro keys, dynamic footer hints, remove stale legend
+- [x] 08-03-PLAN.md — Context-sensitive metro keys, dynamic footer hints, remove stale legend
 **UI hint**: yes
 
 ### Phase 09: Generalization and GitHub Prep
