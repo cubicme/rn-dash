@@ -60,10 +60,6 @@ pub enum Action {
     ModalDevicePrev,        // k/Up in device picker
     ModalDeviceConfirm,     // Enter on selected device
 
-    // Phase 3: Label management
-    SetLabel { branch: String, label: String },
-    StartSetLabel,          // 'L' on selected worktree — opens text input for label
-
     // Phase 3: Device enumeration (internal — sent by background task, not user)
     DevicesEnumerated(Vec<crate::domain::command::DeviceInfo>),
 

@@ -79,7 +79,6 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
             head_sha,
             metro_status: WorktreeMetroStatus::Stopped, // derived later from AppState
             jira_title: None,
-            label: None,
             stale,
             stale_pods,
             jira_key,

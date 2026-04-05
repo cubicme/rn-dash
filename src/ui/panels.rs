@@ -61,7 +61,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let mut detail_row_indices: Vec<usize> = Vec::new();
 
     for wt in state.worktrees.iter() {
-        let label = wt.label.as_deref().unwrap_or("");
         let branch = &wt.branch;
 
         // Extract ticket number from branch if possible
@@ -110,7 +109,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
         rows.push(Row::new(vec![
             Cell::from(Line::from(icon_spans)),
-            Cell::from(truncate(label, 12)),
             Cell::from(truncate(branch, 18)),
             Cell::from(ticket_display),
             Cell::from(dir_name),
@@ -121,7 +119,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         if wt.metro_status == WorktreeMetroStatus::Running {
             if let Some(ref activity) = state.metro.activity {
                 let detail_row = Row::new(vec![
-                    Cell::from(""),
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(Span::styled(
@@ -157,7 +154,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         rows,
         [
             Constraint::Length(8),  // Status icons (metro + Y + /P)
-            Constraint::Length(14), // Label
             Constraint::Length(20), // Branch
             Constraint::Min(20),   // Ticket (merged number + title)
             Constraint::Length(16), // Dir

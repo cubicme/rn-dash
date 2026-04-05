@@ -102,9 +102,6 @@ pub struct AppState {
     // Modal state — only one modal active at a time
     pub modal: Option<crate::domain::command::ModalState>,
 
-    // Label store: branch_name -> label_text (persisted to labels.json)
-    pub labels: std::collections::HashMap<String, String>,
-
     // Repo root — worktrees are listed relative to this path
     pub repo_root: std::path::PathBuf,
 
@@ -113,9 +110,6 @@ pub struct AppState {
 
     // Pending device command — stored while async device enumeration is in flight
     pub pending_device_command: Option<crate::domain::command::CommandSpec>,
-
-    // Pending label branch — set by StartSetLabel, consumed by ModalInputSubmit
-    pub pending_label_branch: Option<String>,
 
     // Pending claude open — stores worktree dir name while TextInput modal is open for tab suffix
     pub pending_claude_open: Option<String>,
@@ -176,14 +170,12 @@ impl Default for AppState {
             running_command: None,
             command_task: None,
             modal: None,
-            labels: std::collections::HashMap::new(),
             repo_root: PathBuf::from(
                 std::env::var("HOME").unwrap_or_else(|_| ".".into()),
             )
             .join("aljazeera/ump"),
             palette_mode: None,
             pending_device_command: None,
-            pending_label_branch: None,
             pending_claude_open: None,
             pending_android_mode: false,
             // Phase 5.2
@@ -398,7 +390,6 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             Char('m') => return Some(Action::EnterMetroPalette),
             Char('C') => return Some(Action::OpenClaudeCode),
             Char('T') => return Some(Action::OpenShellTab),
-            Char('L') => return Some(Action::StartSetLabel),
             Char('f') => return Some(Action::ToggleFullscreen),
             Char('!') => return Some(Action::StartShellCommand),
             Char('R') => return Some(Action::RefreshWorktrees),
@@ -708,14 +699,6 @@ pub fn update(
         }
 
         Action::WorktreesLoaded(mut worktrees) => {
-            // Reload labels from disk — picks up external edits made since last load
-            state.labels = crate::infra::labels::load_labels().unwrap_or_default();
-
-            // Apply labels from state.labels: set wt.label for each worktree
-            for wt in &mut worktrees {
-                wt.label = state.labels.get(&wt.branch).cloned();
-            }
-
             // Phase 4: re-apply cached JIRA titles
             for wt in &mut worktrees {
                 if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch) {
@@ -1090,18 +1073,7 @@ pub fn update(
                         pending_template,
                         ..
                     } => {
-                        // Check if this is a label submit
-                        if let Some(branch) = state.pending_label_branch.take() {
-                            update(
-                                state,
-                                Action::SetLabel {
-                                    branch,
-                                    label: buffer,
-                                },
-                                metro_tx,
-                                handle_tx,
-                            );
-                        } else if state.pending_android_mode {
+                        if state.pending_android_mode {
                             state.pending_android_mode = false;
                             let mode = if buffer.trim().is_empty() { None } else { Some(buffer.trim().to_string()) };
                             state.android_mode = mode.clone();
@@ -1350,36 +1322,6 @@ pub fn update(
                         });
                     }
                 }
-            }
-        }
-
-        // --- Phase 3: Label management ---
-
-        Action::SetLabel { branch, label } => {
-            state.labels.insert(branch.clone(), label.clone());
-            if let Err(e) = crate::infra::labels::save_labels(&state.labels) {
-                tracing::warn!("save_labels failed: {e}");
-            }
-            // Update the matching worktree's label field in memory
-            for wt in &mut state.worktrees {
-                if wt.branch == branch {
-                    wt.label = Some(label.clone());
-                }
-            }
-        }
-
-        Action::StartSetLabel => {
-            if !state.worktrees.is_empty() {
-                let idx = state.worktree_table_state.selected().unwrap_or(0);
-                let idx = idx.min(state.worktrees.len() - 1);
-                let branch = state.worktrees[idx].branch.clone();
-                let current_label = state.worktrees[idx].label.clone().unwrap_or_default();
-                state.pending_label_branch = Some(branch.clone());
-                state.modal = Some(ModalState::TextInput {
-                    prompt: format!("Label for {}:", branch),
-                    buffer: current_label,
-                    pending_template: Box::new(CommandSpec::YarnLint), // sentinel — not used
-                });
             }
         }
 
@@ -1791,9 +1733,6 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 
     // Channel for the spawn task to deliver the MetroHandle once spawning is complete.
     let (handle_tx, mut handle_rx) = tokio::sync::mpsc::unbounded_channel::<MetroHandle>();
-
-    // Load labels from disk on startup
-    state.labels = crate::infra::labels::load_labels().unwrap_or_default();
 
     // Phase 5.1: multiplexer detection (replaces tmux_available bool)
     state.multiplexer = crate::infra::multiplexer::detect_multiplexer();

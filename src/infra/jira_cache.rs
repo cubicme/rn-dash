@@ -8,7 +8,7 @@
 
 #![allow(dead_code)]
 
-use crate::infra::labels::config_dir;
+use crate::infra::config::config_dir;
 use std::collections::HashMap;
 use std::path::PathBuf;
 

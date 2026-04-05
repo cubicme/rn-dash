@@ -1,7 +1,7 @@
 //! Simulator usage history — tracks last-used simulators for sort-by-recent.
 //! Persists to ~/.config/ump-dash/sim_history.json as a JSON array of UDIDs.
 
-use crate::infra::labels::config_dir;
+use crate::infra::config::config_dir;
 
 fn sim_history_path() -> std::path::PathBuf {
     config_dir().join("sim_history.json")

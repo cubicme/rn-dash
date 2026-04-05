@@ -1,7 +1,7 @@
 //! Android run preferences — persists last-used build mode for auto-application.
 //! Persists to ~/.config/ump-dash/android_prefs.json as JSON: {"mode": "debugOptimized"}.
 
-use crate::infra::labels::config_dir;
+use crate::infra::config::config_dir;
 
 fn android_prefs_path() -> std::path::PathBuf {
     config_dir().join("android_prefs.json")

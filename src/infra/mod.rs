@@ -5,7 +5,6 @@ pub mod port;
 pub mod process;
 pub mod worktrees;
 pub mod command_runner;
-pub mod labels;
 pub mod devices;
 pub mod config;
 pub mod jira;

@@ -151,7 +151,6 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
             ("s", "sync"),
             ("g", "git"),
             ("m", "metro"),
-            ("L", "label"),
             ("C", "claude"),
             ("T", "shell tab"),
             ("!", "shell"),

@@ -3,14 +3,16 @@
 // Dashboard configuration persistence.
 // Config is stored at ~/.config/ump-dash/config.json with 0600 permissions
 // because it contains JIRA credentials (token/email).
-//
-// The config_dir() function is re-exported from labels.rs to ensure a single
-// source of truth for the config directory path.
 
 #![allow(dead_code)]
 
-use crate::infra::labels::config_dir;
 use serde::{Deserialize, Serialize};
+
+/// Returns the `~/.config/ump-dash/` config directory path.
+pub fn config_dir() -> std::path::PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
+    std::path::PathBuf::from(home).join(".config").join("ump-dash")
+}
 
 fn default_auth_mode() -> String {
     "cloud".to_string()
