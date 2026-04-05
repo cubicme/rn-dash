@@ -43,7 +43,9 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
   2. No label files are written or read on startup
   3. Codebase compiles with zero warnings related to labels
   4. Worktree list renders correctly with branch and JIRA title only
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 07-01-PLAN.md — Remove labels feature: relocate config_dir, delete labels.rs, clean domain/action/app/UI
 
 ### Phase 08: Palette and Keybinding Rework
 **Goal**: Users interact with a clean, context-sensitive keybinding scheme — yarn palette, worktree palette, metro keys only when relevant, dynamic hints
@@ -92,7 +94,7 @@ See: `.planning/milestones/v1.0-ROADMAP.md` for full details.
 | 05.1 Milestone Feedback | v1.0 | 8/8 | Complete | — |
 | 05.2 Milestone Feedbacks | v1.0 | 10/10 | Complete | — |
 | 06. Final UX Polish | v1.0 | 3/3 | Complete | — |
-| 07. Labels Removal | v1.1 | 0/? | Not started | - |
+| 07. Labels Removal | v1.1 | 0/1 | Planned | - |
 | 08. Palette and Keybinding Rework | v1.1 | 0/? | Not started | - |
 | 09. Generalization and GitHub Prep | v1.1 | 0/? | Not started | - |
 | 10. CI and Release | v1.1 | 0/? | Not started | - |
