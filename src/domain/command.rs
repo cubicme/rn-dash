@@ -128,6 +128,16 @@ impl CommandSpec {
         }
     }
 
+    /// Returns true for commands that require metro to be running before dispatch.
+    pub fn needs_metro(&self) -> bool {
+        matches!(self,
+            CommandSpec::RnRunAndroid { .. }
+            | CommandSpec::RnRunIos { .. }
+            | CommandSpec::RnRunIosDevice
+            | CommandSpec::RnReleaseBuild
+        )
+    }
+
     /// Returns true for commands that require the user to pick a connected device first.
     /// Only triggers when device_id is empty (not yet selected).
     pub fn needs_device_selection(&self) -> bool {

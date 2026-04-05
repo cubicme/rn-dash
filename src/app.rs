@@ -147,6 +147,9 @@ pub struct AppState {
 
     // Quick-260403-dmz: Worktree creation — set when g>W is pressed, consumed by ModalInputSubmit
     pub pending_worktree_add: bool,
+
+    // Quick-260405-ijq: RN run command waiting for metro to become Ready before dispatch.
+    pub pending_metro_run: Option<crate::domain::command::CommandSpec>,
 }
 
 impl Default for AppState {
@@ -199,6 +202,8 @@ impl Default for AppState {
                 .or_else(|| Some("debugOptimized".to_string())),
             // Quick-260403-dmz
             pending_worktree_add: false,
+            // Quick-260405-ijq
+            pending_metro_run: None,
         }
     }
 }
