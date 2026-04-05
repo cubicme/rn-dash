@@ -75,7 +75,10 @@ Plans:
   3. MIT license file and updated Cargo.toml metadata (description, license, repository, keywords) are present
   4. README covers project description, build instructions, usage guide, and config reference
   5. .gitignore excludes .planning/, credentials, and build artifacts
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md — Extract hardcoded AJ/UMP values to config, rename to rn-dash, create config.example.json
+- [ ] 09-02-PLAN.md — Add MIT license, Cargo.toml metadata, .gitignore audit, comprehensive README
 
 ### Phase 10: CI and Release
 **Goal**: Every push is verified by CI and tagged releases produce downloadable prebuilt binaries
@@ -100,5 +103,5 @@ Plans:
 | 06. Final UX Polish | v1.0 | 3/3 | Complete | — |
 | 07. Labels Removal | v1.1 | 0/1 | Planned | - |
 | 08. Palette and Keybinding Rework | v1.1 | 0/3 | Planned | - |
-| 09. Generalization and GitHub Prep | v1.1 | 0/? | Not started | - |
+| 09. Generalization and GitHub Prep | v1.1 | 0/2 | Planned | - |
 | 10. CI and Release | v1.1 | 0/? | Not started | - |
