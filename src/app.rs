@@ -150,6 +150,10 @@ pub struct AppState {
 
     // Quick-260405-ijq: RN run command waiting for metro to become Ready before dispatch.
     pub pending_metro_run: Option<crate::domain::command::CommandSpec>,
+
+    // Phase 08-04: skip external metro detection when restarting our own metro (worktree switch).
+    // Set true in MetroExited when pending_restart was true; consumed (reset) in MetroStart.
+    pub skip_external_metro_check: bool,
 }
 
 impl Default for AppState {
@@ -203,6 +207,8 @@ impl Default for AppState {
             // Phase 08-02
             pending_new_branch_base: None,
             pending_new_branch_worktree: false,
+            // Phase 08-04
+            skip_external_metro_check: false,
         }
     }
 }
@@ -573,6 +579,13 @@ pub fn update(
                 update(state, Action::MetroStop, metro_tx, handle_tx);
                 return;
             }
+            // Skip external detection when restarting our own metro (worktree switch or restart).
+            // The port may still be releasing from our just-killed process — not an external conflict.
+            if state.skip_external_metro_check {
+                state.skip_external_metro_check = false;
+                let _ = metro_tx.send(Action::MetroStartConfirmed);
+                return;
+            }
             // Check for external metro conflict before spawning
             let tx = metro_tx.clone();
             tokio::spawn(async move {
@@ -640,6 +653,9 @@ pub fn update(
                 if let Some(path) = state.pending_switch_path.take() {
                     state.active_worktree_path = Some(path);
                 }
+                // Signal MetroStart to skip external detection — the port may still be
+                // releasing from our just-killed process, not an external conflict.
+                state.skip_external_metro_check = true;
                 update(state, Action::MetroStart, metro_tx, handle_tx);
             }
             // Refresh worktree list so metro status (green bg) updates immediately
