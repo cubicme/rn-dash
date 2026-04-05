@@ -7,8 +7,8 @@
 
 ### Keybindings & Palettes
 
-- [ ] **KEY-01**: User sees (y)arn palette (renamed from sync) containing yarn install, pod-install, and all clean commands
-- [ ] **KEY-02**: User sees (w)orktree palette (extracted from git) containing worktree create, remove, and create-with-new-branch
+- [x] **KEY-01**: User sees (y)arn palette (renamed from sync) containing yarn install, pod-install, and all clean commands
+- [x] **KEY-02**: User sees (w)orktree palette (extracted from git) containing worktree create, remove, and create-with-new-branch
 - [ ] **KEY-03**: User can create a worktree with a new branch, selecting the base branch interactively
 - [ ] **KEY-04**: User sees metro R (reload) and J (debugger) keys only when metro is running
 - [ ] **KEY-05**: User can stop metro with ESC when metro is running; metro restart key removed (RET handles it)
@@ -56,8 +56,8 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | CLN-01 | Phase 07 | Pending |
-| KEY-01 | Phase 08 | Pending |
-| KEY-02 | Phase 08 | Pending |
+| KEY-01 | Phase 08 | Complete |
+| KEY-02 | Phase 08 | Complete |
 | KEY-03 | Phase 08 | Pending |
 | KEY-04 | Phase 08 | Pending |
 | KEY-05 | Phase 08 | Pending |

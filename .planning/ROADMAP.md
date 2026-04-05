@@ -60,7 +60,7 @@ Plans:
   6. Hint line reflects only currently available actions (no stale or inapplicable hints shown)
 **Plans**: 3 plans
 Plans:
-- [ ] 08-01-PLAN.md — Restructure palettes: rename Sync to Yarn, extract Worktree from Git, update hints and help
+- [x] 08-01-PLAN.md — Restructure palettes: rename Sync to Yarn, extract Worktree from Git, update hints and help
 - [ ] 08-02-PLAN.md — New-branch worktree creation with interactive base branch picker
 - [ ] 08-03-PLAN.md — Context-sensitive metro keys, dynamic footer hints, remove stale legend
 **UI hint**: yes
