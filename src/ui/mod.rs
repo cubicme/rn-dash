@@ -31,11 +31,8 @@ pub fn view(f: &mut Frame, state: &mut AppState) {
             .constraints([Constraint::Min(0), Constraint::Length(1)])
             .areas(area);
 
-        match panel {
-            FocusedPanel::CommandOutput => {
-                panels::render_command_output(f, main_area, state);
-            }
-            _ => {} // WorktreeTable cannot be fullscreened
+        if panel == FocusedPanel::CommandOutput {
+            panels::render_command_output(f, main_area, state);
         }
 
         footer::render_footer(f, footer_area, state);

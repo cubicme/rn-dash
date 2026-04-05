@@ -17,7 +17,7 @@ async fn main() -> color_eyre::Result<()> {
     let original_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |panic_info| {
         // Ignore errors — we're already in a panic, best-effort restore
-        let _ = ratatui::restore();
+        ratatui::restore();
         original_hook(panic_info);
     }));
 

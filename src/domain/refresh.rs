@@ -28,6 +28,7 @@ impl RefreshSet {
     }
 
     /// Returns true if any refresh is needed.
+    #[allow(dead_code)]
     pub fn any(&self) -> bool {
         self.worktrees || self.staleness || self.jira_titles
     }

@@ -1,6 +1,7 @@
 /// All actions the user can trigger. TEA pattern: handle_key() → Option<Action> → update().
 /// Phase 1 actions only. Later phases append variants — never remove existing ones.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum Action {
     // Navigation
     FocusNext,             // Tab

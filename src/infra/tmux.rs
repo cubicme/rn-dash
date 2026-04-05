@@ -11,6 +11,7 @@
 /// where keystrokes can arrive before the shell finishes initializing.
 ///
 /// `-d` flag prevents focus switching away from the dashboard.
+#[allow(dead_code)]
 pub fn open_claude_in_worktree(path: &std::path::Path, window_name: &str) -> anyhow::Result<()> {
     let status = std::process::Command::new("tmux")
         .args([

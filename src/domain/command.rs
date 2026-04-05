@@ -189,6 +189,7 @@ pub struct CleanOptions {
 /// State of a modal dialog overlaid on the main UI.
 /// Only one modal can be active at a time.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ModalState {
     /// User must confirm (Y) or cancel (N/Esc) a destructive action.
     Confirm {

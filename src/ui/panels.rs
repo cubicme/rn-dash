@@ -17,13 +17,14 @@ use crate::{
 
 /// Renders the application title bar with double border.
 /// Only shown in normal (non-fullscreen) layout.
+#[allow(dead_code)]
 pub fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
     let title = state.config.as_ref()
         .map(|c| c.app_title.as_str())
         .unwrap_or("RN Dash");
     let block = Block::bordered()
         .border_type(BorderType::Double)
-        .title(format!(" {} ", title))
+        .title(format!(" {title} "))
         .title_style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD));
     f.render_widget(block, area);
 }
@@ -72,7 +73,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
         // Merged ticket display: "UMP-1234 Title text" or just one or the other
         let ticket_display = match (ticket_num.is_empty(), title.is_empty()) {
-            (false, false) => format!("{} {}", ticket_num, title),
+            (false, false) => format!("{ticket_num} {title}"),
             (false, true) => ticket_num,
             (true, false) => title.to_string(),
             (true, true) => String::new(),
@@ -119,13 +120,13 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         .style(row_style));
 
         // If this worktree is running metro and we have activity info, add a detail row
-        if wt.metro_status == WorktreeMetroStatus::Running {
-            if let Some(ref activity) = state.metro.activity {
+        if wt.metro_status == WorktreeMetroStatus::Running
+            && let Some(ref activity) = state.metro.activity {
                 let detail_row = Row::new(vec![
                     Cell::from(""),
                     Cell::from(""),
                     Cell::from(Span::styled(
-                        format!("\u{2502} {}", activity),
+                        format!("\u{2502} {activity}"),
                         Style::default().fg(Color::Cyan),
                     )),
                     Cell::from(""),
@@ -133,7 +134,6 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
                 .style(Style::default().bg(Color::Rgb(0, 60, 0)));
                 detail_row_indices.push(rows.len());
                 rows.push(detail_row);
-            }
         }
     }
 
@@ -216,7 +216,7 @@ pub fn render_command_output(f: &mut Frame, area: Rect, state: &AppState) {
         None => {
             let queue_count = state.command_queue.len();
             if queue_count > 0 {
-                format!(" Output ({} queued) ", queue_count)
+                format!(" Output ({queue_count} queued) ")
             } else {
                 " Output ".to_string()
             }

@@ -76,9 +76,9 @@ impl DashConfig {
     /// Returns `None` when `repo_root` is not set in config.
     pub fn repo_root_path(&self) -> Option<std::path::PathBuf> {
         self.repo_root.as_ref().map(|s| {
-            if s.starts_with("~/") {
+            if let Some(rest) = s.strip_prefix("~/") {
                 let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-                std::path::PathBuf::from(home).join(&s[2..])
+                std::path::PathBuf::from(home).join(rest)
             } else {
                 std::path::PathBuf::from(s)
             }

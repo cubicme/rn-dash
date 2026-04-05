@@ -27,18 +27,20 @@ impl std::fmt::Display for MetroActivity {
         match self {
             Self::Starting => write!(f, "Starting..."),
             Self::Ready => write!(f, "Ready"),
-            Self::Bundling { percent: Some(p) } => write!(f, "Bundling {}%", p),
+            Self::Bundling { percent: Some(p) } => write!(f, "Bundling {p}%"),
             Self::Bundling { percent: None } => write!(f, "Bundling..."),
             Self::DeviceConnected => write!(f, "Device connected"),
-            Self::Error(msg) => write!(f, "Error: {}", msg),
+            Self::Error(msg) => write!(f, "Error: {msg}"),
         }
     }
 }
 
 /// Current observable state of the metro process as seen by the domain layer.
 #[derive(Debug, Clone, PartialEq)]
+#[derive(Default)]
 pub enum MetroStatus {
     /// No metro instance is running.
+    #[default]
     Stopped,
     /// Metro is running with the given OS pid and the worktree it was started from.
     Running { pid: u32, worktree_id: String },
@@ -48,11 +50,6 @@ pub enum MetroStatus {
     Stopping,
 }
 
-impl Default for MetroStatus {
-    fn default() -> Self {
-        Self::Stopped
-    }
-}
 
 /// Live handle to a running metro process.
 ///
@@ -60,6 +57,7 @@ impl Default for MetroStatus {
 /// Fields are pub so the infra layer (app.rs spawn logic in Plan 02) can construct
 /// and pass this struct across the domain boundary.
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct MetroHandle {
     /// OS process ID — used for status display and external-kill detection.
     pub pid: u32,
@@ -133,6 +131,7 @@ impl MetroManager {
     /// Send a raw byte sequence to metro's stdin via the background stdin-writer task.
     ///
     /// No-op if metro is not running.
+    #[allow(dead_code)]
     pub fn send_stdin(&self, bytes: Vec<u8>) -> anyhow::Result<()> {
         if let Some(ref h) = self.handle {
             h.stdin_tx

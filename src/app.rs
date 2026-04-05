@@ -317,9 +317,9 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
         return match mode {
             PaletteMode::Android => match key.code {
                 Char('d') => {
-                    let mode_flag = state.android_mode.as_ref().map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                    let mode_flag = state.android_mode.as_ref().map(|m| format!(" --mode {m}")).unwrap_or_default();
                     Some(Action::CommandRun(CommandSpec::ShellCommand {
-                        command: format!("npx react-native run-android{}", mode_flag),
+                        command: format!("npx react-native run-android{mode_flag}"),
                     }))
                 },
                 Char('e') => Some(Action::CommandRun(CommandSpec::RnRunAndroid { device_id: String::new(), mode: state.android_mode.clone() })),
@@ -386,11 +386,10 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
     }
 
     // --- FULLSCREEN: Tab exits fullscreen ---
-    if state.fullscreen_panel.is_some() {
-        if key.code == Tab {
+    if state.fullscreen_panel.is_some()
+        && key.code == Tab {
             return Some(Action::ToggleFullscreen);
         }
-    }
 
     // --- WORKTREE TABLE SPECIFIC ---
     if state.focused_panel == FocusedPanel::WorktreeTable {
@@ -539,12 +538,11 @@ pub fn update(
         Action::FocusNext => state.focused_panel = state.focused_panel.next(),
         Action::FocusPrev => state.focused_panel = state.focused_panel.prev(),
         Action::FocusUp => {
-            if state.focused_panel == FocusedPanel::CommandOutput {
-                if let Some(id) = active_worktree_id(state) {
+            if state.focused_panel == FocusedPanel::CommandOutput
+                && let Some(id) = active_worktree_id(state) {
                     let scroll = state.command_output_scroll_by_worktree.entry(id).or_insert(0);
                     *scroll = scroll.saturating_sub(1);
                 }
-            }
         }
         Action::FocusDown => {
             if state.focused_panel == FocusedPanel::CommandOutput {
@@ -676,12 +674,11 @@ pub fn update(
         Action::MetroActivityUpdate(activity) => {
             state.metro.activity = Some(activity.clone());
             // Auto-dispatch pending RN run command when metro becomes Ready
-            if matches!(activity, crate::domain::metro::MetroActivity::Ready) {
-                if let Some(run_spec) = state.pending_metro_run.take() {
+            if matches!(activity, crate::domain::metro::MetroActivity::Ready)
+                && let Some(run_spec) = state.pending_metro_run.take() {
                     // Re-enter the full CommandRun pipeline (sync check, device selection, etc.)
                     update(state, Action::CommandRun(run_spec), metro_tx, handle_tx);
                 }
-            }
         }
 
         Action::ExternalMetroDetected(info) => {
@@ -834,9 +831,9 @@ pub fn update(
             };
 
             // Sync-before-run: stale worktree + run command triggers prompt
-            if let Some((_, stale)) = &wt_branch {
-                if *stale {
-                    if matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
+            if let Some((_, stale)) = &wt_branch
+                && *stale
+                    && matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
                         let needs_pods = matches!(spec, CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice);
                         // Also check pods staleness for iOS
                         let needs_pods = if needs_pods {
@@ -853,8 +850,6 @@ pub fn update(
                         state.palette_mode = None;
                         return;
                     }
-                }
-            }
 
             // Pre-processing pipeline
             if spec.is_destructive() {
@@ -1017,11 +1012,10 @@ pub fn update(
                 state.modal = None;
 
                 // Stop metro if it's running on the worktree being removed
-                if state.metro.is_running() {
-                    if state.active_worktree_path.as_ref() == Some(&wt_path) {
+                if state.metro.is_running()
+                    && state.active_worktree_path.as_ref() == Some(&wt_path) {
                         update(state, Action::MetroStop, metro_tx, handle_tx);
                     }
-                }
 
                 // Clean up per-worktree dashboard state
                 state.command_output_by_worktree.remove(&wt_id);
@@ -1176,14 +1170,13 @@ pub fn update(
                                 let command = if flags.is_empty() {
                                     "claude".to_string()
                                 } else {
-                                    format!("claude {}", flags)
+                                    format!("claude {flags}")
                                 };
                                 tokio::task::spawn_blocking(move || {
-                                    if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
-                                        if let Err(e) = mux.new_window(&path, &name, &command) {
+                                    if let Some(mux) = crate::infra::multiplexer::detect_multiplexer()
+                                        && let Err(e) = mux.new_window(&path, &name, &command) {
                                             tracing::warn!("multiplexer new_window (claude) failed: {e}");
                                         }
-                                    }
                                 });
                             }
                         } else {
@@ -1284,10 +1277,9 @@ pub fn update(
                             if let Some(ref m) = mode {
                                 let _ = crate::infra::android_prefs::save_android_mode(m);
                             }
-                            let mode_flag = mode.map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                            let mode_flag = mode.map(|m| format!(" --mode {m}")).unwrap_or_default();
                             let cmd = format!(
-                                "emulator -avd {} > /dev/null 2>&1 & adb wait-for-device && npx react-native run-android{}",
-                                device_id, mode_flag
+                                "emulator -avd {device_id} > /dev/null 2>&1 & adb wait-for-device && npx react-native run-android{mode_flag}"
                             );
                             dispatch_command(state, CommandSpec::ShellCommand { command: cmd }, metro_tx);
                         }
@@ -1338,7 +1330,7 @@ pub fn update(
                                 if let Some(ref m) = mode {
                                     let _ = crate::infra::android_prefs::save_android_mode(m);
                                 }
-                                let mode_flag = mode.map(|m| format!(" --mode {}", m)).unwrap_or_default();
+                                let mode_flag = mode.map(|m| format!(" --mode {m}")).unwrap_or_default();
                                 let cmd = format!(
                                     "emulator -avd {} > /dev/null 2>&1 & adb wait-for-device && npx react-native run-android{}",
                                     devices[0].id, mode_flag
@@ -1468,11 +1460,10 @@ pub fn update(
             let name = format!("{}-shell", wt.preferred_prefix());
             let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
             tokio::task::spawn_blocking(move || {
-                if let Some(mux) = crate::infra::multiplexer::detect_multiplexer() {
-                    if let Err(e) = mux.new_window(&path, &name, &shell) {
+                if let Some(mux) = crate::infra::multiplexer::detect_multiplexer()
+                    && let Err(e) = mux.new_window(&path, &name, &shell) {
                         tracing::warn!("multiplexer new_window (shell) failed: {e}");
                     }
-                }
             });
         }
 
@@ -1489,11 +1480,10 @@ pub fn update(
             }
             // Apply titles to currently loaded worktrees
             for wt in &mut state.worktrees {
-                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch, &state.jira_project_prefix) {
-                    if let Some(title) = state.jira_title_cache.get(&key) {
+                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch, &state.jira_project_prefix)
+                    && let Some(title) = state.jira_title_cache.get(&key) {
                         wt.jira_title = Some(title.clone());
                     }
-                }
             }
         }
 
@@ -1569,11 +1559,8 @@ pub fn update(
                 state.focused_panel = state.focused_panel.next();
             } else {
                 // Only CommandOutput can be fullscreened
-                match state.focused_panel {
-                    FocusedPanel::CommandOutput => {
-                        state.fullscreen_panel = Some(state.focused_panel);
-                    }
-                    _ => {} // no-op for WorktreeTable
+                if state.focused_panel == FocusedPanel::CommandOutput {
+                    state.fullscreen_panel = Some(state.focused_panel);
                 }
             }
         }
@@ -1623,29 +1610,21 @@ pub fn update(
         // --- Phase 5.2: Universal scroll ---
 
         Action::ScrollToTop => {
-            match state.focused_panel {
-                FocusedPanel::CommandOutput => {
-                    if let Some(id) = active_worktree_id(state) {
-                        state.command_output_scroll_by_worktree.insert(id, 0);
-                    }
+            if state.focused_panel == FocusedPanel::CommandOutput
+                && let Some(id) = active_worktree_id(state) {
+                    state.command_output_scroll_by_worktree.insert(id, 0);
                 }
-                _ => {}
-            }
         }
 
         Action::ScrollToBottom => {
-            match state.focused_panel {
-                FocusedPanel::CommandOutput => {
-                    if let Some(id) = active_worktree_id(state) {
-                        let max = state.command_output_by_worktree
-                            .get(&id)
-                            .map(|o| o.len())
-                            .unwrap_or(0);
-                        state.command_output_scroll_by_worktree.insert(id, max);
-                    }
+            if state.focused_panel == FocusedPanel::CommandOutput
+                && let Some(id) = active_worktree_id(state) {
+                    let max = state.command_output_by_worktree
+                        .get(&id)
+                        .map(|o| o.len())
+                        .unwrap_or(0);
+                    state.command_output_scroll_by_worktree.insert(id, max);
                 }
-                _ => {}
-            }
         }
 
         Action::SetPendingG => {
@@ -1730,7 +1709,7 @@ pub fn update(
 
         Action::WorktreeRemoveFailed(err) => {
             state.error_state = Some(ErrorState {
-                message: format!("Failed to remove worktree: {}", err),
+                message: format!("Failed to remove worktree: {err}"),
                 can_retry: false,
             });
         }
@@ -1766,7 +1745,7 @@ pub fn update(
 
         Action::WorktreeAddFailed(err) => {
             state.error_state = Some(ErrorState {
-                message: format!("Failed to create worktree: {}", err),
+                message: format!("Failed to create worktree: {err}"),
                 can_retry: false,
             });
         }
@@ -1903,7 +1882,7 @@ pub fn update(
 
         Action::WorktreeNewBranchFailed(err) => {
             state.error_state = Some(ErrorState {
-                message: format!("Failed to create worktree with new branch: {}", err),
+                message: format!("Failed to create worktree with new branch: {err}"),
                 can_retry: false,
             });
         }
@@ -2021,10 +2000,7 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
                 Err(TryRecvError::Empty) => break,
                 Err(TryRecvError::Disconnected) => break,
             }
-            match handle_rx.try_recv() {
-                Ok(handle) => state.metro.register(handle),
-                Err(_) => {}
-            }
+            if let Ok(handle) = handle_rx.try_recv() { state.metro.register(handle) }
         }
 
         if state.should_quit {

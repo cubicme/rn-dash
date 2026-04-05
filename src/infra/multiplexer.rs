@@ -6,6 +6,7 @@ use std::path::Path;
 
 /// Trait for terminal multiplexer operations.
 /// Implementors must be Send + Sync + Debug for storage in AppState.
+#[allow(dead_code)]
 pub trait Multiplexer: Send + Sync + std::fmt::Debug {
     /// Creates a new window/tab at the given path with the given name, running the given command.
     /// The window should switch focus to the newly created tab.
@@ -55,7 +56,7 @@ impl Multiplexer for ZellijAdapter {
 
         // Write the command to the new tab's terminal
         // (zellij action write-chars sends keystrokes to the focused pane)
-        let cmd_with_enter = format!("{}\n", command);
+        let cmd_with_enter = format!("{command}\n");
         let write_status = std::process::Command::new("zellij")
             .args(["action", "write-chars", &cmd_with_enter])
             .status()?;
