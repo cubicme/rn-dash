@@ -624,6 +624,8 @@ pub fn update(
         }
 
         Action::MetroExited => {
+            // Clear pending run command if metro exited unexpectedly
+            state.pending_metro_run = None;
             state.metro.clear();
             if state.pending_restart {
                 state.pending_restart = false;
@@ -638,6 +640,7 @@ pub fn update(
         }
 
         Action::MetroSpawnFailed(msg) => {
+            state.pending_metro_run = None;
             state.metro.clear();
             state.pending_restart = false;
             state.pending_switch_path = None;
@@ -648,7 +651,14 @@ pub fn update(
         }
 
         Action::MetroActivityUpdate(activity) => {
-            state.metro.activity = Some(activity);
+            state.metro.activity = Some(activity.clone());
+            // Auto-dispatch pending RN run command when metro becomes Ready
+            if matches!(activity, crate::domain::metro::MetroActivity::Ready) {
+                if let Some(run_spec) = state.pending_metro_run.take() {
+                    // Re-enter the full CommandRun pipeline (sync check, device selection, etc.)
+                    update(state, Action::CommandRun(run_spec), metro_tx, handle_tx);
+                }
+            }
         }
 
         Action::ExternalMetroDetected(info) => {
@@ -788,6 +798,14 @@ pub fn update(
         Action::CommandRun(spec) => {
             // Clear palette mode whenever a command is dispatched
             state.palette_mode = None;
+
+            // Metro prerequisite: RN run commands need metro running first
+            if spec.needs_metro() && !state.metro.is_running() {
+                // Store the run command — will be dispatched when metro reports Ready
+                state.pending_metro_run = Some(spec);
+                update(state, Action::MetroStart, metro_tx, handle_tx);
+                return;
+            }
 
             // Get selected worktree (needed for all branches)
             let wt_branch = if !state.worktrees.is_empty() {
