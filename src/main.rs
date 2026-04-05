@@ -23,7 +23,7 @@ async fn main() -> color_eyre::Result<()> {
 
     // Step 3: Set up file-based logging — NEVER use println!/eprintln! in a TUI (corrupts rendering)
     let _log_guard = tui::setup_logging()?;
-    tracing::info!("ump-dash starting");
+    tracing::info!("rn-dash starting");
 
     // Step 4: Initialize terminal (enables raw mode + alternate screen)
     let terminal = ratatui::init();
@@ -34,7 +34,7 @@ async fn main() -> color_eyre::Result<()> {
     // Step 6: Restore terminal unconditionally — runs on both Ok and Err exit from run()
     ratatui::restore();
 
-    tracing::info!("ump-dash exiting: {:?}", result.as_ref().map(|_| "ok").unwrap_or("err"));
+    tracing::info!("rn-dash exiting: {:?}", result.as_ref().map(|_| "ok").unwrap_or("err"));
 
     result
 }

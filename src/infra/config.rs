@@ -1,17 +1,17 @@
 // src/infra/config.rs
 //
 // Dashboard configuration persistence.
-// Config is stored at ~/.config/ump-dash/config.json with 0600 permissions
+// Config is stored at ~/.config/rn-dash/config.json with 0600 permissions
 // because it contains JIRA credentials (token/email).
 
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
-/// Returns the `~/.config/ump-dash/` config directory path.
+/// Returns the `~/.config/rn-dash/` config directory path.
 pub fn config_dir() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-    std::path::PathBuf::from(home).join(".config").join("ump-dash")
+    std::path::PathBuf::from(home).join(".config").join("rn-dash")
 }
 
 fn default_auth_mode() -> String {
@@ -22,7 +22,15 @@ fn default_claude_flags() -> String {
     "--dangerously-skip-permissions".to_string()
 }
 
-/// Application configuration stored in ~/.config/ump-dash/config.json.
+fn default_jira_prefix() -> String {
+    "UMP".to_string()
+}
+
+fn default_app_title() -> String {
+    "RN Dash".to_string()
+}
+
+/// Application configuration stored in ~/.config/rn-dash/config.json.
 ///
 /// Security note: this file is written with 0600 permissions on Unix because
 /// `jira_token` is a credential. Never log or display the token value.
@@ -47,6 +55,35 @@ pub struct DashConfig {
     /// Defaults to "--dangerously-skip-permissions" if not specified in the config file.
     #[serde(default = "default_claude_flags")]
     pub claude_flags: String,
+
+    /// Absolute path to the React Native monorepo root (supports ~/). If None, repo_root
+    /// will remain an empty PathBuf and worktree listing will fail gracefully.
+    #[serde(default)]
+    pub repo_root: Option<String>,
+
+    /// JIRA project key prefix used in branch names (e.g., "UMP" for UMP-1234).
+    /// Defaults to "UMP" to preserve backward compatibility with existing configs.
+    #[serde(default = "default_jira_prefix")]
+    pub jira_project_prefix: String,
+
+    /// Title shown in the dashboard header. Defaults to "RN Dash".
+    #[serde(default = "default_app_title")]
+    pub app_title: String,
+}
+
+impl DashConfig {
+    /// Resolves `repo_root` to a `PathBuf`, expanding `~/` to the home directory.
+    /// Returns `None` when `repo_root` is not set in config.
+    pub fn repo_root_path(&self) -> Option<std::path::PathBuf> {
+        self.repo_root.as_ref().map(|s| {
+            if s.starts_with("~/") {
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+                std::path::PathBuf::from(home).join(&s[2..])
+            } else {
+                std::path::PathBuf::from(s)
+            }
+        })
+    }
 }
 
 /// Loads the dashboard configuration from disk.

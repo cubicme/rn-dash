@@ -70,8 +70,8 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
         let stale = check_stale(&path);
         let stale_pods = check_stale_pods(&path);
 
-        let jira_key = crate::infra::jira::extract_jira_key(&branch);
-
+        // jira_key is derived in app.rs WorktreesLoaded handler using the configured
+        // project prefix — we don't have access to the prefix here.
         worktrees.push(Worktree {
             id,
             path,
@@ -81,7 +81,7 @@ pub fn parse_worktree_porcelain(text: &str) -> anyhow::Result<Vec<Worktree>> {
             jira_title: None,
             stale,
             stale_pods,
-            jira_key,
+            jira_key: None,
         });
     }
 

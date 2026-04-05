@@ -17,10 +17,13 @@ use crate::{
 
 /// Renders the application title bar with double border.
 /// Only shown in normal (non-fullscreen) layout.
-pub fn render_title_bar(f: &mut Frame, area: Rect, _state: &AppState) {
+pub fn render_title_bar(f: &mut Frame, area: Rect, state: &AppState) {
+    let title = state.config.as_ref()
+        .map(|c| c.app_title.as_str())
+        .unwrap_or("RN Dash");
     let block = Block::bordered()
         .border_type(BorderType::Double)
-        .title(" UMP Dashboard ")
+        .title(format!(" {} ", title))
         .title_style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD));
     f.render_widget(block, area);
 }
@@ -64,7 +67,7 @@ pub fn render_worktree_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         let branch = &wt.branch;
 
         // Extract ticket number from branch if possible
-        let ticket_num = crate::infra::jira::extract_jira_key(branch).unwrap_or_default();
+        let ticket_num = crate::infra::jira::extract_jira_key(branch, &state.jira_project_prefix).unwrap_or_default();
         let title = wt.jira_title.as_deref().unwrap_or("");
 
         // Merged ticket display: "UMP-1234 Title text" or just one or the other

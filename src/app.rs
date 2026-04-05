@@ -118,8 +118,10 @@ pub struct AppState {
     pub pending_android_mode: bool,
 
     // --- Phase 4 fields ---
-    pub jira_title_cache: std::collections::HashMap<String, String>,  // UMP-XXXX -> title
+    pub jira_title_cache: std::collections::HashMap<String, String>,  // PROJ-XXXX -> title
     pub jira_client: Option<std::sync::Arc<dyn crate::infra::jira::JiraClient>>,
+    /// JIRA project key prefix used in branch names (e.g., "UMP" for UMP-1234).
+    pub jira_project_prefix: String,
 
     // --- Phase 5.2 fields ---
     /// First 'g' press sets this true; second 'g' triggers ScrollToTop. Cleared on any other action.
@@ -176,10 +178,7 @@ impl Default for AppState {
             running_command: None,
             command_task: None,
             modal: None,
-            repo_root: PathBuf::from(
-                std::env::var("HOME").unwrap_or_else(|_| ".".into()),
-            )
-            .join("aljazeera/ump"),
+            repo_root: PathBuf::new(),
             palette_mode: None,
             pending_device_command: None,
             pending_claude_open: None,
@@ -189,6 +188,7 @@ impl Default for AppState {
             // Phase 4
             jira_title_cache: std::collections::HashMap::new(),
             jira_client: None,
+            jira_project_prefix: "UMP".to_string(),
             // Phase 5.1
             multiplexer: None,  // set properly in run()
             claude_flags: "--dangerously-skip-permissions".to_string(),
@@ -726,12 +726,14 @@ pub fn update(
         }
 
         Action::WorktreesLoaded(mut worktrees) => {
-            // Phase 4: re-apply cached JIRA titles
+            // Re-derive jira_key and re-apply cached JIRA titles using the configured prefix.
+            // jira_key is set here (not in list_worktrees) because the prefix comes from config.
             for wt in &mut worktrees {
-                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch) {
+                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch, &state.jira_project_prefix) {
                     if let Some(title) = state.jira_title_cache.get(&key) {
                         wt.jira_title = Some(title.clone());
                     }
+                    wt.jira_key = Some(key);
                 }
             }
 
@@ -764,7 +766,7 @@ pub fn update(
             if let Some(ref client) = state.jira_client {
                 let keys_to_fetch: Vec<(String, String)> = state.worktrees.iter()
                     .filter_map(|wt| {
-                        let key = crate::infra::jira::extract_jira_key(&wt.branch)?;
+                        let key = crate::infra::jira::extract_jira_key(&wt.branch, &state.jira_project_prefix)?;
                         if state.jira_title_cache.contains_key(&key) { return None; }
                         Some((wt.branch.clone(), key))
                     })
@@ -1484,7 +1486,7 @@ pub fn update(
             }
             // Apply titles to currently loaded worktrees
             for wt in &mut state.worktrees {
-                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch) {
+                if let Some(key) = crate::infra::jira::extract_jira_key(&wt.branch, &state.jira_project_prefix) {
                     if let Some(title) = state.jira_title_cache.get(&key) {
                         wt.jira_title = Some(title.clone());
                     }
@@ -1925,8 +1927,12 @@ pub async fn run(mut terminal: ratatui::DefaultTerminal) -> color_eyre::Result<(
 
     // Phase 4: Load config + JIRA client + cache
     if let Ok(Some(config)) = crate::infra::config::load_config() {
-        // Extract claude_flags before moving config
+        // Extract fields before moving config
         state.claude_flags = config.claude_flags.clone();
+        state.jira_project_prefix = config.jira_project_prefix.clone();
+        if let Some(path) = config.repo_root_path() {
+            state.repo_root = path;
+        }
 
         match crate::infra::jira::HttpJiraClient::new(&config) {
             Ok(client) => {
