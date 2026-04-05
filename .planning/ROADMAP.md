@@ -87,7 +87,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. GitHub Actions CI runs build + clippy + test on both macOS and Linux on every push
   2. Pushing a version tag produces a GitHub Release with prebuilt binaries attached
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 10-01-PLAN.md — GitHub Actions CI workflow (build+clippy+test on macOS/Linux) and release workflow (prebuilt binaries on tag push)
 
 ## Progress
 
@@ -104,4 +106,4 @@ Plans:
 | 07. Labels Removal | v1.1 | 0/1 | Planned | - |
 | 08. Palette and Keybinding Rework | v1.1 | 0/3 | Planned | - |
 | 09. Generalization and GitHub Prep | v1.1 | 0/2 | Planned    |  |
-| 10. CI and Release | v1.1 | 0/? | Not started | - |
+| 10. CI and Release | v1.1 | 0/1 | Planned | - |
