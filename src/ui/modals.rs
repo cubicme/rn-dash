@@ -2,7 +2,7 @@
 //! render_modal() is the single dispatch point called from view().
 
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::Rect,
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph},
@@ -30,7 +30,7 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
 
 /// Renders a yes/no confirmation modal with a red border.
 fn render_confirm_modal(f: &mut Frame, prompt: &str) {
-    let area = centered_rect(f.area(), 50, 25);
+    let area = centered_rect(f.area(), 50, 25, 40, 5);
 
     let lines = vec![
         Line::from(Span::raw(prompt)),
@@ -54,7 +54,7 @@ fn render_confirm_modal(f: &mut Frame, prompt: &str) {
 
 /// Renders a text input modal with a cyan border.
 fn render_text_input_modal(f: &mut Frame, prompt: &str, buffer: &str) {
-    let area = centered_rect(f.area(), 60, 25);
+    let area = centered_rect(f.area(), 60, 25, 40, 6);
 
     let lines = vec![
         Line::from(Span::raw(prompt)),
@@ -87,7 +87,7 @@ fn render_device_picker_modal(
     selected: usize,
     filter: &str,
 ) {
-    let area = centered_rect(f.area(), 60, 60);
+    let area = centered_rect(f.area(), 60, 60, 40, 7);
 
     // Apply filter (case-insensitive substring match)
     let filtered: Vec<&crate::domain::command::DeviceInfo> = if filter.is_empty() {
@@ -159,7 +159,7 @@ fn render_device_picker_modal(
 
 /// Renders the clean toggle modal with checkboxes for each clean option.
 fn render_clean_modal(f: &mut Frame, options: &crate::domain::command::CleanOptions) {
-    let area = centered_rect(f.area(), 50, 60);
+    let area = centered_rect(f.area(), 50, 60, 40, 10);
 
     f.render_widget(Clear, area);
 
@@ -190,7 +190,7 @@ fn render_sync_prompt(
     run_command: &crate::domain::command::CommandSpec,
     needs_pods: bool,
 ) {
-    let area = centered_rect(f.area(), 60, 40);
+    let area = centered_rect(f.area(), 60, 40, 40, 8);
 
     f.render_widget(Clear, area);
 
@@ -219,7 +219,7 @@ fn render_sync_prompt(
 
 /// Renders the external metro conflict modal with PID and working directory info.
 fn render_external_metro_modal(f: &mut Frame, pid: u32, working_dir: &str) {
-    let area = centered_rect(f.area(), 60, 30);
+    let area = centered_rect(f.area(), 60, 30, 40, 9);
 
     f.render_widget(Clear, area);
 
@@ -250,14 +250,13 @@ fn render_external_metro_modal(f: &mut Frame, pid: u32, working_dir: &str) {
     f.render_widget(Paragraph::new(text).block(block), area);
 }
 
-/// Computes a centered Rect of percent_x% width and percent_y% height within the given area.
-/// Follows the same pattern as help_overlay.rs and error_overlay.rs.
-fn centered_rect(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
-    let [area] = Layout::vertical([Constraint::Percentage(percent_y)])
-        .flex(Flex::Center)
-        .areas(area);
-    let [area] = Layout::horizontal([Constraint::Percentage(percent_x)])
-        .flex(Flex::Center)
-        .areas(area);
-    area
+/// Computes a centered Rect within `area`, using percentage sizing with minimum dimensions.
+/// Width is clamped to [min_w, area.width], height to [min_h, area.height].
+/// Follows the same independent-copy pattern as help_overlay.rs and error_overlay.rs.
+fn centered_rect(area: Rect, percent_x: u16, percent_y: u16, min_w: u16, min_h: u16) -> Rect {
+    let w = (area.width * percent_x / 100).clamp(min_w, area.width);
+    let h = (area.height * percent_y / 100).clamp(min_h, area.height);
+    let x = area.x + (area.width.saturating_sub(w)) / 2;
+    let y = area.y + (area.height.saturating_sub(h)) / 2;
+    Rect::new(x, y, w, h)
 }

@@ -1,5 +1,5 @@
 use ratatui::{
-    layout::{Constraint, Flex, Layout, Rect},
+    layout::{Constraint, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Clear, Row, Table},
     Frame,
@@ -9,7 +9,7 @@ use ratatui::{
 /// Uses Clear widget before the table to erase background panels behind the overlay.
 /// Size: 70% width, 85% height to accommodate all keybinding sections.
 pub fn render_help(f: &mut Frame) {
-    let area = centered_rect(f.area(), 70, 85);
+    let area = centered_rect(f.area(), 70, 85, 40, 10);
 
     let section_style = Style::default().add_modifier(Modifier::BOLD);
     let dim_style = Style::default().fg(Color::DarkGray);
@@ -139,13 +139,12 @@ pub fn render_help(f: &mut Frame) {
     f.render_widget(table, area);
 }
 
-/// Computes a centered Rect of percent_x% width and percent_y% height within the given area.
-fn centered_rect(area: Rect, percent_x: u16, percent_y: u16) -> Rect {
-    let [area] = Layout::vertical([Constraint::Percentage(percent_y)])
-        .flex(Flex::Center)
-        .areas(area);
-    let [area] = Layout::horizontal([Constraint::Percentage(percent_x)])
-        .flex(Flex::Center)
-        .areas(area);
-    area
+/// Computes a centered Rect within `area`, using percentage sizing with minimum dimensions.
+/// Width is clamped to [min_w, area.width], height to [min_h, area.height].
+fn centered_rect(area: Rect, percent_x: u16, percent_y: u16, min_w: u16, min_h: u16) -> Rect {
+    let w = (area.width * percent_x / 100).clamp(min_w, area.width);
+    let h = (area.height * percent_y / 100).clamp(min_h, area.height);
+    let x = area.x + (area.width.saturating_sub(w)) / 2;
+    let y = area.y + (area.height.saturating_sub(h)) / 2;
+    Rect::new(x, y, w, h)
 }
