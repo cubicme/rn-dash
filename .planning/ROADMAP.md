@@ -78,7 +78,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [ ] 09-01-PLAN.md — Extract hardcoded AJ/UMP values to config, rename to rn-dash, create config.example.json
-- [ ] 09-02-PLAN.md — Add MIT license, Cargo.toml metadata, .gitignore audit, comprehensive README
+- [x] 09-02-PLAN.md — Add MIT license, Cargo.toml metadata, .gitignore audit, comprehensive README
 
 ### Phase 10: CI and Release
 **Goal**: Every push is verified by CI and tagged releases produce downloadable prebuilt binaries

@@ -26,10 +26,10 @@
 
 ### GitHub Release
 
-- [ ] **GH-01**: MIT license file in repo root
-- [ ] **GH-02**: Cargo.toml metadata (description, license, repository, homepage, keywords)
-- [ ] **GH-03**: README with project description, screenshots, build instructions, usage guide, config reference
-- [ ] **GH-04**: .gitignore audited — no .planning/, credentials, or build artifacts leak
+- [x] **GH-01**: MIT license file in repo root
+- [x] **GH-02**: Cargo.toml metadata (description, license, repository, homepage, keywords)
+- [x] **GH-03**: README with project description, screenshots, build instructions, usage guide, config reference
+- [x] **GH-04**: .gitignore audited — no .planning/, credentials, or build artifacts leak
 - [ ] **GH-05**: GitHub Actions CI workflow (build + clippy + test on macOS and Linux)
 - [ ] **GH-06**: GitHub Actions release workflow — builds prebuilt binaries and creates GitHub Releases on tag push
 
@@ -65,10 +65,10 @@
 | KEY-07 | Phase 08 | Complete |
 | GEN-01 | Phase 09 | Complete |
 | GEN-02 | Phase 09 | Complete |
-| GH-01 | Phase 09 | Pending |
-| GH-02 | Phase 09 | Pending |
-| GH-03 | Phase 09 | Pending |
-| GH-04 | Phase 09 | Pending |
+| GH-01 | Phase 09 | Complete |
+| GH-02 | Phase 09 | Complete |
+| GH-03 | Phase 09 | Complete |
+| GH-04 | Phase 09 | Complete |
 | GH-05 | Phase 10 | Pending |
 | GH-06 | Phase 10 | Pending |
 
