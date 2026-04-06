@@ -31,6 +31,12 @@ Optionally copy the binary to a directory on your PATH:
 cp target/release/rn-dash ~/.local/bin/
 ```
 
+**macOS Gatekeeper:** If downloading a prebuilt binary from GitHub Releases, macOS may block it. Clear the quarantine flag:
+
+```bash
+xattr -cr /path/to/rn-dash
+```
+
 ## Configuration
 
 Config file location: `~/.config/rn-dash/config.toml`
