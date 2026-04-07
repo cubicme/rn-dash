@@ -154,6 +154,9 @@ pub struct AppState {
     // Phase 08-04: skip external metro detection when restarting our own metro (worktree switch).
     // Set true in MetroExited when pending_restart was true; consumed (reset) in MetroStart.
     pub skip_external_metro_check: bool,
+
+    // Quick-260407-cq5: Guard against periodic refresh during worktree mutations.
+    pub worktree_op_in_flight: bool,
 }
 
 impl Default for AppState {
@@ -209,6 +212,8 @@ impl Default for AppState {
             pending_new_branch_worktree: false,
             // Phase 08-04
             skip_external_metro_check: false,
+            // Quick-260407-cq5
+            worktree_op_in_flight: false,
         }
     }
 }
@@ -793,6 +798,10 @@ pub fn update(
         }
 
         Action::RefreshWorktrees => {
+            if state.worktree_op_in_flight {
+                tracing::debug!("skipping periodic refresh — worktree op in flight");
+                return;
+            }
             let repo_root = state.repo_root.clone();
             let tx = metro_tx.clone();
             tokio::spawn(async move {
@@ -1036,6 +1045,7 @@ pub fn update(
                 }
 
                 // Spawn async removal task
+                state.worktree_op_in_flight = true;
                 let repo_root = state.repo_root.clone();
                 let tx = metro_tx.clone();
                 let path_str = wt_path.to_string_lossy().to_string();
@@ -1123,6 +1133,7 @@ pub fn update(
                             };
                             let repo_root = state.repo_root.clone();
                             let tx = metro_tx.clone();
+                            state.worktree_op_in_flight = true;
                             tokio::spawn(async move {
                                 match crate::infra::worktrees::add_worktree_new_branch(&repo_root, &new_branch_name, &base_branch).await {
                                     Ok(path) => {
@@ -1141,6 +1152,7 @@ pub fn update(
                             }
                             let repo_root = state.repo_root.clone();
                             let tx = metro_tx.clone();
+                            state.worktree_op_in_flight = true;
                             tokio::spawn(async move {
                                 match crate::infra::worktrees::add_worktree(&repo_root, &branch_name).await {
                                     Ok(path) => {
@@ -1692,6 +1704,7 @@ pub fn update(
 
         Action::WorktreeRemoved(path_str) => {
             tracing::info!("worktree removed: {}", path_str);
+            state.worktree_op_in_flight = false;
             // Refresh the worktree list to reflect the removal
             let repo_root = state.repo_root.clone();
             let tx = metro_tx.clone();
@@ -1708,10 +1721,13 @@ pub fn update(
         }
 
         Action::WorktreeRemoveFailed(err) => {
+            state.worktree_op_in_flight = false;
             state.error_state = Some(ErrorState {
                 message: format!("Failed to remove worktree: {err}"),
                 can_retry: false,
             });
+            // Re-add the worktree to the UI since git removal failed
+            update(state, Action::RefreshWorktrees, metro_tx, handle_tx);
         }
 
         // --- Quick-260403-dmz: Worktree creation ---
@@ -1728,6 +1744,7 @@ pub fn update(
 
         Action::WorktreeAdded(path_str) => {
             tracing::info!("worktree added: {}", path_str);
+            state.worktree_op_in_flight = false;
             // Refresh the worktree list to show the new worktree
             let repo_root = state.repo_root.clone();
             let tx = metro_tx.clone();
@@ -1744,6 +1761,7 @@ pub fn update(
         }
 
         Action::WorktreeAddFailed(err) => {
+            state.worktree_op_in_flight = false;
             state.error_state = Some(ErrorState {
                 message: format!("Failed to create worktree: {err}"),
                 can_retry: false,
@@ -1866,6 +1884,7 @@ pub fn update(
 
         Action::WorktreeNewBranchCreated(path_str) => {
             tracing::info!("worktree with new branch created: {}", path_str);
+            state.worktree_op_in_flight = false;
             let repo_root = state.repo_root.clone();
             let tx = metro_tx.clone();
             tokio::spawn(async move {
@@ -1881,6 +1900,7 @@ pub fn update(
         }
 
         Action::WorktreeNewBranchFailed(err) => {
+            state.worktree_op_in_flight = false;
             state.error_state = Some(ErrorState {
                 message: format!("Failed to create worktree with new branch: {err}"),
                 can_retry: false,
