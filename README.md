@@ -19,7 +19,7 @@ Built with [Ratatui](https://ratatui.rs) in Rust.
 **Prerequisites:** Rust toolchain — install from [rustup.rs](https://rustup.rs)
 
 ```bash
-git clone https://github.com/AliMonemian/rn-dash.git
+git clone https://github.com/cubicme/rn-dash.git
 cd rn-dash
 cargo build --release
 # Binary at target/release/rn-dash
