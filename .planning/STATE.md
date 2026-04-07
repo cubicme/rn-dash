@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 Phase: 07 of 10 (Labels Removal)
 Plan: — of —
 Status: Ready to execute
-Last activity: 2026-04-05 -- Phase 10 planning complete
+Last activity: 2026-04-07 - Completed quick task 260407-cq5: fix stale worktree UI
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -79,6 +79,12 @@ None.
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260407-cq5 | fix stale worktree UI - force refresh after worktree operations to prevent removing wrong WT | 2026-04-07 | 09472d1 | [260407-cq5-fix-stale-worktree-ui-force-refresh-afte](./quick/260407-cq5-fix-stale-worktree-ui-force-refresh-afte/) |
 
 ## Session Continuity
 

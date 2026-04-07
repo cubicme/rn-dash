@@ -2114,12 +2114,20 @@ async fn metro_process_task(
 ) {
     let drain_task = tokio::spawn(drain_metro_output(stdout, stderr, tx.clone()));
 
+    let pid = child.id();
+
     tokio::select! {
         _ = kill_rx => {
             drain_task.abort();
-            if let Err(e) = child.kill().await {
-                tracing::error!("metro kill failed: {e}");
+            // Kill the entire process group. process_group(0) in spawn_metro makes
+            // the child the group leader (PID == PGID). Sending SIGKILL to -PGID
+            // kills yarn AND the Node metro server that holds port 8081.
+            // child.kill() alone only kills yarn — the node subprocess survives.
+            if let Some(id) = pid {
+                unsafe { libc::kill(-(id as i32), libc::SIGKILL); }
             }
+            // Reap the child to prevent zombie processes
+            let _ = child.wait().await;
             for _ in 0..50 {
                 if crate::infra::port::port_is_free(8081) {
                     break;
