@@ -896,7 +896,7 @@ pub fn update(
                     let devices = if is_android {
                         crate::infra::devices::list_android_devices().await
                     } else {
-                        crate::infra::devices::list_ios_physical_devices().await
+                        crate::infra::devices::list_ios_simulators().await
                     };
                     match devices {
                         Ok(devs) => {
