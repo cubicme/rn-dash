@@ -219,6 +219,7 @@ pub enum ModalState {
     /// Sync-before-run prompt shown when stale worktree is about to run an app command.
     SyncBeforeRun {
         run_command: Box<CommandSpec>,
+        needs_yarn: bool,
         needs_pods: bool,
     },
     /// External metro conflict — another process occupies port 8081.

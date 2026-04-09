@@ -834,26 +834,30 @@ pub fn update(
             // Sync-before-run: stale worktree + run command triggers prompt.
             // This MUST run BEFORE the metro start check — yarn install is a
             // dependency of metro, so running metro against stale deps boots it
-            // with a broken dependency tree.
-            if let Some((_, stale)) = &wt_branch
-                && *stale
-                    && matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
-                        let needs_pods = matches!(spec, CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice);
-                        // Also check pods staleness for iOS
-                        let needs_pods = if needs_pods {
-                            let idx = state.worktree_table_state.selected().unwrap_or(0);
-                            let wt_path = &state.worktrees[idx.min(state.worktrees.len() - 1)].path;
-                            crate::infra::worktrees::check_stale_pods(wt_path)
-                        } else {
-                            false
-                        };
+            // with a broken dependency tree. Also triggers when ONLY pods are
+            // stale (yarn fresh, pods out of sync — e.g. after a git checkout
+            // that only touched Podfile.lock).
+            if let Some((_, yarn_stale)) = &wt_branch
+                && matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
+                    let is_ios = matches!(spec, CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice);
+                    let pods_stale = if is_ios {
+                        let idx = state.worktree_table_state.selected().unwrap_or(0);
+                        let wt_path = &state.worktrees[idx.min(state.worktrees.len() - 1)].path;
+                        crate::infra::worktrees::check_stale_pods(wt_path)
+                    } else {
+                        false
+                    };
+
+                    if *yarn_stale || pods_stale {
                         state.modal = Some(ModalState::SyncBeforeRun {
                             run_command: Box::new(spec),
-                            needs_pods,
+                            needs_yarn: *yarn_stale,
+                            needs_pods: pods_stale,
                         });
                         state.palette_mode = None;
                         return;
                     }
+                }
 
             // Metro prerequisite: RN run commands need metro running first
             if spec.needs_metro() && !state.metro.is_running() {
@@ -1614,16 +1618,25 @@ pub fn update(
             });
         }
         Action::SyncBeforeRunAccept => {
-            if let Some(ModalState::SyncBeforeRun { run_command, needs_pods }) = state.modal.take() {
-                // Enqueue: yarn install, (pod-install if needs_pods), then the run command
-                state.command_queue.push_back(*run_command);
-                if needs_pods {
-                    // Re-order: yarn install first, pod-install, then run
-                    let run = state.command_queue.pop_back().unwrap();
-                    state.command_queue.push_back(CommandSpec::YarnPodInstall);
-                    state.command_queue.push_back(run);
+            if let Some(ModalState::SyncBeforeRun { run_command, needs_yarn, needs_pods }) = state.modal.take() {
+                // Build sequence: [yarn install?, pod install?, run_command]
+                // Dispatch the first, queue the rest.
+                let mut sequence: Vec<CommandSpec> = Vec::new();
+                if needs_yarn {
+                    sequence.push(CommandSpec::YarnInstall);
                 }
-                dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
+                if needs_pods {
+                    sequence.push(CommandSpec::YarnPodInstall);
+                }
+                sequence.push(*run_command);
+
+                // Guaranteed non-empty: we only get here from the modal which only
+                // appears when needs_yarn || needs_pods, so sequence has ≥2 elements.
+                let first = sequence.remove(0);
+                for cmd in sequence {
+                    state.command_queue.push_back(cmd);
+                }
+                dispatch_command(state, first, metro_tx);
             }
         }
         Action::SyncBeforeRunDecline => {

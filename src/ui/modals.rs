@@ -19,8 +19,8 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
             render_device_picker_modal(f, devices, *selected, filter)
         }
         ModalState::CleanToggle { options } => render_clean_modal(f, options),
-        ModalState::SyncBeforeRun { run_command, needs_pods } => {
-            render_sync_prompt(f, run_command, *needs_pods)
+        ModalState::SyncBeforeRun { run_command, needs_yarn, needs_pods } => {
+            render_sync_prompt(f, run_command, *needs_yarn, *needs_pods)
         }
         ModalState::ExternalMetroConflict { pid, working_dir } => {
             render_external_metro_modal(f, *pid, working_dir)
@@ -191,16 +191,18 @@ fn render_clean_modal(f: &mut Frame, options: &crate::domain::command::CleanOpti
 fn render_sync_prompt(
     f: &mut Frame,
     run_command: &crate::domain::command::CommandSpec,
+    needs_yarn: bool,
     needs_pods: bool,
 ) {
     let area = centered_rect(f.area(), 60, 40, 40, 8);
 
     f.render_widget(Clear, area);
 
-    let sync_desc = if needs_pods {
-        "yarn install + pod-install"
-    } else {
-        "yarn install"
+    let sync_desc = match (needs_yarn, needs_pods) {
+        (true, true) => "yarn install + pod-install",
+        (true, false) => "yarn install",
+        (false, true) => "pod-install",
+        (false, false) => "nothing", // unreachable — modal only shown when at least one is stale
     };
 
     let text = vec![
