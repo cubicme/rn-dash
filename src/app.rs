@@ -822,14 +822,6 @@ pub fn update(
             // Clear palette mode whenever a command is dispatched
             state.palette_mode = None;
 
-            // Metro prerequisite: RN run commands need metro running first
-            if spec.needs_metro() && !state.metro.is_running() {
-                // Store the run command — will be dispatched when metro reports Ready
-                state.pending_metro_run = Some(spec);
-                update(state, Action::MetroStart, metro_tx, handle_tx);
-                return;
-            }
-
             // Get selected worktree (needed for all branches)
             let wt_branch = if !state.worktrees.is_empty() {
                 let idx = state.worktree_table_state.selected().unwrap_or(0);
@@ -839,7 +831,10 @@ pub fn update(
                 None
             };
 
-            // Sync-before-run: stale worktree + run command triggers prompt
+            // Sync-before-run: stale worktree + run command triggers prompt.
+            // This MUST run BEFORE the metro start check — yarn install is a
+            // dependency of metro, so running metro against stale deps boots it
+            // with a broken dependency tree.
             if let Some((_, stale)) = &wt_branch
                 && *stale
                     && matches!(spec, CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. } | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild) {
@@ -859,6 +854,14 @@ pub fn update(
                         state.palette_mode = None;
                         return;
                     }
+
+            // Metro prerequisite: RN run commands need metro running first
+            if spec.needs_metro() && !state.metro.is_running() {
+                // Store the run command — will be dispatched when metro reports Ready
+                state.pending_metro_run = Some(spec);
+                update(state, Action::MetroStart, metro_tx, handle_tx);
+                return;
+            }
 
             // Pre-processing pipeline
             if spec.is_destructive() {
@@ -945,12 +948,9 @@ pub fn update(
             let completed_cmd = state.running_command.take();
             state.command_task = None;
 
-            // Drain command queue — pop_front and dispatch if non-empty
-            if let Some(next_spec) = state.command_queue.pop_front() {
-                dispatch_command(state, next_spec, metro_tx);
-            }
-
-            // Dispatch post-command refreshes based on the completed command
+            // Refresh staleness BEFORE draining the queue so any queued run command
+            // re-entering CommandRun sees up-to-date stale state (prevents re-showing
+            // the SyncBeforeRun modal after yarn install just ran).
             if let Some(ref cmd) = completed_cmd {
                 let refresh = crate::domain::refresh::refresh_needed(cmd);
                 if refresh.worktrees {
@@ -971,6 +971,19 @@ pub fn update(
                         wt.stale = crate::infra::worktrees::check_stale(&wt.path);
                         wt.stale_pods = crate::infra::worktrees::check_stale_pods(&wt.path);
                     }
+                }
+            }
+
+            // Drain command queue — pop_front and dispatch if non-empty.
+            // Route through CommandRun (not dispatch_command) for commands that need
+            // metro but metro isn't running — so pending_metro_run + MetroStart fires.
+            // This matters for the sync-before-run flow: after yarn install, the queued
+            // run_command needs metro to be started before dispatching.
+            if let Some(next_spec) = state.command_queue.pop_front() {
+                if next_spec.needs_metro() && !state.metro.is_running() {
+                    update(state, Action::CommandRun(next_spec), metro_tx, handle_tx);
+                } else {
+                    dispatch_command(state, next_spec, metro_tx);
                 }
             }
         }
@@ -1615,8 +1628,17 @@ pub fn update(
         }
         Action::SyncBeforeRunDecline => {
             if let Some(ModalState::SyncBeforeRun { run_command, .. }) = state.modal.take() {
-                // Skip sync, dispatch run command directly
-                dispatch_command(state, *run_command, metro_tx);
+                // Skip sync. Since the stale check now runs before the metro check,
+                // metro may still need to be started. Route through CommandRun so the
+                // metro auto-start via pending_metro_run fires. The stale check won't
+                // re-trigger because the user just declined it.
+                let spec = *run_command;
+                if spec.needs_metro() && !state.metro.is_running() {
+                    state.pending_metro_run = Some(spec);
+                    update(state, Action::MetroStart, metro_tx, handle_tx);
+                } else {
+                    dispatch_command(state, spec, metro_tx);
+                }
             }
         }
         // --- Phase 5.2: Universal scroll ---
