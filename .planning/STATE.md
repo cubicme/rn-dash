@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 Phase: 07 of 10 (Labels Removal)
 Plan: — of —
 Status: Ready to execute
-Last activity: 2026-04-07 - Completed quick task 260407-cq5: fix stale worktree UI
+Last activity: 2026-04-10 - Completed quick task 260410-mu7: add stale dependency check before metro start on Enter
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -85,6 +85,11 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260407-cq5 | fix stale worktree UI - force refresh after worktree operations to prevent removing wrong WT | 2026-04-07 | 09472d1 | [260407-cq5-fix-stale-worktree-ui-force-refresh-afte](./quick/260407-cq5-fix-stale-worktree-ui-force-refresh-afte/) |
+| 260407-dma | fix metro kill not stopping Node subprocess — kill process group instead of just yarn PID | 2026-04-07 | 0807f41 | [260407-dma-fix-metro-kill-not-stopping-node-subproc](./quick/260407-dma-fix-metro-kill-not-stopping-node-subproc/) |
+| 260407-h2h | fix i>e simulator listing — call list_ios_simulators instead of list_ios_physical_devices | 2026-04-07 | f6abf25 | [260407-h2h-fix-i-e-simulator-listing-call-list-ios-](./quick/260407-h2h-fix-i-e-simulator-listing-call-list-ios-/) |
+| 260409-jfc | yarn install should run before metro when deps are stale | 2026-04-09 | bb6eaf9 | [260409-jfc-yarn-install-should-run-before-metro-whe](./quick/260409-jfc-yarn-install-should-run-before-metro-whe/) |
+| 260409-kws | fix i>e pods-only staleness not triggering sync modal | 2026-04-09 | 1c3857c | [260409-kws-fix-i-e-pods-only-staleness-not-triggeri](./quick/260409-kws-fix-i-e-pods-only-staleness-not-triggeri/) |
+| 260410-mu7 | add stale dependency check before metro start on Enter | 2026-04-10 | c6d703d | [260410-mu7-shouldn-t-pressing-enter-running-metro-t](./quick/260410-mu7-shouldn-t-pressing-enter-running-metro-t/) |
 
 ## Session Continuity
 
