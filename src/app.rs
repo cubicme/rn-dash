@@ -860,6 +860,24 @@ pub fn update(
                     };
 
                     if *yarn_stale || pods_stale {
+                        if state.config.as_ref().map_or(false, |c| c.auto_sync) {
+                            // Auto-sync: skip modal, execute sync+run directly
+                            let mut sequence: Vec<CommandSpec> = Vec::new();
+                            if *yarn_stale {
+                                sequence.push(CommandSpec::YarnInstall);
+                            }
+                            if pods_stale {
+                                sequence.push(CommandSpec::YarnPodInstall);
+                            }
+                            sequence.push(spec);
+                            let first = sequence.remove(0);
+                            for cmd in sequence {
+                                state.command_queue.push_back(cmd);
+                            }
+                            state.palette_mode = None;
+                            dispatch_command(state, first, metro_tx);
+                            return;
+                        }
                         state.modal = Some(ModalState::SyncBeforeRun {
                             run_command: Box::new(spec),
                             needs_yarn: *yarn_stale,
@@ -1449,6 +1467,30 @@ pub fn update(
                 let needs_yarn = wt.stale;
                 let needs_pods = wt.stale_pods;
                 if needs_yarn || needs_pods {
+                    if state.config.as_ref().map_or(false, |c| c.auto_sync) {
+                        // Auto-sync: skip modal, execute sync+switch directly
+                        if let Some(path) = target_path {
+                            state.active_worktree_path = Some(path);
+                        }
+                        if state.metro.is_running() {
+                            state.pending_restart = false;
+                            update(state, Action::MetroStop, metro_tx, handle_tx);
+                        }
+                        let mut sequence: Vec<CommandSpec> = Vec::new();
+                        if needs_yarn {
+                            sequence.push(CommandSpec::YarnInstall);
+                        }
+                        if needs_pods {
+                            sequence.push(CommandSpec::YarnPodInstall);
+                        }
+                        state.pending_metro_after_sync = true;
+                        let first = sequence.remove(0);
+                        for cmd in sequence {
+                            state.command_queue.push_back(cmd);
+                        }
+                        dispatch_command(state, first, metro_tx);
+                        return;
+                    }
                     // Store target path for use after sync completes
                     state.pending_switch_path = target_path;
                     state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn, needs_pods });

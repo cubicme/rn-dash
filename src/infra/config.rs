@@ -69,6 +69,11 @@ pub struct DashConfig {
     /// Title shown in the dashboard header. Defaults to "RN Dash".
     #[serde(default = "default_app_title")]
     pub app_title: String,
+
+    /// When true, automatically accept sync-before-run and sync-before-metro prompts
+    /// instead of showing a confirmation modal. Defaults to false.
+    #[serde(default)]
+    pub auto_sync: bool,
 }
 
 impl DashConfig {
