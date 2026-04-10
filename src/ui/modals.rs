@@ -22,6 +22,9 @@ pub fn render_modal(f: &mut Frame, modal: &ModalState) {
         ModalState::SyncBeforeRun { run_command, needs_yarn, needs_pods } => {
             render_sync_prompt(f, run_command, *needs_yarn, *needs_pods)
         }
+        ModalState::SyncBeforeMetro { needs_yarn, needs_pods } => {
+            render_sync_before_metro(f, *needs_yarn, *needs_pods)
+        }
         ModalState::ExternalMetroConflict { pid, working_dir } => {
             render_external_metro_modal(f, *pid, working_dir)
         }
@@ -210,6 +213,35 @@ fn render_sync_prompt(
         Line::from(""),
         Line::from("  Worktree is stale. Sync before running?"),
         Line::from(format!("  Will run: {} -> {}", sync_desc, run_command.label())),
+        Line::from(""),
+        Line::from(Span::styled("  Y = sync first  N = skip  Esc = cancel", Style::default().fg(Color::DarkGray))),
+    ];
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Yellow))
+        .title(" Sync ");
+
+    f.render_widget(Paragraph::new(text).block(block), area);
+}
+
+/// Renders the sync-before-metro prompt when a stale worktree is about to start metro via Enter.
+fn render_sync_before_metro(f: &mut Frame, needs_yarn: bool, needs_pods: bool) {
+    let area = centered_rect(f.area(), 60, 40, 40, 8);
+    f.render_widget(Clear, area);
+
+    let sync_desc = match (needs_yarn, needs_pods) {
+        (true, true) => "yarn install + pod-install",
+        (true, false) => "yarn install",
+        (false, true) => "pod-install",
+        (false, false) => "nothing",
+    };
+
+    let text = vec![
+        Line::from(Span::styled(" Stale Dependencies ", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(""),
+        Line::from("  Worktree is stale. Sync before starting metro?"),
+        Line::from(format!("  Will run: {} -> start metro", sync_desc)),
         Line::from(""),
         Line::from(Span::styled("  Y = sync first  N = skip  Esc = cancel", Style::default().fg(Color::DarkGray))),
     ];

@@ -222,6 +222,11 @@ pub enum ModalState {
         needs_yarn: bool,
         needs_pods: bool,
     },
+    /// Sync-before-metro prompt shown when stale worktree is about to start metro via Enter.
+    SyncBeforeMetro {
+        needs_yarn: bool,
+        needs_pods: bool,
+    },
     /// External metro conflict — another process occupies port 8081.
     ExternalMetroConflict {
         pid: u32,

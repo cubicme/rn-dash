@@ -157,6 +157,9 @@ pub struct AppState {
 
     // Quick-260407-cq5: Guard against periodic refresh during worktree mutations.
     pub worktree_op_in_flight: bool,
+
+    // Quick-260410-mu7: metro start pending after sync commands drain
+    pub pending_metro_after_sync: bool,
 }
 
 impl Default for AppState {
@@ -214,6 +217,8 @@ impl Default for AppState {
             skip_external_metro_check: false,
             // Quick-260407-cq5
             worktree_op_in_flight: false,
+            // Quick-260410-mu7
+            pending_metro_after_sync: false,
         }
     }
 }
@@ -298,6 +303,11 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
             ModalState::SyncBeforeRun { .. } => match key.code {
                 Char('y') | Char('Y') => Some(Action::SyncBeforeRunAccept),
                 Char('n') | Char('N') | Esc => Some(Action::SyncBeforeRunDecline),
+                _ => None,
+            },
+            ModalState::SyncBeforeMetro { .. } => match key.code {
+                Char('y') | Char('Y') => Some(Action::SyncBeforeMetroAccept),
+                Char('n') | Char('N') | Esc => Some(Action::SyncBeforeMetroDecline),
                 _ => None,
             },
             ModalState::ExternalMetroConflict { pid, .. } => match key.code {
@@ -670,6 +680,7 @@ pub fn update(
             state.metro.clear();
             state.pending_restart = false;
             state.pending_switch_path = None;
+            state.pending_metro_after_sync = false;
             state.error_state = Some(ErrorState {
                 message: format!("Metro failed to start: {msg}"),
                 can_retry: true,
@@ -989,6 +1000,10 @@ pub fn update(
                 } else {
                     dispatch_command(state, next_spec, metro_tx);
                 }
+            } else if state.pending_metro_after_sync {
+                // Sync commands finished — start metro in the (already switched) worktree
+                state.pending_metro_after_sync = false;
+                update(state, Action::MetroStart, metro_tx, handle_tx);
             }
         }
 
@@ -1006,6 +1021,7 @@ pub fn update(
             state.running_command = None;
             // Also clear pending queue items — cancel is all-or-nothing
             state.command_queue.clear();
+            state.pending_metro_after_sync = false;
             if let Some(id) = active_worktree_id(state) {
                 let output = state.command_output_by_worktree.entry(id).or_default();
                 output.push_back("[cancelled]".into());
@@ -1422,11 +1438,25 @@ pub fn update(
         // --- Phase 5: Worktree switching and Claude Code ---
 
         Action::WorktreeSwitchToSelected => {
+            let selected_idx = state.worktree_table_state.selected().unwrap_or(0);
             // Capture target path NOW — navigation may change active_worktree_path later
             let target_path = state.worktrees
-                .get(state.worktree_table_state.selected().unwrap_or(0))
+                .get(selected_idx)
                 .map(|wt| wt.path.clone());
 
+            // Stale dependency check — show sync modal before metro start
+            if let Some(wt) = state.worktrees.get(selected_idx) {
+                let needs_yarn = wt.stale;
+                let needs_pods = wt.stale_pods;
+                if needs_yarn || needs_pods {
+                    // Store target path for use after sync completes
+                    state.pending_switch_path = target_path;
+                    state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn, needs_pods });
+                    return;
+                }
+            }
+
+            // Original logic (unchanged) — only reached when deps are fresh
             if state.metro.is_running() {
                 // Kill current → wait for port free → start in new worktree
                 state.pending_switch_path = target_path;
@@ -1654,6 +1684,58 @@ pub fn update(
                 }
             }
         }
+
+        Action::SyncBeforeMetroAccept => {
+            if let Some(ModalState::SyncBeforeMetro { needs_yarn, needs_pods }) = state.modal.take() {
+                // Switch active worktree to the target (consume pending_switch_path set in stale check)
+                if let Some(path) = state.pending_switch_path.take() {
+                    state.active_worktree_path = Some(path);
+                }
+
+                // Stop metro if running (no auto-restart — sync must finish first)
+                if state.metro.is_running() {
+                    state.pending_restart = false;
+                    update(state, Action::MetroStop, metro_tx, handle_tx);
+                }
+
+                // Build sync sequence and dispatch
+                let mut sequence: Vec<CommandSpec> = Vec::new();
+                if needs_yarn {
+                    sequence.push(CommandSpec::YarnInstall);
+                }
+                if needs_pods {
+                    sequence.push(CommandSpec::YarnPodInstall);
+                }
+
+                // Flag: after sync queue drains, start metro
+                state.pending_metro_after_sync = true;
+
+                let first = sequence.remove(0);
+                for cmd in sequence {
+                    state.command_queue.push_back(cmd);
+                }
+                dispatch_command(state, first, metro_tx);
+            }
+        }
+
+        Action::SyncBeforeMetroDecline => {
+            if let Some(ModalState::SyncBeforeMetro { .. }) = state.modal.take() {
+                // Consume pending_switch_path and proceed with original worktree switch logic
+                let target_path = state.pending_switch_path.take();
+
+                if state.metro.is_running() {
+                    state.pending_switch_path = target_path;
+                    state.pending_restart = true;
+                    update(state, Action::MetroStop, metro_tx, handle_tx);
+                } else {
+                    if let Some(path) = target_path {
+                        state.active_worktree_path = Some(path);
+                    }
+                    update(state, Action::MetroStart, metro_tx, handle_tx);
+                }
+            }
+        }
+
         // --- Phase 5.2: Universal scroll ---
 
         Action::ScrollToTop => {

@@ -109,6 +109,10 @@ pub enum Action {
     SyncBeforeRunAccept,    // user said "Yes" to sync prompt
     SyncBeforeRunDecline,   // user said "No" to sync prompt — run without sync
 
+    // Quick-260410-mu7: Sync-before-metro
+    SyncBeforeMetroAccept,    // user said "Yes" to sync before metro
+    SyncBeforeMetroDecline,   // user said "No" — start metro without sync
+
     // Phase 5.2: Universal scroll
     ScrollToTop,            // gg (two g presses) — scroll to top of focused scrollable pane
     ScrollToBottom,         // G — scroll to bottom, re-enable auto-follow

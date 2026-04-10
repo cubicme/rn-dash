@@ -16,7 +16,7 @@ pub fn render_footer(f: &mut Frame, area: Rect, state: &AppState) {
     let hint_spans: Vec<Span> = hints.iter().flat_map(|(key, desc)| {
         vec![
             Span::styled(*key, theme::style_key_hint()),
-            Span::raw(format!(" {}  ", desc)),
+            Span::raw(format!(" {desc}  ")),
         ]
     }).collect();
 
@@ -98,6 +98,11 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("Esc", "cancel"),
             ],
             ModalState::SyncBeforeRun { .. } => vec![
+                ("Y", "sync first"),
+                ("N", "skip sync"),
+                ("Esc", "cancel"),
+            ],
+            ModalState::SyncBeforeMetro { .. } => vec![
                 ("Y", "sync first"),
                 ("N", "skip sync"),
                 ("Esc", "cancel"),
