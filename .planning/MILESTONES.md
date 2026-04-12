@@ -1,5 +1,36 @@
 # Milestones
 
+## v1.1 Public Release (Shipped: 2026-04-13)
+
+**Phases completed:** 4 phases, 9 plans
+
+**Delivered:** Polished keybinding scheme, removed dead features, generalized config for any RN monorepo, and shipped to public GitHub with CI and prebuilt binaries.
+
+**Stats:**
+- 60 files changed, +5,139 / -546 LOC
+- Timeline: 2026-04-05 → 2026-04-12 (8 days)
+- Git range: `1740f25` (milestone start) → `98500fb` (v1.2.0 release)
+
+**Key accomplishments:**
+
+- Labels feature deleted entirely — `labels.rs` removed, `config_dir()` relocated, `Worktree.label` stripped, all `SetLabel` actions and UI handlers gone; codebase compiles with zero label references
+- Sync palette renamed to Yarn (absorbing 3 clean commands); Worktree palette extracted from Git with create/remove/new-branch commands under lowercase `w` key
+- `w>B` opens a filterable remote-branch picker, prompts for a new branch name, then creates a worktree on that branch via `git worktree add -b`
+- Context-sensitive metro keys (R/J/Esc only when metro running), dynamic footer hints derived from available actions, MetroRestart action removed entirely
+- Package renamed to `rn-dash`; all hardcoded AJ/UMP values extracted to `DashConfig` (repo_root, jira_project_prefix, app_title) with a fully documented example config
+- TOML config format replaces JSON using `toml::from_str`/`toml::to_string_pretty`, with annotated `config.example.toml`
+- MIT license, Cargo.toml crates.io metadata, comprehensive README (build, config, usage), and `.gitignore` audit
+- GitHub Actions CI (`cargo build / clippy -D warnings / test` on macOS+Linux) and tag-triggered release workflow publishing tar.gz binaries for Apple Silicon, Intel Mac, and Linux x86_64
+- macOS codesigning + notarization added to release pipeline; Gatekeeper workaround documented in README
+
+**Post-ship quick tasks (merged into v1.2.0 release):**
+- `SyncBeforeMetro` modal for stale-dep check on Enter key
+- `auto_sync` config param to skip sync confirmation modals
+- Consolidated yarn clean commands into single selection menu
+- Bug fixes: lsof hang, process-group kill, race conditions, sync modal for pods-only staleness
+
+---
+
 ## v1.0 MVP (Shipped: 2026-04-05)
 
 **Phases completed:** 8 phases, 37 plans, 59 tasks

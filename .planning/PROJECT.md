@@ -32,19 +32,21 @@ One place to see and control everything about your React Native worktrees — wh
 - ✓ Worktree creation and removal commands — v1.0
 - ✓ Metro auto-prerequisite for RN run commands — v1.0
 
+- ✓ Labels feature removed entirely — v1.1
+- ✓ (s)ync renamed to (y)arn palette with clean commands absorbed — v1.1
+- ✓ Worktree commands extracted from (g)it to lowercase (w)orktree palette — v1.1
+- ✓ New worktree creation with interactive base branch picker — v1.1
+- ✓ Context-sensitive metro keys (R/J/Esc), MetroRestart removed — v1.1
+- ✓ Dynamic footer hints derived from available actions — v1.1
+- ✓ Hardcoded AJ/UMP values extracted to DashConfig — v1.1
+- ✓ MIT license, README, config example, Cargo.toml metadata — v1.1
+- ✓ GitHub Actions CI + release workflow with prebuilt binaries (macOS signed+notarized, Linux) — v1.1
+- ✓ TOML config format replaces JSON — v1.1
+- ✓ `auto_sync` config param and `SyncBeforeMetro` modal — v1.2 (post-ship quick tasks)
+
 ### Active
 
-- [ ] Remove Labels feature entirely
-- [ ] Rename (s)ync to (y)arn palette, move clean commands into it
-- [ ] Move worktree commands from (g)it to (w)orktree palette
-- [ ] New worktree creation command with base branch selection
-- [ ] Metro keys (R/J) context-sensitive — only when metro running; ESC stops metro; remove restart
-- [ ] Dynamic hint line derived from available actions, not hardcoded
-- [ ] Update footer legend
-- [ ] Extract all hardcoded AJ/UMP/system-specific values to config
-- [ ] License file, README, config example, Cargo.toml metadata
-- [ ] GitHub Actions CI + release workflow with prebuilt binaries
-- [ ] .gitignore audit
+_(To be defined — next milestone via `/gsd-new-milestone`)_
 
 ### Out of Scope
 
@@ -55,18 +57,18 @@ One place to see and control everything about your React Native worktrees — wh
 
 ## Context
 
-Shipped v1.0 with 5,491 LOC Rust across 207 commits in 34 days.
-Tech stack: Rust + Ratatui 0.30, tokio async runtime, crossterm, reqwest for JIRA.
+Shipped v1.1 Public Release — now at ~5,936 LOC Rust, published to GitHub as `rn-dash`.
+Tech stack: Rust + Ratatui 0.30, tokio async runtime, crossterm, reqwest for JIRA, TOML config.
 Architecture: TEA (The Elm Architecture) with domain/infra/app/ui separation.
 
-- Designed for any React Native monorepo using git worktrees
+- Works with any React Native monorepo (generalized from AJ/UMP in v1.1)
 - Only one metro bundler can run at a time across all worktrees (enforced)
 - User works in tmux or zellij, dedicating one window to this dashboard
 - Branch naming convention configurable (default: JIRA-style PROJ-XXXX)
 - Palette submenu keybinding scheme (a/i/x/y/g/w) with vim-style navigation
 - Per-worktree command output persistence, FIFO command queue
 - External metro conflict detection via port 8081 lsof
-- Preparing for public GitHub release in v1.1
+- Public GitHub release: MIT licensed, CI on macOS+Linux, tag-triggered prebuilt binaries (signed+notarized on macOS)
 
 ## Constraints
 
@@ -89,15 +91,23 @@ Architecture: TEA (The Elm Architecture) with domain/infra/app/ui separation.
 | Command queue (VecDeque) | Chain dependent commands, show queue count | ✓ Good — enables fetch-then-reset, release build flows |
 | External metro conflict detection | Detect port 8081 already in use | ✓ Good — lsof-based PID lookup with kill prompt |
 | Metro as prerequisite for RN runs | Auto-start metro before build commands | ✓ Good — prevents RN from spawning unmanaged metro |
+| Remove labels feature | Unused in practice, added noise to domain/UI | ✓ Good — clean codebase, no regressions |
+| Lowercase palette keys (w/d/b) | Consistency with other palettes, UAT feedback | ✓ Good — fixed in 08-04 gap closure |
+| TOML over JSON for config | Better human readability and comments | ✓ Good — switched in 08-05 |
+| Rename ump-dash → rn-dash | Generalize beyond AJ/UMP for public release | ✓ Good — shipped to GitHub |
+| Config-driven repo paths, JIRA prefix | Remove hardcoded company-specific values | ✓ Good — works for any RN monorepo |
+| macOS codesign + notarize in release | Avoid Gatekeeper friction for end users | ✓ Good — clean install experience |
 
-## Current Milestone: v1.1 Public Release
+## Current State
 
-**Goal:** Polish keybinding scheme, remove dead features, extract hardcoded values to config, and prepare for public GitHub release with README, license, CI, and prebuilt binaries.
+**Shipped:** v1.1 Public Release (2026-04-13) — app published to GitHub as `rn-dash`, CI + signed release binaries live. Post-ship quick tasks rolled into v1.2.0.
 
-**Target features:**
-- App polish: remove labels, rework palettes (y/w), dynamic hints, metro key context
-- GitHub prep: license, README, config example, CI/CD, .gitignore, Cargo.toml metadata
-- Generalization: extract all AJ/UMP-specific values to config
+## Next Milestone
+
+_To be defined via `/gsd-new-milestone`._ Candidate directions:
+- Configurable keybinding overrides
+- Theme / color customization
+- Multi-project support (switch between RN repos)
 
 ## Evolution
 
@@ -117,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-05 after v1.1 milestone start*
+*Last updated: 2026-04-13 after v1.1 milestone completion*
