@@ -290,7 +290,7 @@ pub async fn list_remote_branches(repo_root: &Path) -> anyhow::Result<Vec<String
         .await?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("git branch -r failed: {}", stderr);
+        anyhow::bail!("git branch -r failed: {stderr}");
     }
     let text = String::from_utf8(output.stdout)?;
     let mut branches: Vec<String> = text.lines()
@@ -319,7 +319,7 @@ pub async fn add_worktree_new_branch(
     }
     let path_str = worktree_path.to_string_lossy().to_string();
     let output = tokio::process::Command::new("git")
-        .args(["worktree", "add", "-b", new_branch, &path_str, &format!("origin/{}", base_branch)])
+        .args(["worktree", "add", "-b", new_branch, &path_str, &format!("origin/{base_branch}")])
         .current_dir(repo_root)
         .output()
         .await?;
@@ -340,7 +340,7 @@ pub async fn list_worktrees(repo_root: &Path) -> anyhow::Result<Vec<Worktree>> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("git worktree list failed: {}", stderr);
+        anyhow::bail!("git worktree list failed: {stderr}");
     }
 
     let text = String::from_utf8(output.stdout)?;

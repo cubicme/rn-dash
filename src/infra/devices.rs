@@ -248,7 +248,7 @@ pub async fn list_ios_simulators() -> anyhow::Result<Vec<DeviceInfo>> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("xcrun simctl failed: {}", stderr);
+        anyhow::bail!("xcrun simctl failed: {stderr}");
     }
 
     let text = String::from_utf8(output.stdout)?;
@@ -265,7 +265,7 @@ pub async fn list_ios_physical_devices() -> anyhow::Result<Vec<DeviceInfo>> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("xcrun xctrace failed: {}", stderr);
+        anyhow::bail!("xcrun xctrace failed: {stderr}");
     }
 
     let text = String::from_utf8_lossy(&output.stdout).to_string();

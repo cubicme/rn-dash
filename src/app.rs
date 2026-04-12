@@ -1462,13 +1462,11 @@ pub fn update(
                 .get(selected_idx)
                 .map(|wt| wt.path.clone());
 
-            // Stale dependency check — show sync modal before metro start
+            // Stale dependency check — metro only needs yarn, not pods
             if let Some(wt) = state.worktrees.get(selected_idx) {
-                let needs_yarn = wt.stale;
-                let needs_pods = wt.stale_pods;
-                if needs_yarn || needs_pods {
+                if wt.stale {
                     if state.config.as_ref().map_or(false, |c| c.auto_sync) {
-                        // Auto-sync: skip modal, execute sync+switch directly
+                        // Auto-sync: skip modal, execute yarn install + metro directly
                         if let Some(path) = target_path {
                             state.active_worktree_path = Some(path);
                         }
@@ -1476,24 +1474,13 @@ pub fn update(
                             state.pending_restart = false;
                             update(state, Action::MetroStop, metro_tx, handle_tx);
                         }
-                        let mut sequence: Vec<CommandSpec> = Vec::new();
-                        if needs_yarn {
-                            sequence.push(CommandSpec::YarnInstall);
-                        }
-                        if needs_pods {
-                            sequence.push(CommandSpec::YarnPodInstall);
-                        }
                         state.pending_metro_after_sync = true;
-                        let first = sequence.remove(0);
-                        for cmd in sequence {
-                            state.command_queue.push_back(cmd);
-                        }
-                        dispatch_command(state, first, metro_tx);
+                        dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
                         return;
                     }
                     // Store target path for use after sync completes
                     state.pending_switch_path = target_path;
-                    state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn, needs_pods });
+                    state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn: true, needs_pods: false });
                     return;
                 }
             }

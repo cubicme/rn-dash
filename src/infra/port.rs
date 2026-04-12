@@ -21,23 +21,30 @@ pub struct ExternalMetroInfo {
 }
 
 /// Detect if an external (non-dashboard) process is listening on the given port.
-/// Uses `lsof -i :PORT -sTCP:LISTEN -t` to get PID, then `lsof -a -p PID -d cwd -Fn`
-/// to get the working directory. Returns None if port is free or detection fails.
+/// Fast path: a successful `TcpListener::bind` means the port is free — returns None
+/// without invoking `lsof` (lsof can hang for seconds on macOS while scanning mounts).
+/// Slow path: port occupied → run `lsof -nP -i :PORT -sTCP:LISTEN -t` (no name/port
+/// resolution) under a 2s timeout to get the PID, then another bounded lsof for cwd.
 pub async fn detect_external_metro(port: u16) -> Option<ExternalMetroInfo> {
-    let output = tokio::process::Command::new("lsof")
-        .args(["-i", &format!(":{port}"), "-sTCP:LISTEN", "-t"])
-        .output()
-        .await
-        .ok()?;
+    // Fast path — skip lsof entirely when the port is free.
+    if port_is_free(port) {
+        return None;
+    }
+
+    let timeout = std::time::Duration::from_secs(2);
+
+    let pid_fut = tokio::process::Command::new("lsof")
+        .args(["-nP", "-i", &format!(":{port}"), "-sTCP:LISTEN", "-t"])
+        .output();
+    let output = tokio::time::timeout(timeout, pid_fut).await.ok()?.ok()?;
 
     let pid_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let pid: u32 = pid_str.lines().next()?.parse().ok()?;
 
-    let cwd_output = tokio::process::Command::new("lsof")
-        .args(["-a", "-p", &pid.to_string(), "-d", "cwd", "-Fn"])
-        .output()
-        .await
-        .ok()?;
+    let cwd_fut = tokio::process::Command::new("lsof")
+        .args(["-nP", "-a", "-p", &pid.to_string(), "-d", "cwd", "-Fn"])
+        .output();
+    let cwd_output = tokio::time::timeout(timeout, cwd_fut).await.ok()?.ok()?;
 
     let cwd_text = String::from_utf8_lossy(&cwd_output.stdout);
     let working_dir = cwd_text

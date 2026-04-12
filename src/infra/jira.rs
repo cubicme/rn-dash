@@ -113,7 +113,7 @@ pub fn extract_jira_key(branch: &str, project_prefix: &str) -> Option<String> {
         };
 
         if first == project_prefix && !second.is_empty() && second.chars().all(|c| c.is_ascii_digit()) {
-            return Some(format!("{}-{}", project_prefix, second));
+            return Some(format!("{project_prefix}-{second}"));
         }
     }
     None
