@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-05)
 Phase: 07 of 10 (Labels Removal)
 Plan: — of —
 Status: Ready to execute
-Last activity: 2026-04-10 - Completed quick task 260410-mu7: add stale dependency check before metro start on Enter
+Last activity: 2026-04-10 - Completed quick task 260410-nk1: add auto_sync config param to skip sync confirmation modals
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -90,6 +90,7 @@ None.
 | 260409-jfc | yarn install should run before metro when deps are stale | 2026-04-09 | bb6eaf9 | [260409-jfc-yarn-install-should-run-before-metro-whe](./quick/260409-jfc-yarn-install-should-run-before-metro-whe/) |
 | 260409-kws | fix i>e pods-only staleness not triggering sync modal | 2026-04-09 | 1c3857c | [260409-kws-fix-i-e-pods-only-staleness-not-triggeri](./quick/260409-kws-fix-i-e-pods-only-staleness-not-triggeri/) |
 | 260410-mu7 | add stale dependency check before metro start on Enter | 2026-04-10 | c6d703d | [260410-mu7-shouldn-t-pressing-enter-running-metro-t](./quick/260410-mu7-shouldn-t-pressing-enter-running-metro-t/) |
+| 260410-nk1 | add auto_sync config param to skip sync confirmation modals | 2026-04-10 | 5ebf25f | [260410-nk1-add-auto-sync-config-param-to-skip-sync-](./quick/260410-nk1-add-auto-sync-config-param-to-skip-sync-/) |
 
 ## Session Continuity
 
