@@ -69,9 +69,7 @@ pub fn render_help(f: &mut Frame) {
         Row::new(vec!["t",               "yarn check-types --incremental"]),
         Row::new(vec!["j",               "yarn jest <filter>"]),
         Row::new(vec!["l",               "yarn lint --quiet --fix"]),
-        Row::new(vec!["a",               "Clean Android (react-native clean)"]),
-        Row::new(vec!["c",               "Clean CocoaPods (react-native clean)"]),
-        Row::new(vec!["n",               "Remove node_modules"]),
+        Row::new(vec!["c",               "Clean… (select targets: pods, android, node_modules)"]),
         Row::new(vec!["Esc",             "Cancel"]),
         Row::new(vec!["", ""]).style(dim_style),
 

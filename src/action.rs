@@ -87,6 +87,7 @@ pub enum Action {
     // EnterGitPalette already exists
 
     // Phase 5.1: Clean toggle actions
+    OpenCleanMenu,          // y>c — open CleanToggle modal from yarn palette
     CleanToggleNodeModules,
     CleanTogglePods,
     CleanToggleAndroid,

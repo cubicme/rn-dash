@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::action::Action;
-use crate::domain::command::{CommandSpec, ModalState};
+use crate::domain::command::{CleanOptions, CommandSpec, ModalState};
 use crate::domain::metro::MetroHandle;
 use futures::StreamExt;
 use ratatui::crossterm::event::{EventStream, KeyCode, KeyEventKind};
@@ -357,9 +357,7 @@ pub fn handle_key(state: &AppState, key: ratatui::crossterm::event::KeyEvent) ->
                 Char('t') => Some(Action::CommandRun(CommandSpec::YarnCheckTypes)),
                 Char('j') => Some(Action::CommandRun(CommandSpec::YarnJest { filter: String::new() })),
                 Char('l') => Some(Action::CommandRun(CommandSpec::YarnLint)),
-                Char('a') => Some(Action::CommandRun(CommandSpec::RnCleanAndroid)),
-                Char('c') => Some(Action::CommandRun(CommandSpec::RnCleanCocoapods)),
-                Char('n') => Some(Action::CommandRun(CommandSpec::RmNodeModules)),
+                Char('c') => Some(Action::OpenCleanMenu),
                 Esc => Some(Action::ModalCancel),
                 _ => Some(Action::ModalCancel),
             },
@@ -1589,6 +1587,10 @@ pub fn update(
         Action::EnterWorktreePalette => {
             state.palette_mode = Some(PaletteMode::Worktree);
         }
+        Action::OpenCleanMenu => {
+            state.palette_mode = None;
+            state.modal = Some(ModalState::CleanToggle { options: CleanOptions::default() });
+        }
         Action::CleanToggleNodeModules => {
             if let Some(ModalState::CleanToggle { ref mut options }) = state.modal {
                 options.node_modules = !options.node_modules;
@@ -1613,16 +1615,19 @@ pub fn update(
             if let Some(ModalState::CleanToggle { options }) = state.modal.take() {
                 state.palette_mode = None;
 
-                // Build command sequence from checked options
+                // Build command sequence from checked options.
+                // Order matters: react-native clean first, node_modules last —
+                // removing node_modules before `react-native clean` breaks the
+                // RN clean scripts that depend on packages under node_modules.
                 let mut cmds: Vec<CommandSpec> = Vec::new();
-                if options.node_modules {
-                    cmds.push(CommandSpec::RmNodeModules);
-                }
                 if options.pods {
                     cmds.push(CommandSpec::RnCleanCocoapods);
                 }
                 if options.android {
                     cmds.push(CommandSpec::RnCleanAndroid);
+                }
+                if options.node_modules {
+                    cmds.push(CommandSpec::RmNodeModules);
                 }
                 if options.sync_after {
                     cmds.push(CommandSpec::YarnInstall);

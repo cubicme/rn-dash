@@ -57,9 +57,7 @@ fn key_hints_for(state: &AppState) -> Vec<(&'static str, &'static str)> {
                 ("t", "check-types"),
                 ("j", "jest"),
                 ("l", "lint"),
-                ("a", "clean android"),
-                ("c", "clean cocoapods"),
-                ("n", "rm node_modules"),
+                ("c", "clean…"),
                 ("Esc", "cancel"),
             ],
             PaletteMode::Git => vec![
