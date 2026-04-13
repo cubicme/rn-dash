@@ -858,7 +858,7 @@ pub fn update(
                     };
 
                     if *yarn_stale || pods_stale {
-                        if state.config.as_ref().map_or(false, |c| c.auto_sync) {
+                        if state.config.as_ref().is_some_and(|c| c.auto_sync) {
                             // Auto-sync: skip modal, execute sync+run directly
                             let mut sequence: Vec<CommandSpec> = Vec::new();
                             if *yarn_stale {
@@ -1461,26 +1461,26 @@ pub fn update(
                 .map(|wt| wt.path.clone());
 
             // Stale dependency check — metro only needs yarn, not pods
-            if let Some(wt) = state.worktrees.get(selected_idx) {
-                if wt.stale {
-                    if state.config.as_ref().map_or(false, |c| c.auto_sync) {
-                        // Auto-sync: skip modal, execute yarn install + metro directly
-                        if let Some(path) = target_path {
-                            state.active_worktree_path = Some(path);
-                        }
-                        if state.metro.is_running() {
-                            state.pending_restart = false;
-                            update(state, Action::MetroStop, metro_tx, handle_tx);
-                        }
-                        state.pending_metro_after_sync = true;
-                        dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
-                        return;
+            if let Some(wt) = state.worktrees.get(selected_idx)
+                && wt.stale
+            {
+                if state.config.as_ref().is_some_and(|c| c.auto_sync) {
+                    // Auto-sync: skip modal, execute yarn install + metro directly
+                    if let Some(path) = target_path {
+                        state.active_worktree_path = Some(path);
                     }
-                    // Store target path for use after sync completes
-                    state.pending_switch_path = target_path;
-                    state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn: true, needs_pods: false });
+                    if state.metro.is_running() {
+                        state.pending_restart = false;
+                        update(state, Action::MetroStop, metro_tx, handle_tx);
+                    }
+                    state.pending_metro_after_sync = true;
+                    dispatch_command(state, CommandSpec::YarnInstall, metro_tx);
                     return;
                 }
+                // Store target path for use after sync completes
+                state.pending_switch_path = target_path;
+                state.modal = Some(ModalState::SyncBeforeMetro { needs_yarn: true, needs_pods: false });
+                return;
             }
 
             // Original logic (unchanged) — only reached when deps are fresh

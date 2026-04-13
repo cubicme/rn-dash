@@ -1,412 +1,614 @@
-# Architecture Research
+# Architecture Research — v1.3 Per-Worktree Tasks + Architecture Audit
 
-**Domain:** Rust TUI dashboard — process management, worktree browser, tmux integration
-**Researched:** 2026-03-02
-**Confidence:** HIGH (ratatui official docs, tokio official docs, gitui source analysis, lazygit architecture review)
+**Domain:** Rust TUI dashboard — adding per-worktree task ownership, parallel execution, cancellation, spinner animation
+**Researched:** 2026-04-13
+**Confidence:** HIGH (derived from direct source reading of all existing modules; no external research needed for integration design)
 
-## Standard Architecture
+---
 
-### System Overview
+## Existing Architecture Summary
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Presentation Layer                           │
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────────┐    │
-│  │  MetroPane    │  │ WorktreePane  │  │    CommandPalette     │    │
-│  │  (Widget)     │  │  (Widget)     │  │      (Widget)         │    │
-│  └───────┬───────┘  └───────┬───────┘  └───────────┬───────────┘    │
-│          │                  │                      │                 │
-│          └──────────────────┴──────────────────────┘                │
-│                             │                                        │
-│                      view(&AppState)                                 │
-├─────────────────────────────────────────────────────────────────────┤
-│                        Application Layer                             │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                       AppState                               │   │
-│  │  active_worktree | worktrees | metro_status | ui_focus       │   │
-│  └──────────────────────────────┬───────────────────────────────┘   │
-│                                 │                                    │
-│  ┌──────────────────────────────┴───────────────────────────────┐   │
-│  │               Event Loop (tokio::select!)                    │   │
-│  │   terminal events ── app events ── process events ── tick   │   │
-│  └──────────────────────────────┬───────────────────────────────┘   │
-│                                 │                                    │
-│  ┌──────────────────────────────┴───────────────────────────────┐   │
-│  │                     Action enum                              │   │
-│  │  SwitchWorktree | KillMetro | RunCommand | FetchJira | ...  │   │
-│  └──────────────────────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────────┤
-│                         Domain Layer                                 │
-│  ┌────────────────┐  ┌────────────────┐  ┌──────────────────────┐   │
-│  │  Worktree      │  │  Metro         │  │   Command            │   │
-│  │  (pure data)   │  │  (pure data)   │  │   (pure data)        │   │
-│  └────────────────┘  └────────────────┘  └──────────────────────┘   │
-│  ┌────────────────┐  ┌──────────────────────────────────────────┐   │
-│  │  JiraTicket    │  │  WorktreeManager (business rules)        │   │
-│  │  (pure data)   │  │  "only one metro at a time"              │   │
-│  └────────────────┘  └──────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────────┤
-│                       Infrastructure Layer                           │
-│  ┌────────────────┐  ┌────────────────┐  ┌──────────────────────┐   │
-│  │ ProcessManager │  │  JiraClient    │  │   TmuxClient         │   │
-│  │ (tokio::Child) │  │  (reqwest)     │  │  (tmux_interface)    │   │
-│  └────────────────┘  └────────────────┘  └──────────────────────┘   │
-│  ┌────────────────┐  ┌────────────────┐                             │
-│  │  GitClient     │  │  ConfigStore   │                             │
-│  │  (git2 / cmd)  │  │  (toml + XDG)  │                             │
-│  └────────────────┘  └────────────────┘                             │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Typical Implementation |
-|-----------|----------------|------------------------|
-| AppState | Single source of truth for all UI-visible data | Plain struct, cloned into render; mutated by update() |
-| Event Loop | Multiplex terminal input, process events, ticks | `tokio::select!` over mpsc channels |
-| Action enum | Named, typed user/system intents | `enum Action { SwitchWorktree(usize), KillMetro, ... }` |
-| Presentation Widgets | Render AppState into ratatui Buffers | Implement `Widget` or `StatefulWidget` trait; no logic |
-| WorktreeManager | Enforce "one metro at a time" business rule | Pure Rust, no async, no IO; tested in isolation |
-| ProcessManager | Spawn, capture, kill tokio child processes | Owns `tokio::process::Child` + stdout reader task |
-| JiraClient | Fetch ticket title from branch name | HTTP via reqwest; returns domain type `JiraTicket` |
-| TmuxClient | Create windows, send keys to panes | Wraps `tmux_interface` crate; fire-and-forget |
-| GitClient | Run git operations per worktree | Calls `git` subprocess via `tokio::process::Command` |
-| ConfigStore | Read/write XDG config file | `~/.config/ump-dash/*.toml`; deserializes to typed structs |
-
-## Recommended Project Structure
+The app is a strict TEA implementation with four layers. Every layer boundary is already enforced by import discipline:
 
 ```
-src/
-├── main.rs                 # Entry point — parse args, init terminal, run event loop
-├── app.rs                  # AppState struct + update() function (the brain)
-├── event.rs                # Event enum (terminal + process + tick events)
-├── action.rs               # Action enum (typed user/system intents)
-├── tui.rs                  # Terminal setup/teardown (crossterm boilerplate)
-│
-├── domain/                 # Pure business data and rules — zero IO, fully testable
-│   ├── mod.rs
-│   ├── worktree.rs         # Worktree struct, WorktreeId, branch name parsing
-│   ├── metro.rs            # MetroStatus enum (Running, Stopped, Starting, Crashing)
-│   ├── command.rs          # RnCommand enum (Clean, Install, RunAndroid, ...) + arg structs
-│   └── jira.rs             # JiraTicket struct, ticket ID extraction from branch name
-│
-├── ui/                     # Rendering only — reads AppState, produces ratatui output
-│   ├── mod.rs              # Root view() function — assembles layout
-│   ├── metro_pane.rs       # Metro status, log toggle, controls
-│   ├── worktree_pane.rs    # Worktree list with JIRA titles and labels
-│   ├── command_palette.rs  # Command options overlay when executing
-│   ├── key_hints.rs        # On-screen key bindings bar
-│   └── theme.rs            # Colors, styles (no logic)
-│
-└── infra/                  # IO and system concerns — implements domain contracts
-    ├── mod.rs
-    ├── process_manager.rs  # Spawn/kill/capture metro and RN commands
-    ├── git_client.rs       # Executes git commands per worktree
-    ├── jira_client.rs      # HTTP calls to JIRA API
-    ├── tmux_client.rs      # Creates windows, sends keys for Claude Code
-    └── config.rs           # Read/write ~/.config/ump-dash/ (serde + toml)
+domain/      — pure Rust types. Zero IO, no tokio, no ratatui. Tested in isolation.
+infra/       — async I/O: process spawning, git, JIRA, config, multiplexer.
+app.rs       — TEA brain: AppState struct + update() + handle_key() + run() event loop.
+ui/          — ratatui widgets that read &AppState. No logic, no async.
 ```
 
-### Structure Rationale
+The event loop in `run()` is a `tokio::select!` over four sources:
 
-- **domain/:** Zero imports from infra/ or ui/. Every type and function here can be unit tested with no mocking. This is Ousterhout's "deep module" principle: hide complexity behind a simple interface that owns the business rules.
-- **ui/:** Only imports from domain/ and the ratatui crate. No async, no IO, no `tokio`. The `view()` function is a pure function of `&AppState` — same state always produces identical frames. This makes rendering trivially correct and easy to reason about.
-- **infra/:** The only layer that touches the filesystem, network, child processes, and tmux. Each client type exposes a small async interface. Domain types flow in; domain types flow out. No ratatui imports here.
-- **app.rs:** The orchestrator. `AppState` owns all the data the UI needs. `update(state, action) -> Vec<Effect>` maps actions to state mutations and side-effect requests. This is the only place that talks to both domain/ and triggers infra/ work.
+1. `tick` — 250ms `tokio::time::interval` (redraws for time-based UI)
+2. `refresh_interval` — 60s `tokio::time::interval` (periodic worktree refresh)
+3. `events.next()` — crossterm `EventStream` (keyboard input)
+4. `metro_rx.recv()` — unbounded `mpsc` channel (all background Action senders)
 
-## Architectural Patterns
+Plus a side channel: `handle_rx` delivers `MetroHandle` objects from the metro spawn task.
 
-### Pattern 1: Elm Architecture (TEA) for the Main Loop
+### Current Command System (What Must Change)
 
-**What:** The app loop runs as Model → Update → View with a typed Message/Action enum. Every user keypress and process event maps to an Action. The `update()` function mutates AppState and returns a list of Effects (async work to kick off). The `view()` function renders the current AppState.
+The current command system has three problems the new milestone must fix:
 
-**When to use:** Always. This is the dominant pattern in ratatui apps (confirmed by ratatui official docs). It eliminates callback hell and makes state changes auditable.
+**Problem 1: Command is globally anonymous.**
+`AppState.running_command: Option<CommandSpec>` has no worktree binding. When a command runs, the system knows *what* is running but not *for which worktree*. `dispatch_command()` captures the currently selected worktree's path at dispatch time, but this is not stored as part of the running task record. The `CommandOutputLine` action routes to whichever worktree is selected at the time the line arrives — which may differ from the worktree that dispatched the command.
 
-**Trade-offs:** Requires defining the Action enum upfront. Adding a new interaction means adding to Action, updating update(), and possibly adding a new Effect — three predictable edits in three places.
+**Problem 2: Only one command can run at a time (global serialization).**
+`AppState.command_task: Option<JoinHandle<()>>` is a single slot. When a new command starts (or `dispatch_command` is called), any existing task handle is aborted first. There is no mechanism for running a yarn command in worktree A while a git pull runs in worktree B.
 
-**Example:**
+**Problem 3: Cancellation is task-abort only, with no SIGTERM.**
+`Action::CommandCancel` calls `task.abort()` on the outer `tokio::spawn` wrapper. This sends a Tokio task cancellation signal (cooperative future poll cancellation) but does NOT send SIGTERM or SIGKILL to the child process. The child process continues running until it exits naturally; only the stdout-streaming task is dropped. For long commands (yarn install, jest, gradlew), this leaves orphaned processes.
+
+**Problem 4: No elapsed-time tracking.**
+`running_command` is an `Option<CommandSpec>` with no start timestamp. The UI cannot show elapsed time for the current command.
+
+**Problem 5: No spinner state.**
+Tick-driven animation requires a frame counter in `AppState`. The current tick fires at 250ms but there is no frame counter consumed by the UI. Spinner state is missing.
+
+---
+
+## Proposed Changes by Layer
+
+### Layer 1: domain/ — New Types
+
+Add to `domain/command.rs` (new section, no existing types removed):
+
 ```rust
-// action.rs
-pub enum Action {
-    SwitchWorktree(WorktreeId),
-    KillMetro,
-    StartMetro(WorktreeId),
-    RunGitCommand(WorktreeId, GitCommand),
-    RunRnCommand(WorktreeId, RnCommand),
-    LaunchClaudeCode(WorktreeId),
-    FetchJiraTitle(WorktreeId),
-    ToggleMetroLog,
-    Quit,
+/// A task record binding a command to its owning worktree.
+/// Created by dispatch_command(), lives in AppState.tasks.
+#[derive(Debug, Clone)]
+pub struct TaskRecord {
+    pub id: TaskId,
+    pub worktree_id: WorktreeId,
+    pub spec: CommandSpec,
+    pub started_at: std::time::Instant,
 }
 
-// app.rs
-pub fn update(state: &mut AppState, action: Action) -> Vec<Effect> {
-    match action {
-        Action::SwitchWorktree(id) => {
-            // Domain rule: WorktreeManager validates the switch
-            let switch = state.worktree_manager.begin_switch(id);
-            vec![Effect::KillMetroThenStart(switch)]
+/// Stable identifier for an in-flight or recently-completed task.
+/// Newtype prevents mixing with WorktreeId and CommandSpec indices.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TaskId(pub u64);
+
+/// Categorizes a command for the UI animation indicator.
+/// Used by ui/ to decide which spinner style to render.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TaskCategory {
+    /// Yarn-like (yarn install, pod-install, clean): renders Y/P spinner
+    Yarn,
+    /// Run commands (run-android, run-ios, release build): renders R spinner
+    Run,
+    /// Test/lint/types: renders T spinner
+    Test,
+    /// Git operations: no spinner (non-cancellable, fast enough)
+    Git,
+    /// Shell: generic spinner
+    Shell,
+}
+
+impl CommandSpec {
+    /// Returns the animation category for this command.
+    pub fn task_category(&self) -> TaskCategory {
+        match self {
+            CommandSpec::YarnInstall | CommandSpec::YarnPodInstall
+            | CommandSpec::RnCleanAndroid | CommandSpec::RnCleanCocoapods
+            | CommandSpec::RmNodeModules => TaskCategory::Yarn,
+
+            CommandSpec::RnRunAndroid { .. } | CommandSpec::RnRunIos { .. }
+            | CommandSpec::RnRunIosDevice | CommandSpec::RnReleaseBuild
+            | CommandSpec::AdbInstallApk => TaskCategory::Run,
+
+            CommandSpec::YarnUnitTests | CommandSpec::YarnJest { .. }
+            | CommandSpec::YarnLint | CommandSpec::YarnCheckTypes => TaskCategory::Test,
+
+            CommandSpec::GitResetHard | CommandSpec::GitPull | CommandSpec::GitPush
+            | CommandSpec::GitRebase { .. } | CommandSpec::GitCheckout { .. }
+            | CommandSpec::GitCheckoutNew { .. } | CommandSpec::GitFetch
+            | CommandSpec::GitResetHardFetch => TaskCategory::Git,
+
+            CommandSpec::ShellCommand { .. } => TaskCategory::Shell,
         }
-        Action::KillMetro => {
-            state.metro_status = MetroStatus::Stopping;
-            vec![Effect::KillMetroProcess]
-        }
-        // ...
+    }
+
+    /// True for commands that support cancellation (SIGTERM to process group).
+    /// Git operations are NOT cancellable — mid-operation kill risks index corruption.
+    pub fn is_cancellable(&self) -> bool {
+        !matches!(self.task_category(), TaskCategory::Git)
     }
 }
 ```
 
-### Pattern 2: Channel-Based Event Multiplex
+Add `domain/task.rs` as a new file (or add inline to `command.rs` if small enough). The key insight: `TaskRecord` is pure data — `std::time::Instant` is in std, no tokio dependency needed in domain.
 
-**What:** A single `tokio::select!` loop combines four event sources: terminal key events (from crossterm), process output events (from ProcessManager), background task results (JiraClient, GitClient), and tick events for animations/refresh. All sources send into typed channels. The main loop receives from all channels and dispatches to `update()`.
+Add to `domain/worktree.rs`:
 
-**When to use:** Any time you have both interactive UI and background async work. This is required for this project because metro log streaming and JIRA fetching run concurrently with user input.
-
-**Trade-offs:** All concurrent state ends up in one AppState — simpler than distributed state but requires discipline to not make AppState a grab-bag.
-
-**Example:**
 ```rust
-// event.rs
-pub enum Event {
-    Key(crossterm::event::KeyEvent),
-    ProcessOutput(WorktreeId, String),   // metro log lines
-    ProcessExited(WorktreeId, ExitStatus),
-    JiraFetched(WorktreeId, JiraTicket),
-    Tick,
-    Resize(u16, u16),
-}
-
-// main loop (simplified)
-loop {
-    tokio::select! {
-        event = terminal_rx.recv() => { /* crossterm key events */ }
-        event = process_rx.recv() => { /* metro output lines */ }
-        event = bg_rx.recv()      => { /* jira, git results */ }
-        _ = tick_interval.tick()  => { /* refresh animations */ }
-    }
-    let action = map_event_to_action(&state, event);
-    let effects = update(&mut state, action);
-    spawn_effects(effects, &process_tx, &bg_tx);
-    terminal.draw(|f| view(f, &state))?;
+/// Live task indicator for a worktree row — what task (if any) is running on it.
+/// Populated in AppState from the tasks map; read by ui/panels.rs for the spinner column.
+#[derive(Debug, Clone, PartialEq)]
+pub enum WorktreeTaskIndicator {
+    Idle,
+    Running {
+        label: &'static str,      // spec.label() — static str from CommandSpec
+        category: TaskCategory,
+        elapsed_secs: u64,
+    },
 }
 ```
 
-### Pattern 3: Command Pattern for Process Execution
+### Layer 2: infra/command_runner.rs — Process Group + Cancellation
 
-**What:** The `RnCommand` and `GitCommand` enums are rich types that carry all arguments needed to run a command. The ProcessManager receives these types and translates them into `tokio::process::Command` invocations. This decouples "what to run" (domain) from "how to run it" (infra).
+The infra change is surgical: `spawn_command_task` needs to return a type that carries both the JoinHandle and a kill mechanism that sends SIGTERM to the child process group.
 
-**When to use:** Any time you have a set of typed operations with parameters that the UI needs to present and the user needs to configure. In this project, commands like `run-android` have device selection that must flow from the UI through to the process.
-
-**Trade-offs:** More types to define upfront. The payoff is that the UI layer can display command options without knowing about process spawning, and the infra layer can run commands without knowing about display.
-
-**Example:**
+**Current signature:**
 ```rust
-// domain/command.rs
-pub enum RnCommand {
-    Clean(CleanTarget),          // android | cocoapods | both
-    Install,
-    RunAndroid(AndroidOptions),  // device: Option<String>, variant: BuildVariant
-    RunIos(IosOptions),          // device: Option<DeviceId>
-    YarnTest(TestFilter),
-    YarnLint,
-    CheckTypes,
-}
+pub async fn spawn_command_task(
+    spec: CommandSpec,
+    worktree_path: PathBuf,
+    current_branch: String,
+    action_tx: UnboundedSender<Action>,
+) -> JoinHandle<()>
+```
 
-// infra/process_manager.rs — only layer that calls tokio::process
-impl ProcessManager {
-    pub async fn spawn(&self, cmd: RnCommand, cwd: &Path) -> Result<ChildHandle> {
-        let mut command = tokio::process::Command::new("yarn");
-        match cmd {
-            RnCommand::RunAndroid(opts) => {
-                command.args(["react-native", "run-android"]);
-                if let Some(device) = opts.device {
-                    command.args(["--deviceId", &device]);
+**New return type:**
+
+```rust
+/// Handle to a running command task.
+/// abort() cancels Tokio streaming. kill() sends SIGTERM to the process group.
+pub struct CommandHandle {
+    /// Task join handle — abort() stops stdout/stderr streaming.
+    pub join_handle: tokio::task::JoinHandle<()>,
+    /// Cancellation channel — send () to trigger SIGTERM on the child process group.
+    /// Using a oneshot so it can be consumed exactly once.
+    pub cancel_tx: tokio::sync::oneshot::Sender<()>,
+    /// OS pid of the spawned child — used for process group kill.
+    pub pid: u32,
+}
+```
+
+Inside `spawn_command_task`, use `tokio::sync::oneshot::channel()` to create a kill signal. The spawned task selects between the stdout/stderr streams and the kill receiver:
+
+```rust
+tokio::select! {
+    _ = stream_command_output(stdout, stderr, action_tx.clone()) => {}
+    _ = kill_rx => {
+        // SIGTERM to process group: -pid kills all children spawned by the command
+        unsafe { libc::kill(-(pid as libc::pid_t), libc::SIGTERM); }
+        // Brief wait then SIGKILL if still alive
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        let _ = child.kill().await;
+    }
+}
+let _ = child.wait().await;
+let _ = action_tx.send(Action::CommandExited);
+```
+
+The `libc` crate is already in `Cargo.toml` — no new dependencies.
+
+**Process group setup:** The child must be spawned with `process_group(0)` so it gets its own PGID equal to its PID. Add `.process_group(0)` to the `tokio::process::Command` builder in `spawn_command_task`. This matches what the existing metro process does (same pattern in `infra/process.rs`).
+
+**New signature:**
+```rust
+pub async fn spawn_command_task(
+    spec: CommandSpec,
+    worktree_id: WorktreeId,        // NEW — passed through for TaskRecord creation
+    worktree_path: PathBuf,
+    current_branch: String,
+    action_tx: UnboundedSender<Action>,
+) -> CommandHandle
+```
+
+The `action_tx` sends `Action::CommandOutputLine` and `Action::CommandExited` exactly as before, but `CommandExited` needs to carry the `TaskId` so `update()` can look up the right record:
+
+```rust
+// action.rs changes:
+CommandExited,                  // CHANGE to:
+CommandExited { task_id: TaskId },  // so update() can find the right record
+CommandOutputLine(String),      // CHANGE to:
+CommandOutputLine { task_id: TaskId, line: String },  // route to correct worktree
+```
+
+This is the critical routing fix: output lines carry their `TaskId`, and `update()` resolves `task_id → worktree_id → command_output_by_worktree[worktree_id]`. The currently selected worktree is no longer involved in routing.
+
+### Layer 3: app.rs — AppState and update()
+
+**AppState changes (additions, no removals):**
+
+```rust
+// REPLACE:
+pub running_command: Option<CommandSpec>,
+pub command_task: Option<JoinHandle<()>>,
+pub command_queue: VecDeque<CommandSpec>,
+
+// WITH:
+/// All in-flight command tasks, keyed by TaskId.
+/// Allows multiple worktrees to run commands concurrently.
+pub tasks: HashMap<TaskId, (TaskRecord, CommandHandle)>,
+
+/// Per-worktree command queue. Each worktree has its own FIFO queue.
+/// Drained on CommandExited for that worktree's task.
+pub command_queue_by_worktree: HashMap<WorktreeId, VecDeque<CommandSpec>>,
+
+/// Task ID counter — monotonically increasing, wraps at u64::MAX (safe in practice).
+pub next_task_id: u64,
+
+/// Animation tick counter — incremented on every 250ms tick.
+/// Spinner frame = tick_count % SPINNER_FRAMES.len()
+pub tick_count: u64,
+```
+
+The old `command_queue` (global FIFO) becomes `command_queue_by_worktree` (per-worktree FIFO). The queue drain logic in `CommandExited` now only drains the queue for the worktree that just finished, not the global queue.
+
+**Metro single-instance constraint stays intact.** Metro lives in `AppState.metro: MetroManager` which is unchanged. The "only one metro at a time" rule is at the domain layer in `MetroManager::register()` which panics on double-register. This is independent of the command task system.
+
+**dispatch_command() changes:**
+
+```rust
+fn dispatch_command(
+    state: &mut AppState,
+    worktree_id: WorktreeId,   // explicit — no longer derived from selected row
+    spec: CommandSpec,
+    metro_tx: &UnboundedSender<Action>,
+) {
+    let task_id = TaskId(state.next_task_id);
+    state.next_task_id += 1;
+
+    // ... output routing, separator line (unchanged logic, uses worktree_id directly) ...
+
+    let record = TaskRecord {
+        id: task_id.clone(),
+        worktree_id: worktree_id.clone(),
+        spec: spec.clone(),
+        started_at: std::time::Instant::now(),
+    };
+
+    let tx = metro_tx.clone();
+    let path = /* looked up from state.worktrees */;
+    let branch = /* looked up from state.worktrees */;
+    let tid = task_id.clone();
+
+    let handle = tokio::spawn(async move {
+        let cmd_handle = spawn_command_task(spec, worktree_id, path, branch, tx, tid).await;
+        // drive the handle
+    });
+    // store (record, handle) in state.tasks[task_id]
+}
+```
+
+**Action::CommandExited { task_id } changes:**
+
+```rust
+Action::CommandExited { task_id } => {
+    let Some((record, _handle)) = state.tasks.remove(&task_id) else { return; };
+    let worktree_id = record.worktree_id.clone();
+
+    // post-command staleness refresh (existing logic, unchanged)
+    // ...
+
+    // Drain THIS WORKTREE'S queue only
+    if let Some(queue) = state.command_queue_by_worktree.get_mut(&worktree_id) {
+        if let Some(next_spec) = queue.pop_front() {
+            dispatch_command(state, worktree_id, next_spec, metro_tx);
+        }
+    }
+}
+```
+
+**Action::CommandCancel changes:**
+
+The existing `CommandCancel` maps to `Char('X')` in `CommandOutput` focus. Under the new system, this should cancel the task for the *selected worktree* (the one whose output is visible). The implementation:
+
+```rust
+Action::CommandCancel => {
+    // Find task for the selected worktree
+    let wt_id = active_worktree_id(state);
+    if let Some(id) = wt_id {
+        // Find task belonging to this worktree
+        let task_id = state.tasks.iter()
+            .find(|(_, (rec, _))| rec.worktree_id == id)
+            .map(|(tid, _)| tid.clone());
+        if let Some(tid) = task_id {
+            if let Some((rec, handle)) = state.tasks.remove(&tid) {
+                if rec.spec.is_cancellable() {
+                    let _ = handle.cancel_tx.send(());
+                    // handle.join_handle will complete via CommandExited action
                 }
+                // For non-cancellable (git): just drop the streaming, process finishes naturally
+                handle.join_handle.abort();
             }
-            // ...
         }
-        command.current_dir(cwd).stdout(Stdio::piped());
-        // spawn, attach stdout reader task that sends lines to process_tx channel
+    }
+    // Clear this worktree's queue too
+    if let Some(id) = active_worktree_id(state) {
+        state.command_queue_by_worktree.remove(&id);
     }
 }
 ```
 
-### Pattern 4: Deep Module for Metro Management (Ousterhout)
+**Tick counter increment:** In the `run()` event loop tick arm:
 
-**What:** The `ProcessManager` hides all complexity of PTY/pipe management, zombie process prevention, graceful vs. forced kill, and output buffering behind a minimal interface: `spawn(cmd, cwd)`, `kill(id)`, `is_running(id)`. Callers never touch `tokio::process::Child` directly.
-
-**When to use:** Any subsystem with significant implementation complexity that has a clean, stable purpose. Metro management has exactly this profile: the internals are tricky (kill ordering, SIGTERM/SIGKILL escalation, log streaming) but the external contract is simple.
-
-**Trade-offs:** More code inside the module. The benefit is that all the hard parts are in one place and the rest of the codebase stays clean.
-
-## Data Flow
-
-### User Keypress to Screen Update
-
-```
-User presses key
-    ↓
-crossterm sends KeyEvent → terminal_rx channel
-    ↓
-main loop receives Event::Key(k)
-    ↓
-map_event_to_action(&state, Event::Key(k)) → Action::SwitchWorktree(id)
-    ↓
-update(&mut state, action) → mutates state + returns Vec<Effect>
-    ↓
-spawn_effects(effects) → spawns tokio task to kill metro
-    ↓
-terminal.draw(|f| view(f, &state))  ← renders immediately with new state
-    ↓
-tokio task kills process → sends Event::ProcessExited(id, status)
-    ↓
-main loop receives it → update() mutates metro_status to Stopped
-    ↓
-terminal.draw() → next frame reflects Stopped state
+```rust
+_ = tick.tick() => {
+    state.tick_count = state.tick_count.wrapping_add(1);
+    // existing behavior: triggers redraw
+}
 ```
 
-### Metro Log Streaming
+**Per-worktree task lookup helper** (for ui/ consumption):
 
-```
-ProcessManager::spawn() called
-    ↓
-tokio::process::Child spawned with stdout: Stdio::piped()
-    ↓
-Background task: BufReader::new(child.stdout).lines()
-    ↓
-Each line → process_tx.send(Event::ProcessOutput(id, line))
-    ↓
-main loop → update() → state.metro_log.push(line)
-    ↓
-view() → MetroPane renders from state.metro_log (ring buffer)
+```rust
+/// Returns the running task for a given worktree, if any.
+pub fn task_for_worktree<'a>(
+    state: &'a AppState,
+    id: &WorktreeId,
+) -> Option<&'a TaskRecord> {
+    state.tasks.values()
+        .find(|(rec, _)| &rec.worktree_id == id)
+        .map(|(rec, _)| rec)
+}
 ```
 
-### JIRA Title Fetch
+### Layer 4: ui/ — Spinner and Elapsed Time
 
-```
-Worktree discovered during init or added
-    ↓
-domain/jira.rs::extract_ticket_id("UMP-1234-description") → Some("UMP-1234")
-    ↓
-bg_tx.send(Effect::FetchJira(worktree_id, ticket_id))
-    ↓
-Background task: JiraClient::fetch_title(token, ticket_id).await
-    ↓
-bg_rx.send(Event::JiraFetched(worktree_id, ticket))
-    ↓
-main loop → update() → state.worktrees[id].jira_title = Some(title)
-    ↓
-view() → WorktreePane shows the title
+**Spinner frames constant (in `ui/theme.rs` or a new `ui/spinner.rs`):**
+
+```rust
+pub const SPINNER_FRAMES: [char; 6] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴'];
+
+pub fn spinner_frame(tick_count: u64) -> char {
+    SPINNER_FRAMES[(tick_count as usize) % SPINNER_FRAMES.len()]
+}
 ```
 
-### Key Data Flows Summary
+At 250ms tick, 6 frames = 1.5s per rotation. That is visually appropriate for a terminal spinner (not too fast, clearly animated).
 
-1. **Input → Action → State mutation → Render**: Synchronous, completes in one loop iteration, keeps UI responsive.
-2. **Action → Effect → Background task → Event → State mutation → Render**: Async, completes over multiple loop iterations; state shows in-progress immediately.
-3. **Process stdout → State → Render**: Continuous streaming; log lines flow through channels into a ring buffer.
+**Worktree table row rendering in `ui/panels.rs`:**
 
-## Build Order Implications
+The worktree table currently renders Y/P indicators as static styled cells. Under the new design:
 
-The layered architecture implies a build order where each layer depends only on the ones below it:
+- If `task_for_worktree(state, &wt.id)` returns `Some(record)`:
+  - Render `spinner_frame(state.tick_count)` in yellow bold
+  - Render `elapsed: {record.started_at.elapsed().as_secs()}s` in a dim style
+  - The spinner replaces the Y/P/T static character for the active task category
+- If `None`: render the static Y/P/T as today
 
-1. **Build first — domain/ types and rules.** WorktreeId, MetroStatus, RnCommand, JiraTicket, the "one metro at a time" invariant in WorktreeManager. No async, no IO. Write and test in isolation. This is the foundation everything else depends on.
+The elapsed time renders in the same column as the task indicator, after the spinner. The column width may need to be widened slightly (from fixed `2` to `8–10` characters) to fit `spinner + elapsed`.
 
-2. **Build second — infra/ adapters.** ProcessManager, ConfigStore, GitClient, JiraClient, TmuxClient. Each one independently testable with integration tests. No ratatui imports. Domain types are input/output.
+**No new async in ui/.** The `tick_count` is plain `u64` in `AppState`. `spinner_frame()` is a pure function. `task_for_worktree()` returns a reference. The render function remains a pure function of `&AppState`.
 
-3. **Build third — app.rs coordination.** AppState struct and update() function. Wire domain types and infra effects together. No rendering. Can be tested by driving actions and asserting on state.
+---
 
-4. **Build fourth — tui.rs and event.rs scaffolding.** Terminal init/teardown, crossterm event capture, channel setup, main loop skeleton. Ratatui setup code.
+## New Types Summary
 
-5. **Build last — ui/ widgets.** Each widget gets AppState, renders, done. No logic to test — visual inspection suffices. Widgets are decoupled so they can be built and refined independently.
+| Type | Layer | File | Purpose |
+|------|-------|------|---------|
+| `TaskId` | domain | `domain/command.rs` | Stable opaque handle for an in-flight task |
+| `TaskRecord` | domain | `domain/command.rs` | Binds CommandSpec + WorktreeId + start time |
+| `TaskCategory` | domain | `domain/command.rs` | Drives spinner style in UI |
+| `WorktreeTaskIndicator` | domain | `domain/worktree.rs` | UI-facing task state per worktree row |
+| `CommandHandle` | infra | `infra/command_runner.rs` | cancel_tx + join_handle + pid for a running task |
 
-## Anti-Patterns
+No new files strictly required. All types fit naturally in existing files. The only potential new file would be `ui/spinner.rs` if spinner logic grows beyond two functions — optional.
 
-### Anti-Pattern 1: Putting Logic Inside Widget render()
+---
 
-**What people do:** Calculate "is this worktree active?" or "should this button be enabled?" inside the Widget render method.
+## New and Modified Modules
 
-**Why it's wrong:** The view() function is supposed to be a pure, deterministic translation of state to pixels. Logic in render() means the same AppState could produce different output depending on hidden factors. It also makes the logic untestable without a full terminal setup.
+| Module | Change Type | What Changes |
+|--------|-------------|-------------|
+| `domain/command.rs` | MODIFY | Add TaskId, TaskRecord, TaskCategory; add task_category() and is_cancellable() to CommandSpec |
+| `domain/worktree.rs` | MODIFY | Add WorktreeTaskIndicator |
+| `infra/command_runner.rs` | MODIFY | spawn_command_task returns CommandHandle; add process_group(0); add SIGTERM cancellation path |
+| `action.rs` | MODIFY | CommandExited gains task_id field; CommandOutputLine gains task_id field |
+| `app.rs` | MODIFY (AppState + update()) | Replace running_command/command_task/command_queue with tasks/command_queue_by_worktree/tick_count/next_task_id; update dispatch_command; update CommandExited arm; update CommandCancel arm; add tick_count increment in run() |
+| `ui/panels.rs` | MODIFY | Worktree table row rendering: spinner + elapsed replaces static Y/P when task active |
+| `ui/theme.rs` | MODIFY (small) | Add SPINNER_FRAMES and spinner_frame() |
 
-**Do this instead:** Compute derived values in `update()` and store them in AppState. The widget reads `state.is_active[id]`, not `state.active_worktree == id`. Or use a thin ViewModel struct that `view()` constructs from AppState before passing to widgets.
+Modules that are NOT touched: `domain/metro.rs`, `domain/refresh.rs`, `infra/process.rs`, `infra/config.rs`, `infra/jira.rs`, `infra/multiplexer.rs`, `ui/modals.rs`, `ui/footer.rs`, `event.rs`, `tui.rs`.
 
-### Anti-Pattern 2: Blocking Tokio in the Event Loop
+---
 
-**What people do:** Call `std::process::Command::output()` inside the async event loop to run git or yarn commands.
+## Data Flow After Changes
 
-**Why it's wrong:** `std::process::Command` blocks the Tokio thread. The entire UI freezes while the command runs. In a dashboard context, this means the metro log stops updating and keypresses are lost.
+### Parallel Command Execution (New Flow)
 
-**Do this instead:** Always use `tokio::process::Command` for subprocess spawning. For truly blocking operations (e.g., libgit2 synchronous API), use `tokio::task::spawn_blocking` to run them on a dedicated thread pool thread. Send results back through channels.
+```
+User presses 'y' > 'i' (yarn install) on worktree A (selected)
+    ↓
+handle_key() → Action::CommandRun(YarnInstall)
+    ↓
+update() → dispatch_command(worktree_A_id, YarnInstall)
+    ↓
+Creates TaskId(1), TaskRecord { worktree_A_id, YarnInstall, now }
+Spawns CommandHandle { cancel_tx, join_handle, pid }
+Stores in state.tasks[TaskId(1)]
+    ↓
+User navigates to worktree B, presses 'g' > 'p' (git pull)
+    ↓
+update() → dispatch_command(worktree_B_id, GitPull)
+    ↓
+Creates TaskId(2), TaskRecord { worktree_B_id, GitPull, now }
+state.tasks[TaskId(2)] = ...
+    ↓
+BOTH commands run concurrently in separate tokio tasks.
+    ↓
+Output lines arrive: Action::CommandOutputLine { task_id: 1, line: "..." }
+    ↓
+update() → tasks[1].record.worktree_id = A
+    → command_output_by_worktree[A].push_back(line)
+    ↓
+Action::CommandExited { task_id: 1 }
+    ↓
+update() → remove tasks[1] → drain command_queue_by_worktree[A]
+```
 
-### Anti-Pattern 3: Shared Mutable State for Process Handles
+### Cancellation Flow (New)
 
-**What people do:** Store `Arc<Mutex<Option<Child>>>` in AppState so both the UI and the process manager can access it.
+```
+User presses 'X' in CommandOutput pane (worktree A selected)
+    ↓
+Action::CommandCancel
+    ↓
+update() finds task with worktree_id == A in state.tasks
+    ↓
+spec.is_cancellable() == true (e.g. YarnInstall)
+    ↓
+cancel_tx.send(()) → spawned task's kill_rx fires
+    ↓
+libc::kill(-pid, SIGTERM) → process group receives SIGTERM
+    ↓
+200ms grace period
+    ↓
+child.kill().await (SIGKILL if still alive)
+    ↓
+child.wait().await → CommandExited { task_id } sent
+    ↓
+update() cleans up state.tasks entry, drains queue
+```
 
-**Why it's wrong:** Process handles are not UI state. Mixing them into AppState creates implicit coupling between the rendering layer and the OS process layer. It also makes the mutex a coordination point that adds latency.
+### Spinner Animation Flow (New)
 
-**Do this instead:** ProcessManager owns all `Child` handles internally. AppState contains only domain-level status: `MetroStatus::Running { pid: u32 }`. The UI knows the process is running and its PID for display; it never holds the raw handle.
+```
+tokio::time::interval(250ms) fires
+    ↓
+run() tick arm: state.tick_count += 1
+    ↓
+terminal.draw() called
+    ↓
+ui::view() → render_worktree_table()
+    ↓
+For each worktree row:
+    task_for_worktree(state, &wt.id)?
+    → spinner_frame(state.tick_count)  ← 6-frame rotation, 1.5s cycle
+    → elapsed = record.started_at.elapsed().as_secs()
+    → render yellow spinner char + "Xs" elapsed
+```
 
-### Anti-Pattern 4: Domain Logic in Action Handlers
+---
 
-**What people do:** Put the "only one metro at a time" check inside the Action::SwitchWorktree arm of update().
+## Architecture Audit Notes
 
-**Why it's wrong:** Business rules embedded in event handlers are hard to find, hard to test, and tend to be replicated when similar actions are added later.
+The following deviations from Ousterhout and TEA principles exist in the current codebase and should be surfaced in the audit phase before implementing the new features:
 
-**Do this instead:** Business rules live in domain/. The `WorktreeManager::begin_switch(id)` method encodes the invariant and returns either a `PendingSwitch` (describing what needs to happen) or an error. The update() function just calls it and converts the result to Effects.
+**AUDIT-01: dispatch_command() derives worktree from selected table row.**
+Location: `app.rs:dispatch_command()`. The function reads `state.worktree_table_state.selected()` to find the worktree at dispatch time. This couples command dispatch to UI cursor position. If the user moves the cursor after dispatching but before `CommandExited`, `running_command` still refers to the original command but `active_worktree_id()` returns the new cursor position. Output is currently routed to the original worktree correctly (path is captured at dispatch), but the running_command display in the UI may show the wrong context. Fix: pass `worktree_id` explicitly into `dispatch_command()` (which the new design does).
 
-### Anti-Pattern 5: Orphaned Metro Process on Crash/Exit
+**AUDIT-02: AppState contains tokio JoinHandle (process handle).**
+`command_task: Option<JoinHandle<()>>` mixes process lifecycle management (infra concern) into AppState (app concern). This violates the boundary described in the original ARCHITECTURE.md. The new `CommandHandle` moves closer to the boundary by pairing the handle with its cancel mechanism, but it still lives in `state.tasks`. This is acceptable for a TUI — unlike a production server, there is no test-isolation requirement for AppState — but should be noted as a pragmatic compromise.
 
-**What people do:** Spawn metro with `tokio::process::Command::spawn()` but drop the `Child` handle when switching worktrees, expecting the process to die.
+**AUDIT-03: update() calls tokio::spawn directly.**
+Throughout `update()`, async work is dispatched with `tokio::spawn(...)`. This is an `async fn` side-effect from a nominally pure update function. It works correctly because `update()` is called from an async context in `run()`, but it breaks the TEA contract (update should be synchronous, return effects, let the loop spawn them). The existing codebase accepts this trade-off for simplicity; the new milestone should preserve this pattern rather than introducing an Effect enum, as the refactor cost is high and the benefit is theoretical at this scale.
 
-**Why it's wrong:** Dropping a `Child` without `.kill()` does NOT kill the process on Unix. Metro keeps running in the background, consuming port 8081 and causing the next `yarn start` to fail with "address already in use."
+**AUDIT-04: Global command_queue is not per-worktree.**
+Location: `AppState.command_queue`. The current FIFO queue is global: when worktree A dispatches a clean+install+run sequence, all three commands queue together. If worktree B then dispatches a command, it enters the same global queue and runs after worktree A's entire sequence finishes. The per-worktree queue (`command_queue_by_worktree`) introduced in this milestone fixes this correctly.
 
-**Do this instead:** Always call `child.kill().await` before dropping the handle. Use `kill_on_drop(true)` on the Command as a safety net, but do not rely on it exclusively. Maintain a handle registry in ProcessManager. On graceful shutdown and on panics (via a drop guard), kill all tracked children.
+**AUDIT-05: MetroHandle in domain/ uses tokio types.**
+`domain/metro.rs` contains a comment acknowledging this as a deliberate pragmatic choice. The types are inert data. Leave as is — refactoring adds complexity for no practical benefit at this scale.
 
-## Integration Points
+---
 
-### External Services
+## Build Order
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| JIRA REST API | HTTP GET with Bearer token (reqwest) | Token stored in ~/.config/ump-dash/config.toml; requests cached per session to avoid rate limits |
-| git CLI | `tokio::process::Command` calling git binary | Prefer git binary over libgit2: simpler, no linking, matches user's git version |
-| yarn / React Native CLI | `tokio::process::Command` in worktree cwd | Must capture stdout/stderr for display; must be killable on worktree switch |
-| tmux | `tmux_interface` crate (wraps tmux CLI) | Use `NewWindow` + `SendKeys` to open Claude Code; fire-and-forget, no response needed |
+Dependencies must be built bottom-up. Each step must compile and pass existing tests before the next step starts.
 
-### Internal Boundaries
+### Step 1: Domain types (no behavioral change)
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| ui/ → app/ | Reads `&AppState` reference; no writes | One-way. UI never mutates state. |
-| app/ → domain/ | Direct function calls (sync) | No async in domain/. update() calls domain functions synchronously. |
-| app/ → infra/ | Via `Effect` enum + tokio tasks | update() returns Vec<Effect>. Caller spawns tasks to execute effects. Results come back as Events. |
-| infra/ → app/ | mpsc channel sending Event variants | ProcessManager, JiraClient etc. hold Sender<Event>. Main loop holds Receiver<Event>. |
-| domain/ → (nothing) | No outbound dependencies | Domain is a leaf node. Zero imports from infra/ or ui/. |
+Add `TaskId`, `TaskRecord`, `TaskCategory` to `domain/command.rs`.
+Add `task_category()` and `is_cancellable()` methods to `CommandSpec`.
+Add `WorktreeTaskIndicator` to `domain/worktree.rs`.
 
-## Scaling Considerations
+These are pure additions. Nothing breaks. Compile check passes immediately.
 
-This is a single-user local tool. Scale is not relevant in the traditional sense. The equivalent concerns are:
+**Dependency:** nothing (self-contained domain layer)
 
-| Concern | At 1 worktree | At 10 worktrees | At 50+ worktrees |
-|---------|---------------|-----------------|------------------|
-| JIRA fetching | Fire-and-forget single request | Batch requests on init, cache | Paginate or lazy-fetch on scroll |
-| Metro log buffer | Unlimited growth is fine | Cap at 10k lines (ring buffer) | Same — log file on disk, stream tail |
-| Git status refresh | Per-keystroke or per-tick | Debounced, one goroutine per worktree | Same, git is fast |
-| Process tracking | One handle in ProcessManager | Same — still one metro, N process handles for git/yarn | Same |
+### Step 2: Action enum changes
+
+Add `task_id: TaskId` to `CommandExited` and `CommandOutputLine`.
+
+This is a breaking change to a heavily-used enum. All existing match arms on these variants must be updated. The compiler will flag every location. Expected sites: `update()` (two arms in `app.rs`), `command_runner.rs` (the `action_tx.send()` calls).
+
+Change `CommandQueuePush` to `CommandQueuePush { worktree_id: WorktreeId, spec: CommandSpec }` to prepare for per-worktree queuing.
+
+**Dependency:** Step 1 (TaskId must exist)
+
+### Step 3: infra/command_runner.rs — CommandHandle + process group
+
+Introduce `CommandHandle`. Update `spawn_command_task` to:
+- Accept `worktree_id: WorktreeId` and `task_id: TaskId` parameters
+- Call `.process_group(0)` on the child
+- Create a `oneshot::channel` for kill signaling
+- Return `CommandHandle` instead of `JoinHandle<()>`
+- Pass `task_id` in `CommandOutputLine` and `CommandExited` sends
+
+**Dependency:** Steps 1 and 2 (TaskId and updated Action variants must exist)
+
+### Step 4: AppState restructure
+
+Replace `running_command`, `command_task`, `command_queue` with `tasks`, `command_queue_by_worktree`, `next_task_id`, `tick_count`.
+
+Update `Default` impl accordingly (all new fields have obvious defaults).
+
+Update `dispatch_command()` to accept explicit `worktree_id`, create `TaskRecord`, store `CommandHandle` in `state.tasks`.
+
+**Dependency:** Steps 1–3 (TaskRecord and CommandHandle must exist)
+
+### Step 5: update() arm updates
+
+Update `Action::CommandExited { task_id }` to remove from `state.tasks`, drain per-worktree queue.
+Update `Action::CommandOutputLine { task_id, line }` to route to correct worktree via `tasks[task_id].worktree_id`.
+Update `Action::CommandCancel` to find task by active worktree, call cancel semantics.
+Update `Action::CommandQueuePush` to push to `command_queue_by_worktree`.
+Update `run()` tick arm to increment `state.tick_count`.
+Update `run()` cleanup to abort all tasks in `state.tasks`.
+
+**Dependency:** Steps 1–4
+
+### Step 6: UI — spinner and elapsed time
+
+Add `SPINNER_FRAMES` and `spinner_frame()` to `ui/theme.rs`.
+Update `render_worktree_table()` in `ui/panels.rs` to call `task_for_worktree()` per row and render spinner + elapsed.
+
+**Dependency:** Steps 4 and 5 (tick_count and task_for_worktree must exist)
+
+### Step 7: Architecture audit verification
+
+After all behavioral changes compile and tests pass, audit the five AUDIT-0x items above. The ones that warrant a refactor (primarily AUDIT-01 which the new design already fixes, and AUDIT-04 which Step 5 fixes) will be resolved by the milestone work itself. AUDIT-02 and AUDIT-03 should be documented as accepted trade-offs in a code comment. AUDIT-05 already has its comment.
+
+---
+
+## Pitfalls Specific to This Milestone
+
+**PITFALL-M1: SIGTERM without process_group(0) kills only the shell, not subprocesses.**
+`yarn install` spawns node as a child of sh. `kill(-pid, SIGTERM)` only works if the child was spawned with `process_group(0)`. Without it, `-pid` references PGID 0 (the terminal's process group) which would kill the entire terminal session. Add `.process_group(0)` in `spawn_command_task` and verify this is not already set (metro's process.rs sets it there, not in command_runner.rs).
+
+**PITFALL-M2: CommandExited variant change breaks existing match arms everywhere.**
+The compiler catches all sites but the fix is mechanical. Do this change in one commit so the compiler guides all required edits.
+
+**PITFALL-M3: Per-worktree queue + parallel execution creates ordering ambiguity for queue chains.**
+A queue like `[YarnInstall, RnRunAndroid]` in worktree A relies on YarnInstall completing before the run command starts. This is preserved because the per-worktree queue still drains sequentially within a worktree. Parallel execution only applies across worktrees. This invariant must be maintained by ensuring `CommandExited { task_id }` only drains the queue for `tasks[task_id].worktree_id`.
+
+**PITFALL-M4: Spinner tick rate drives all redraws, including when idle.**
+The 250ms tick fires regardless of whether any task is running. This is already the case (tick exists today). It is not a new cost. Do not increase tick frequency for faster spinner animation — 250ms is already visually responsive and the existing rate is validated.
+
+**PITFALL-M5: task_for_worktree() is O(n) over all tasks.**
+Under normal conditions `state.tasks` has at most N entries where N is the number of worktrees (typically 5–15). An O(n) scan is negligible. Do not add a secondary index unless profiling shows a real cost.
+
+---
 
 ## Sources
 
-- [Ratatui: The Elm Architecture (TEA)](https://ratatui.rs/concepts/application-patterns/the-elm-architecture/) — HIGH confidence, official docs
-- [Ratatui: Event Handling](https://ratatui.rs/concepts/event-handling/) — HIGH confidence, official docs
-- [Ratatui: Widget and StatefulWidget traits](https://ratatui.rs/concepts/widgets/) — HIGH confidence, official docs
-- [Ratatui: Best Practices Discussion](https://github.com/ratatui/ratatui/discussions/220) — HIGH confidence, official repo discussion
-- [Ratatui: Component Template](https://ratatui.rs/templates/component/) — HIGH confidence, official docs
-- [tokio::process documentation](https://docs.rs/tokio/latest/tokio/process/index.html) — HIGH confidence, official docs
-- [tmux_interface crate docs](https://docs.rs/tmux_interface/latest/tmux_interface/) — HIGH confidence, official docs
-- [Codex TUI architecture analysis](https://zread.ai/openai/codex/18-tui-application-structure) — MEDIUM confidence, derived analysis
-- [GitUI source code analysis (gitui-org/gitui)](https://github.com/gitui-org/gitui) — MEDIUM confidence, source code review
-- [Lazygit architecture (DeepWiki)](https://deepwiki.com/jesseduffield/lazygit) — MEDIUM confidence, third-party analysis
-- [Hexagonal Architecture in Rust](https://medium.com/@lucorset/hexagonal-architecture-in-rust-72f8958eb26d) — MEDIUM confidence, community article
+All findings are HIGH confidence — derived from direct code reading of the existing codebase (2026-04-13).
+
+- `/Users/cubicme/aljazeera/dashboard/src/app.rs` — AppState, update(), dispatch_command(), run()
+- `/Users/cubicme/aljazeera/dashboard/src/action.rs` — Action enum, all 50+ variants
+- `/Users/cubicme/aljazeera/dashboard/src/domain/command.rs` — CommandSpec, ModalState, CleanOptions
+- `/Users/cubicme/aljazeera/dashboard/src/domain/metro.rs` — MetroHandle, MetroManager
+- `/Users/cubicme/aljazeera/dashboard/src/domain/worktree.rs` — Worktree, WorktreeId
+- `/Users/cubicme/aljazeera/dashboard/src/infra/command_runner.rs` — spawn_command_task, stream_command_output
+- `/Users/cubicme/aljazeera/dashboard/src/event.rs` — Event enum
+- `/Users/cubicme/aljazeera/dashboard/Cargo.toml` — dependency versions (libc already present)
+- `/Users/cubicme/aljazeera/dashboard/.planning/PROJECT.md` — v1.3 milestone requirements
 
 ---
-*Architecture research for: Rust TUI dashboard — React Native worktree management*
-*Researched: 2026-03-02*
+*Architecture research for: v1.3 Per-Worktree Tasks + Architecture Audit*
+*Researched: 2026-04-13*
+*Supersedes prior ARCHITECTURE.md sections on command system (adds new sections, existing patterns remain valid)*

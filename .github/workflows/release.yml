@@ -43,7 +43,7 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Codesign macOS binary
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -69,7 +69,7 @@ jobs:
           rm -f certificate.p12
 
       - name: Notarize macOS binary
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.APPLE_ID != ''
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

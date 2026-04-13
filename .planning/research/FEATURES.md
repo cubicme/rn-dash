@@ -1,227 +1,267 @@
 # Feature Research
 
-**Domain:** TUI developer workspace/process manager (Rust/Ratatui, React Native worktrees)
-**Researched:** 2026-03-02
-**Confidence:** HIGH (core TUI patterns), MEDIUM (RN-specific workflow), HIGH (project-specific requirements from PROJECT.md)
+**Domain:** TUI developer workspace/process manager (Rust/Ratatui, React Native worktrees) — v1.3 per-worktree task system + architecture audit
+**Researched:** 2026-04-13
+**Confidence:** HIGH (task cancellation patterns — verified against tokio-util docs and canonical blog post), HIGH (UI indicator patterns — verified against throbber-widgets-tui and Ratatui ecosystem), HIGH (architecture audit patterns — verified against cargo-modules and Ousterhout literature), MEDIUM (elapsed-time tick pattern — standard Instant::now() but no ratatui-specific prior art for per-row display found)
+
+---
+
+## Context: What Is Already Built
+
+The v1.0–v1.2 foundation is complete. Existing state relevant to v1.3:
+
+- `AppState.command_queue`: `VecDeque<CommandSpec>` — single global FIFO queue
+- `AppState.running_command`: `Option<CommandSpec>` — single global running slot
+- `AppState.command_task`: `Option<JoinHandle<()>>` — single global task handle
+- `AppState.command_output_by_worktree`: `HashMap<WorktreeId, VecDeque<String>>` — output is already per-worktree (good foundation)
+- `spawn_command_task`: spawns a child process with `kill_on_drop(true)`, streams stdout/stderr via `Action::CommandOutputLine`, sends `Action::CommandExited` on completion
+- `CommandSpec.is_destructive()` and `CommandSpec.needs_metro()` — classification predicates already exist
+- `Action::CommandCancel` — already defined, but currently aborts via `JoinHandle::abort()` on the single global handle
+- Y/P letters in the worktree table icon column — currently static green/red staleness indicators
+- No elapsed time tracking, no per-worktree task state, no spinner frames
+
+---
 
 ## Feature Landscape
 
 ### Table Stakes (Users Expect These)
 
-Features users assume exist in any TUI workspace/process manager. Missing these makes the tool feel broken or amateur.
+Features the v1.3 milestone must deliver for the product to feel complete at this level of maturity. Missing any of these makes the feature set feel half-built.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Vim-style keybindings (hjkl, q, /, ?) | Every power-user TUI (lazygit, k9s, gitui) uses these. Doom Emacs user will expect them. | LOW | Must be keyboard-only. Mouse optional. |
-| On-screen keybinding hints (footer bar) | lazygit, k9s, gitui all show context-sensitive shortcuts in a footer. Users don't memorize; they discover. | LOW | Context-aware: hints change per selected panel/mode. |
-| Panel/pane layout with focus traversal | Split-pane layout is the standard TUI pattern (gitui, lazygit, k9s all use it). Tab or arrow to move between panels. | MEDIUM | Tab or shift-Tab between panels; enter to dive in. |
-| Real-time status display | k9s pioneered auto-refresh. Users expect live process state, not stale snapshots. | MEDIUM | Tick-based polling for process status; async updates. |
-| List view with selection highlight | Standard widget in every TUI. Arrow keys navigate; selected item is highlighted. | LOW | Ratatui's List widget covers this. |
-| Scrollable log output | Any tool that exposes logs must allow scrolling. Users need to read past output. | LOW | Ratatui Paragraph with scroll offset. |
-| ? or F1 for help overlay | gitui uses context-aware help; k9s uses ?; lazygit uses x for custom commands and ? for general help. | LOW | Full-screen or floating overlay listing all bindings. |
-| Escape to cancel/go back | Universal TUI convention. Cancel modals, deselect, return to previous state. | LOW | Applies to modals, confirmations, command input. |
-| Confirmation dialog for destructive actions | git reset --hard, rm node_modules — these are irreversible. lazygit prompts before destructive ops. | LOW | Simple y/N prompt or dedicated confirm modal. |
-| Command output visible while running | Running yarn install blind is frustrating. Users expect to see streaming output. | MEDIUM | Spawn subprocess, stream stdout/stderr to a panel. |
-| Worktree list as primary navigation surface | This is a worktree manager — the list of worktrees is the core of the tool. | MEDIUM | Sortable, filterable list with branch/ticket metadata. |
-| Git branch name visible per worktree | Minimum context. Users need to know what branch each worktree represents. | LOW | Read from git; display next to path. |
-| Process running/stopped status indicator | Only one metro allowed. Users must know at a glance which worktree (if any) has metro running. | LOW | Boolean indicator: running / stopped. Simple icon or color. |
-| Error state visibility | When a command fails, the user must know. Silent failures are bugs. | LOW | Non-zero exit code → show error, offer retry/dismiss. |
+| Feature | Why Expected | Complexity | Existing Dependency |
+|---------|--------------|------------|---------------------|
+| Per-worktree task ownership | Commands dispatched in a worktree context must remain bound to that worktree — not a global slot. A user dispatching `yarn install` on worktree A while worktree B is already running a test must produce independent, attributed output. | MEDIUM | `command_output_by_worktree` already keyed — need to extend `running_command` and `command_task` to the same HashMap pattern |
+| Parallel execution across worktrees | If worktree A is running `yarn install` and the user switches to worktree B and dispatches `run-android`, both should run concurrently. Serializing across worktrees is a regression: users with multiple worktrees open expect independent task lanes. | HIGH | Requires replacing the single `command_task: Option<JoinHandle>` with `HashMap<WorktreeId, JoinHandle>` |
+| Individual task cancellation for yarn/clean/install/run/test | Accidental dispatches happen. A 10-minute `yarn install` on the wrong worktree must be cancellable without killing everything else. This is table stakes because `Action::CommandCancel` already exists in the codebase — users already expect it to work. | MEDIUM | `JoinHandle::abort()` is already used; needs to become per-worktree abort rather than global. Child process has `kill_on_drop(true)` so task abort cascades to process kill. |
+| Git operations remain non-cancellable and globally serialized | Git ops (reset, pull, push, rebase, fetch) must not be interrupted mid-operation — a half-applied rebase or a partial push leaves the repo in a broken state. This is not a missing feature; it is a deliberate constraint that must be surfaced in the UI. | LOW | Enforce via `CommandSpec::is_cancellable()` predicate — Git variants return false; all others return true |
+| Metro stays single-instance globally | v1.0–v1.2 already enforces this. v1.3 must not regress: parallelism across worktrees for tasks must not extend to metro. Metro is still one instance at a time, managed globally by `MetroManager`. | LOW | No new work — preserve existing constraint, explicitly document that per-worktree task parallelism excludes metro |
+| Output panel shows correct worktree's output | When the user navigates to worktree B in the table, the output panel must show B's output stream, not A's. Already partially true via `command_output_by_worktree` but must be fully consistent with the per-worktree task model. | LOW | Already built in `active_output(state)` — keep consistent |
 
 ### Differentiators (Competitive Advantage)
 
-Features that distinguish this tool from generic TUI workspace managers. These map directly to the project's core value: "one place to see and control everything about UMP worktrees."
+Features that distinguish v1.3 from a basic task runner. These map to the core value of "one place to see and control everything about your worktrees."
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| JIRA ticket title alongside branch name | Branch names like UMP-1234-fix-crash are opaque. Showing "Fix crash on Android login" gives instant context without leaving the terminal. | MEDIUM | Fetch from JIRA REST API v3 using API token. Cache locally (in-memory or ~/.config/ump-dash/). Extract UMP-XXXX from branch with regex. |
-| Single-metro enforcement with auto-switch | No other tool enforces the "only one bundler" constraint. Auto-killing metro when switching worktrees removes a daily friction point. | HIGH | Track which worktree owns the running metro process. On switch: SIGTERM metro, verify dead, start in new worktree. Race condition risk if process doesn't die cleanly. |
-| Custom labels per worktree/branch | JIRA titles are sometimes uninformative. Custom labels let users annotate worktrees (e.g., "QA build", "blocked by backend"). | LOW | Store in ~/.config/ump-dash/labels.toml. Display alongside JIRA title. |
-| Dependency staleness detection with lazy install | Automatically detect when node_modules is stale (package.json mtime vs node_modules mtime). Offer to install before launching. No manual "did I forget to yarn install?" | MEDIUM | Compare file modification times. Present warning badge. Lazy-install before run-android/run-ios, not proactively. |
-| Metro log toggle (live tail, show/hide) | Metro logs are noisy. Being able to show/hide them in-panel without killing the process is a workflow upgrade. | MEDIUM | Attach to the metro process stdout/stderr pipe. Toggle visibility. Separate from the "running" state. |
-| Metro interactive commands (j/r/reload) | Metro responds to keyboard input (j for debugger, r for reload). Wrapping those inside the dashboard means no terminal-switching. | MEDIUM | Send keystrokes to the metro subprocess's stdin. Requires process stdin pipe. |
-| Device/simulator selection for run-android/run-ios | Picking the right device is a manual step in every RN workflow. Surfacing adb devices and xcrun simctl list inside the TUI eliminates CLI-switching. | HIGH | Run adb devices and xcrun simctl list instruments -s simulators, parse output, present selection list. |
-| Launch Claude Code in tmux tab at worktree | Developer workflow: pick worktree, launch agent. No other tool integrates AI agent spawning. | MEDIUM | tmux new-window -c <worktree-path> 'claude'. Requires tmux session detection. |
-| RN-specific command palette (clean, pod-install, lint, etc.) | Generic TUI workspace tools have no RN awareness. Exposing yarn pod-install, yarn check-types, clean per-platform makes this indispensable for the RN team. | MEDIUM | Configurable command list with per-worktree execution. Output streamed to panel. |
-| Command flags configuration before execution | Power users want --reset-cache, --fix, --quiet exposed. lazygit exposes options before running some commands. | MEDIUM | Pre-execution modal: show command, allow flag toggling, confirm. |
-| Worktree switching orchestration | When switching active worktree: kill metro, optionally run yarn install, start metro. One-keystroke workflow. | HIGH | Sequence of async operations with visible progress. Rollback on failure. |
+| Feature | Value Proposition | Complexity | Existing Dependency |
+|---------|-------------------|------------|---------------------|
+| Live task name + elapsed time in worktree table row | Each worktree row shows the currently running task label and a live HH:MM:SS or MM:SS elapsed counter. This eliminates the need to focus the output panel to know what's happening across multiple worktrees. No comparable TUI worktree manager does this. | MEDIUM | Requires `task_started_at: Option<Instant>` per worktree in `AppState`; tick events (already present in the event loop via `tokio::select!`) drive re-render. `std::time::Instant::elapsed()` is sufficient — no new dependencies. |
+| 6-frame rotating yellow spinner replacing Y/P during active tasks | The Y/P staleness letters are replaced by an animated spinner (frames: `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` or `◐◓◑◒` or a 6-char custom set) rendered in yellow when a yarn-like or pod-like task is running on that worktree. Run/test tasks get the same treatment in the run column. Returns to Y/P (with staleness colors) when idle. | MEDIUM | `throbber-widgets-tui` exists in the Ratatui ecosystem (listed in official third-party widgets showcase). However, the custom 6-frame set is simple enough to implement inline with a tick-counter modulo 6 — no external dep needed. Frame advancement driven by the existing tick event. |
+| Per-worktree task queue (not global) | Commands queued for worktree A wait for A's current task to finish, independently of B's queue state. This is a natural progression of the existing global `VecDeque<CommandSpec>` — just move it into the per-worktree task record. | MEDIUM | Existing `command_queue: VecDeque<CommandSpec>` becomes `HashMap<WorktreeId, VecDeque<CommandSpec>>` |
+| Architecture audit surfacing real violations | A structured audit against Ousterhout deep-module criteria and domain/infra/app/ui boundary rules produces a prioritized list of actual regressions, not a theoretical checklist. Refactoring phases address only what the audit finds — not speculative cleanup. | MEDIUM | `cargo-modules` (visualize/analyze crate internal structure, detect cycles, report visibility) and manual Ousterhout checklist; no new runtime dependencies |
 
 ### Anti-Features (Commonly Requested, Often Problematic)
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Mouse support as primary interaction | GUIs feel more approachable. | TUI tools targeting Doom Emacs/vim users should be keyboard-first. Mouse support adds complexity for minimal gain given the audience. | Keyboard-only with discoverable shortcuts. Add basic mouse scrolling only if trivial. |
-| Real-time JIRA sync / ticket write-back | "Update ticket status from the dashboard" sounds convenient. | Scope creep. JIRA write requires OAuth scopes, error handling, conflict resolution. Read-only title fetch is already sufficient and simple. | Read-only JIRA ticket title via API token. |
-| Full git log / diff viewer | lazygit does this better. Users will reach for lazygit for deep git operations. | Duplicates lazygit. Adds significant complexity (diff rendering, hunk navigation). | Offer a single keybinding to open lazygit at the worktree instead. |
-| Multi-user / team sync | "Share which worktree is being worked on" sounds useful. | Single-user tool by definition. Network sync introduces auth, conflicts, reliability concerns. | Out of scope. PROJECT.md explicitly excludes multi-user support. |
-| Plugin/extension system | Power users want customization. | Massively increases scope and maintenance burden. Not needed for a focused single-team tool. | Hardcode the RN command palette. Add config file for simple customization (labels, commands). |
-| Built-in terminal emulator / shell | Running arbitrary commands is tempting to expose. | This becomes a tmux replacement. Scope explosion. | Use tmux new-window for ad-hoc shells. The dashboard executes specific commands only. |
-| Background auto-refresh of all JIRA titles on startup | Feels like a nice UX touch. | JIRA rate limits API calls. Cold-start latency. Refreshing all worktrees on launch could be slow or fail. | Fetch on demand (when worktree is focused) with in-memory cache. Configurable TTL. |
-| CI/CD status per worktree | lazyworktree does this via GitHub Actions integration. | Requires GitHub API auth (different from JIRA), polling, and rate limiting. Adds two auth systems. | Defer to v2 if the team requests it. Not blocking core value. |
+| Feature | Why It Seems Appealing | Why It Is Problematic | Better Approach |
+|---------|------------------------|----------------------|-----------------|
+| CancellationToken (tokio-util) instead of JoinHandle::abort() for task cancellation | `CancellationToken` is the recommended graceful-shutdown pattern in the tokio ecosystem and allows cooperative cleanup. | For shell commands (`yarn install`, `npx react-native run-android`), cooperative cancellation requires the child process to respond to a signal — which most yarn/RN processes do not implement. The existing `kill_on_drop(true)` on `tokio::process::Command` already correctly propagates SIGKILL to the child process when the task is aborted. `CancellationToken` adds complexity without benefit here because the "cleanup" we want is process kill, not async teardown logic. | Keep `JoinHandle::abort()` for task cancellation. The child process is killed by `kill_on_drop(true)`. Add `Action::CommandCancelForWorktree(WorktreeId)` that calls `abort()` on the per-worktree handle. |
+| Task parallelism inside a single worktree | Allowing two tasks to run simultaneously in the same worktree (e.g., `yarn install` and `yarn lint` both running in worktree A) seems like more power. | Two concurrent processes writing to the same `node_modules` directory will corrupt each other. RN build tools are not parallelism-safe within a single worktree. The FIFO queue per worktree is the correct model. | Enforce one active task per worktree via the existing queue model — just move the queue to per-worktree scope. |
+| Persisting task history across restarts | Showing a log of past tasks and their outcomes (succeeded/failed/cancelled) could be useful for audit trail purposes. | Adds persistent storage, file I/O in the hot path, migration concerns, and UI surface area with no direct benefit to the current workflow. The output buffer per worktree (`VecDeque<String>`) already provides in-session history. | Keep the existing in-memory `VecDeque<String>` per worktree. No disk persistence of task history in v1.3. |
+| Global "cancel all" action | A single keystroke to cancel all running tasks across all worktrees seems convenient. | Dangerous: cancelling a nearly-finished `yarn install` or a `run-android` that is mid-deployment could leave devices or build artifacts in a broken state. The per-worktree cancel is deliberate and targeted. | Only expose per-worktree cancel. If the user needs to stop everything, they can cancel each worktree individually or quit the dashboard. |
+| Parallel architecture refactor phases (do audit and refactor simultaneously) | Seems efficient — fix things as you find them. | The audit phase must complete before refactor phases begin. Running them in parallel means refactoring against a moving target, invalidating discoveries, and producing incomplete diffs. | Strict two-phase approach: Phase 1 = audit only (read + document), Phase 2+ = refactor phases derived from audit findings. |
+| Metric-based fitness functions for architecture enforcement (e.g., ArchUnit-style) | Automated enforcement of architecture rules (no `ui` importing `infra`, no domain depending on tokio) sounds rigorous. | Rust's visibility system (`pub(crate)`, `pub(super)`) already enforces module boundaries at compile time. Adding a runtime or CI fitness-function framework for a ~6K LOC single-crate project is over-engineering. The right tool is `cargo-modules` for visualization and manual Ousterhout checklist review, not a rules engine. | Use `cargo-modules graph` to visualize actual import edges; use Clippy lints for complexity signals; use manual review against the Ousterhout checklist for interface depth assessment. |
+| Animated spinner as a separate widget crate dependency | `throbber-widgets-tui` is a well-maintained Ratatui ecosystem crate that provides spinner widgets. | Adding a new runtime dependency for 6 unicode characters and a modulo counter is not warranted. The crate adds compile time and a transitive Ratatui version coupling risk. | Inline implementation: a `tick_counter: u64` in `AppState`, incremented on each tick event. Spinner frame = `FRAMES[tick_counter % 6]` where `FRAMES` is a `[&str; 6]` const. Total implementation: ~5 lines. |
+
+---
 
 ## Feature Dependencies
 
 ```
-[Worktree List Panel]
-    └──requires──> [Git Process Layer] (read branch names)
-    └──requires──> [Config Storage] (~/.config/ump-dash/)
-    └──enhances──> [JIRA Title Fetcher] (add ticket context)
-    └──enhances──> [Custom Labels] (add user annotations)
+[Per-Worktree Task State]
+    └──requires──> [WorktreeTaskRecord: task_handle, queue, started_at]
+    └──requires──> [action_tx per-worktree routing]
+    └──replaces──> [global running_command / command_task / command_queue in AppState]
 
-[Metro Process Control]
-    └──requires──> [Process Spawner/Monitor] (spawn, kill, detect status)
-    └──requires──> [Worktree List Panel] (know which worktree is active)
-    └──enhances──> [Log Panel] (stream metro output)
-    └──enhances──> [Metro Interactive Commands] (stdin pipe to metro)
+[Task Cancellation]
+    └──requires──> [Per-Worktree Task State] (need per-worktree JoinHandle)
+    └──requires──> [CommandSpec::is_cancellable()] (new predicate, git=false, rest=true)
+    └──uses──> [JoinHandle::abort() + kill_on_drop(true)] (already correct in command_runner)
 
-[RN Command Palette]
-    └──requires──> [Worktree List Panel] (know target worktree)
-    └──requires──> [Command Runner] (subprocess execution with output streaming)
-    └──enhances──> [Device Selector] (for run-android / run-ios)
-    └──enhances──> [Dependency Staleness Detector] (pre-run check)
+[Parallel Execution]
+    └──requires──> [Per-Worktree Task State] (independent task lanes)
+    └──conflicts with──> [Metro single-instance] (parallelism excludes metro — preserve existing constraint)
+    └──conflicts with──> [Serial within worktree] (queue enforces serial within one worktree)
 
-[Worktree Switching Orchestration]
-    └──requires──> [Metro Process Control] (kill current metro)
-    └──requires──> [Worktree List Panel] (select target)
-    └──requires──> [Command Runner] (start metro in new worktree)
-    └──enhances──> [Dependency Staleness Detector] (auto-install before start)
+[Live UI Indicators: task name + elapsed time]
+    └──requires──> [Per-Worktree Task State] (task_started_at: Option<Instant>)
+    └──requires──> [Tick event in event loop] (already present in app.rs tokio::select!)
+    └──enhances──> [Worktree table row render] (adds task label + MM:SS column or inline span)
 
-[JIRA Title Fetcher]
-    └──requires──> [Config Storage] (API token, cache)
+[Animated Spinner (Y/P replacement)]
+    └──requires──> [Tick event] (already present)
+    └──requires──> [tick_counter: u64 in AppState] (new field, trivial)
+    └──requires──> [CommandSpec category predicates] (yarn-like vs run-like vs test-like)
+    └──enhances──> [Worktree table icon column render] (replace Y/P spans with spinner frame spans)
 
-[Device Selector]
-    └──requires──> [Command Runner] (adb devices, xcrun simctl)
-    └──enhances──> [RN Command Palette] (run-android, run-ios)
+[Architecture Audit]
+    └──requires──> [cargo-modules CLI] (external tool, no crate dep)
+    └──requires──> [Ousterhout checklist] (manual review)
+    └──produces──> [Audit findings doc] (input to refactor phases)
+    └──gates──> [Refactor phases] (must complete before any structural changes)
 
-[Launch Claude Code]
-    └──requires──> [tmux Integration] (new-window with cwd)
-    └──requires──> [Worktree List Panel] (target directory)
-
-[Keybinding Hints Footer]
-    └──enhances──> all panels (contextual hints per active panel)
-
-[Confirmation Dialog]
-    └──requires──> [Modal System]
-    └──enhances──> [Git Operations] (before reset --hard)
-    └──enhances──> [Metro Process Control] (before kill)
-
-[Metro Interactive Commands (j/r/reload)]
-    └──requires──> [Metro Process Control] (must be running)
-    └──requires──> [Process stdin pipe] (send keystrokes)
+[Refactor Phases]
+    └──requires──> [Architecture Audit findings] (must know what to refactor)
+    └──requires──> [Full test suite green] (cargo test, cargo clippy -D warnings)
+    └──conflicts with──> [Per-Worktree Task feature work] (do not run audit+refactor in parallel with task system changes — pick one per phase)
 ```
 
 ### Dependency Notes
 
-- **Metro Process Control requires Process Spawner/Monitor:** Everything that talks to metro (logs, interactive commands, status) is downstream of actually owning the process handle. Build the process layer first.
-- **Worktree Switching requires Metro Process Control:** Switching must kill-then-start. Metro control must be stable before orchestration is safe to build.
-- **Device Selector enhances RN Command Palette:** Device selection is only needed when running the app. It's a popup within the run command flow, not a separate panel.
-- **JIRA Fetcher is isolated:** It only needs an HTTP client and the config token. It doesn't depend on metro or git beyond reading the branch name.
-- **Custom Labels conflict with nothing:** Pure config read — zero dependencies on live processes.
+- **Per-Worktree Task State is the foundation**: Every other v1.3 feature (cancellation, parallelism, live indicators, spinner) depends on replacing the three global task fields in `AppState` with a `HashMap<WorktreeId, WorktreeTaskRecord>`. This must be the first feature built.
+- **Architecture audit gates all structural refactor work**: The audit must run against the current codebase before any structural changes. Running the per-worktree task feature work first is acceptable because it adds new fields/logic without restructuring existing module boundaries. The audit findings will then assess the post-task-feature state.
+- **Spinner and elapsed time share the same tick signal**: Both features advance on the same tick event. The tick counter modulo 6 drives spinner frame; `Instant::elapsed()` drives the elapsed display. No additional timer infrastructure needed.
+- **`kill_on_drop(true)` is the cancellation mechanism**: Already set in `command_runner.rs`. Task abort → JoinHandle dropped → `kill_on_drop` kills child process. No additional cleanup logic required.
+- **`action_tx` routing does not change**: Background tasks already send `Action::CommandOutputLine` and `Action::CommandExited` via the shared `mpsc::UnboundedSender<Action>`. With per-worktree tasks, `CommandOutputLine` and `CommandExited` need to carry a `WorktreeId` so `update()` can route them to the correct worktree's record. This is a targeted change to the `Action` enum variants.
 
-## MVP Definition
+---
 
-### Launch With (v1)
+## Architecture Audit Feature — What "Good" Looks Like
 
-Minimum viable product — what proves the concept and replaces the current ad-hoc tmux workflow.
+This is a distinct category: the audit is a process, not a runtime feature. Here is what the audit must cover and what good output looks like.
 
-- [ ] Worktree list panel showing path + branch name — core navigation surface
-- [ ] Metro status indicator (running/stopped, which worktree) — the critical constraint made visible
-- [ ] Metro start/stop/restart controls (from the active worktree) — core action
-- [ ] Metro log panel with toggle (show/hide, scroll) — live feedback
-- [ ] RN command palette: clean, rm node_modules, yarn install, yarn start --reset-cache — most-used commands
-- [ ] Git operations per worktree: reset --hard origin, pull, push — the daily git operations
-- [ ] Vim-style keybindings throughout — non-negotiable for the user
-- [ ] On-screen keybinding hints in footer — discovery mechanism
-- [ ] Confirmation dialog for destructive actions — safety gate
-- [ ] Command output streaming in panel — visibility into what commands are doing
+### Audit Scope
 
-### Add After Validation (v1.x)
+| Area | What to Check | Tool / Method |
+|------|---------------|---------------|
+| Module import graph | Does any module in `domain/` import from `infra/` or `ui/`? Does `ui/` import domain types directly (allowed) or infra types (not allowed)? | `cargo-modules graph --package rn-dash` — visualize actual edges |
+| Shallow vs deep modules | Does each public module's interface justify its implementation size? Are there modules with large `pub` surfaces but trivial logic (shallow)? Are there modules with complex logic hidden behind a narrow interface (deep — good)? | Manual checklist: count `pub fn` vs total `fn` per module; flag any module where `pub` items exceed 50% of items |
+| Information leakage | Are implementation details exposed in public types? Do callers need to know things they shouldn't? | Manual review of `pub` fields in domain structs; flag any `pub` fields that could be `pub(crate)` or removed |
+| Temporal coupling | Are there sequences of function calls that must happen in a specific order with no enforcement? | Manual review of `AppState` mutation patterns in `update()` — flag "must set X before Y" patterns with no type-level enforcement |
+| Comment density vs code clarity | Ousterhout: good comments describe *what* and *why*, not *how*. Code should be self-documenting. | Grep for comments that restate the code; flag functions where the comment is longer than the body |
+| `app.rs` size and God Object risk | At ~2,200+ lines, `app.rs` contains `AppState`, `update()`, `dispatch_command()`, and the event loop. This is a known risk area. | Count public items; check if `update()` could be split into domain-specific handler modules |
 
-Features to add once the core workflow is proven.
+### Audit Output Format
 
-- [ ] JIRA ticket title fetching from branch name — add once the list is stable; requires HTTP/config
-- [ ] Custom labels per worktree — simple config enhancement after list is working
-- [ ] Worktree switching orchestration (kill + restart) — build after metro control is solid
-- [ ] Dependency staleness detection — low risk enhancement once command runner is stable
-- [ ] run-android / run-ios with device selection — more complex; needs device listing subprocess
-- [ ] Metro interactive commands (j/r) — nice UX polish; needs stdin pipe to metro
-- [ ] Launch Claude Code in tmux tab — useful but not blocking core value
+The audit produces a prioritized findings doc, not a fix-everything list. Each finding has:
+- **Severity**: Critical (violates a boundary), Major (makes future changes harder), Minor (style/polish)
+- **Location**: file, line range
+- **Description**: what the problem is
+- **Ousterhout principle violated**: which one (e.g., "shallow module", "information leakage", "temporal coupling")
+- **Recommended fix**: concrete action
 
-### Future Consideration (v2+)
+### What the Audit Must NOT Do
 
-Features to defer until product-market fit is established.
+- It must not propose speculative refactors ("this could be cleaner if...") without a concrete problem statement
+- It must not flag working code as broken just because it is long
+- It must not recommend splitting modules for splitting's sake — Ousterhout explicitly warns against over-decomposition
+- It must not change behavior during the audit phase — audit is read-only
 
-- [ ] CI/CD status per worktree (GitHub Actions) — requires second auth system; not in core scope
-- [ ] Command flags configuration modal before execution — polish feature, adds UI complexity
-- [ ] yarn jest [filter] / yarn lint in palette — add when testing workflow is validated as pain point
-- [ ] yarn pod-install / run-ios simulator selection — iOS workflow; add when Android path is stable
+---
+
+## MVP Definition for v1.3
+
+This milestone's MVP is not about minimum viable product — the product already ships. It is about what v1.3 must deliver to be releasable as a complete increment.
+
+### Must Deliver (v1.3 complete)
+
+- [ ] Architecture audit complete — findings doc exists, prioritized by severity
+- [ ] Refactor phases derived from audit — each critical/major finding addressed
+- [ ] Per-worktree task ownership — `running_command`, `command_task`, `command_queue` are per-worktree not global
+- [ ] `Action::CommandOutputLine` and `Action::CommandExited` carry `WorktreeId` for correct routing
+- [ ] Parallel execution — dispatching a command on worktree B while A is running works correctly
+- [ ] `CommandSpec::is_cancellable()` predicate — git ops return false, all others return true
+- [ ] `Action::CommandCancelForWorktree(WorktreeId)` — cancels the task handle for that worktree only
+- [ ] Live task name visible in worktree table row during active task
+- [ ] Live elapsed time visible in worktree table row (MM:SS, updated by tick)
+- [ ] Spinner frame replaces Y/P during active yarn-like or pod-like task; returns to Y/P when idle
+- [ ] Run/test tasks show equivalent spinner in a separate column or the same icon column with distinct color
+
+### Defer to v1.4+
+
+- [ ] Persistent task history (succeeded/failed/cancelled log)
+- [ ] Global cancel-all action
+- [ ] Per-worktree task queue priority (priority lanes, not just FIFO)
+- [ ] Configurable spinner style
+
+---
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Worktree list panel | HIGH | MEDIUM | P1 |
-| Metro status indicator | HIGH | LOW | P1 |
-| Metro start/stop/restart | HIGH | MEDIUM | P1 |
-| Metro log panel (toggle + scroll) | HIGH | MEDIUM | P1 |
-| Vim keybindings + footer hints | HIGH | LOW | P1 |
-| Confirmation dialog | HIGH | LOW | P1 |
-| Command output streaming | HIGH | MEDIUM | P1 |
-| Git operations (reset, pull, push) | HIGH | MEDIUM | P1 |
-| RN command palette (core) | HIGH | MEDIUM | P1 |
-| JIRA title fetching | MEDIUM | MEDIUM | P2 |
-| Custom labels | MEDIUM | LOW | P2 |
-| Worktree switching orchestration | HIGH | HIGH | P2 |
-| Dependency staleness detection | MEDIUM | MEDIUM | P2 |
-| Device selector (run-android/ios) | MEDIUM | HIGH | P2 |
-| Metro interactive commands (j/r) | MEDIUM | MEDIUM | P2 |
-| Launch Claude Code in tmux | MEDIUM | MEDIUM | P2 |
-| Command flags configuration modal | LOW | MEDIUM | P3 |
-| CI/CD status per worktree | LOW | HIGH | P3 |
-| yarn test / jest filter | LOW | LOW | P3 |
+| Architecture audit | HIGH (foundational) | LOW | P1 — do first, gates refactors |
+| Refactor phases (per audit findings) | HIGH | MEDIUM–HIGH | P1 — do before task system work |
+| Per-worktree task state (foundation) | HIGH | MEDIUM | P1 — all other task features depend on this |
+| `CommandOutputLine`/`CommandExited` carry `WorktreeId` | HIGH | LOW | P1 — must accompany per-worktree state |
+| Parallel execution across worktrees | HIGH | LOW (once per-worktree state exists) | P1 |
+| Individual task cancellation | HIGH | LOW (abort on per-worktree handle) | P1 |
+| `CommandSpec::is_cancellable()` + git non-cancellable | MEDIUM | LOW | P1 |
+| Live task name in worktree row | MEDIUM | LOW | P2 |
+| Live elapsed time in worktree row | MEDIUM | LOW | P2 |
+| Animated spinner (Y/P replacement) | MEDIUM | LOW | P2 |
+| Run/test task spinner indicator | LOW | LOW | P2 |
 
 **Priority key:**
-- P1: Must have for launch (v1)
-- P2: Should have, add after core is stable (v1.x)
-- P3: Nice to have, future consideration (v2+)
+- P1: Must have for v1.3 to be complete
+- P2: Should have in v1.3, can be phase 2 of the milestone
+- P3: Nice to have, defer to v1.4+
 
-## Competitor Feature Analysis
+---
 
-| Feature | lazygit | gitui | k9s | lazyworktree | UMP Dashboard |
-|---------|---------|-------|-----|--------------|---------------|
-| Panel-based layout | YES | YES | YES | YES | YES — planned |
-| Vim keybindings | YES | YES | YES | YES | YES — required |
-| On-screen key hints | YES (footer) | YES (context panel) | YES (header) | YES | YES — footer bar |
-| Real-time status | Partial | Partial | YES (auto-refresh) | Partial | YES — metro status |
-| Process management | NO | NO | YES (pods) | NO | YES — metro |
-| Log streaming | NO | NO | YES (pod logs) | NO | YES — metro logs |
-| Git operations | YES (deep) | YES (core) | NO | YES (basic) | YES (subset) |
-| Worktree management | YES (basic) | NO | NO | YES (primary) | YES (primary) |
-| External API integration | NO | NO | NO | YES (GitHub) | YES (JIRA) |
-| Custom labels/notes | NO | NO | NO | YES (markdown notes) | YES (simple labels) |
-| Device selection | NO | NO | NO | NO | YES — differentiator |
-| tmux integration | NO | NO | NO | YES (sessions) | YES (Claude Code) |
-| Single-process enforcement | NO | NO | YES (k8s constraint) | NO | YES — metro singleton |
-| Domain-specific commands | NO | NO | YES (k8s ops) | NO | YES — RN commands |
+## Implementation Complexity Notes
 
-**Key insight from competitor analysis:** lazygit and gitui are git-only tools that don't touch processes. k9s is the closest analogue — it manages running processes (pods) in real-time, shows logs, and enforces cluster constraints. The UMP dashboard is effectively "k9s for React Native worktrees" with git and JIRA integration added. lazyworktree is the closest feature-wise on the worktree side but doesn't manage processes at all.
+### WorktreeTaskRecord struct (new domain type)
+
+The core structural change. Replaces three global `AppState` fields:
+
+```
+struct WorktreeTaskRecord {
+    running_command: Option<CommandSpec>,   // replaces AppState.running_command
+    task_handle:     Option<JoinHandle<()>>, // replaces AppState.command_task
+    queue:           VecDeque<CommandSpec>, // replaces AppState.command_queue
+    started_at:      Option<std::time::Instant>, // new — for elapsed time
+}
+```
+
+Stored as `HashMap<WorktreeId, WorktreeTaskRecord>` in `AppState`. The three existing global fields remain during migration, removed once all call sites are updated. This is a targeted, mechanical refactor — no logic changes in `spawn_command_task` or `command_runner.rs`.
+
+### Action enum changes
+
+`CommandOutputLine(String)` becomes `CommandOutputLine { worktree_id: WorktreeId, line: String }`.
+`CommandExited` becomes `CommandExited { worktree_id: WorktreeId }`.
+`CommandCancel` (existing global) is supplemented by `CommandCancelForWorktree(WorktreeId)`.
+
+Impact: all match arms in `update()` that handle these variants must be updated. This is the highest-touch change in the milestone — estimate 40–80 lines of `update()` to update.
+
+### Tick counter for spinner
+
+```
+// In AppState:
+pub tick_counter: u64,  // incremented on each Tick event
+
+// In update():
+Action::Tick => { state.tick_counter = state.tick_counter.wrapping_add(1); }
+
+// In render:
+const SPINNER_FRAMES: [&str; 6] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴"];
+let frame = SPINNER_FRAMES[(state.tick_counter % 6) as usize];
+```
+
+Confidence: HIGH — this is a standard pattern in all TUI apps with animation. No external dependencies.
+
+### Elapsed time display
+
+```
+let elapsed = task_record.started_at
+    .map(|t| t.elapsed())
+    .unwrap_or_default();
+let secs = elapsed.as_secs();
+let display = format!("{:02}:{:02}", secs / 60, secs % 60);
+```
+
+Confidence: HIGH — `std::time::Instant` is stable, this is a direct computation. Render on every tick.
+
+---
 
 ## Sources
 
-- [lazygit GitHub — keybindings and worktree features](https://github.com/jesseduffield/lazygit)
-- [lazygit Keybindings Reference](https://github.com/jesseduffield/lazygit/blob/master/docs/keybindings/Keybindings_en.md)
-- [gitui GitHub — panel architecture and design decisions](https://github.com/gitui-org/gitui)
-- [k9s official site — feature overview](https://k9scli.io/)
-- [lazyworktree GitHub — worktree TUI patterns](https://github.com/chmouel/lazyworktree)
-- [lazyworktree HN discussion](https://news.ycombinator.com/item?id=46474066)
-- [Prox process manager TUI patterns](https://github.com/craigderington/prox)
-- [Ratatui popup/dialog patterns](https://ratatui.rs/examples/apps/popup/)
-- [awesome-ratatui — TUI app examples](https://github.com/ratatui/awesome-ratatui)
-- [Essential CLI/TUI tools analysis](https://itnext.io/essential-cli-tui-tools-for-developers-7e78f0cd27db)
-- [bottom (btm) — process monitoring TUI](https://github.com/ClementTsang/bottom)
-- [JIRA Cloud REST API docs](https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/)
-- [Nerdlog — log streaming TUI patterns](https://github.com/dimonomid/nerdlog)
-- [PROJECT.md — project requirements and constraints](/Users/cubicme/aljazeera/dashboard/.planning/PROJECT.md)
+- [tokio-util CancellationToken docs](https://docs.rs/tokio-util/latest/tokio_util/sync/struct.CancellationToken.html) — confirmed CancellationToken pattern; determined it is not the right fit here (cooperative, child processes do not cooperate)
+- [Rust tokio task cancellation patterns — Cybernetist (2024)](https://cybernetist.com/2024/04/19/rust-tokio-task-cancellation-patterns/) — confirmed JoinHandle::abort() vs CancellationToken tradeoffs
+- [tokio JoinHandle docs](https://docs.rs/tokio/latest/tokio/task/struct.JoinHandle.html) — abort() semantics, drop-does-not-cancel behavior
+- [throbber-widgets-tui crate](https://docs.rs/throbber-widgets-tui/latest/throbber_widgets_tui/) — confirmed spinner widget exists; decided to implement inline to avoid dependency
+- [Ratatui third-party widgets showcase](https://ratatui.rs/showcase/third-party-widgets/) — throbber-widgets-tui listed as official ecosystem widget
+- [cargo-modules GitHub](https://github.com/regexident/cargo-modules) — visualize/analyze Rust crate internal structure, detect cycles; confirmed as the right audit tool
+- [A Philosophy of Software Design — Ousterhout](https://www.amazon.com/Philosophy-Software-Design-John-Ousterhout/dp/1732102201) — deep module / shallow module criteria for audit checklist
+- Existing codebase: `/Users/cubicme/aljazeera/dashboard/src/` — direct reading of `app.rs`, `action.rs`, `domain/command.rs`, `infra/command_runner.rs`, `ui/panels.rs`
 
 ---
-*Feature research for: Rust/Ratatui TUI dashboard for React Native worktree management (UMP Dashboard)*
-*Researched: 2026-03-02*
+*Feature research for: v1.3 Per-Worktree Task System + Architecture Audit (rn-dash)*
+*Researched: 2026-04-13*
